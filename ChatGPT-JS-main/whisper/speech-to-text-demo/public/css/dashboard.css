@@ -1,0 +1,398 @@
+:root {
+    --primary: #FF8A3D;
+    --accent: #FF6B1A;
+    --background: #1A1A1A;
+    --secondary: #1A1A1A;
+    --muted: #2A2A2A;
+    --text-muted: #A1A1A1;
+    --text-subtle: #888888;
+    --gradient-primary: linear-gradient(135deg, #FF8A3D 0%, #FF6B1A 100%);
+    --gradient-hover: linear-gradient(135deg, #FF6B1A 0%, #FF8A3D 100%);
+    --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%);
+    --card-border: 1px solid rgba(255, 138, 61, 0.1);
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    --card-bg: rgba(42, 42, 42, 0.5);
+}
+
+body {
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--gradient-dark);
+}
+
+.sidebar-nav {
+    background: linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(42, 42, 42, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    border-right: var(--card-border);
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.1);
+    width: 280px;
+    text-align: center;
+    animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.app-brand {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.app-brand h1 {
+    font-size: 2rem;
+    margin: 0;
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.app-brand p {
+    color: #A1A1A1;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.nav-menu {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.nav-link {
+    display: flex;
+    align-items: flex-start;
+    padding: 0.8rem;
+    text-align: left;
+    width: 100%;
+}
+
+.nav-content {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1rem;
+    width: 100%;
+}
+
+.nav-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    color: #ffffff;
+}
+
+.nav-text span {
+    color: #A1A1A1;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.nav-link i {
+    background: rgba(26, 26, 26, 0.8);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    margin: 0;
+    color: #A1A1A1;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    transition: all 300ms ease;
+}
+
+.nav-link span {
+    color: #A1A1A1;
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+}
+
+.nav-link:hover {
+    background: rgba(42, 42, 42, 0.8);
+    transform: translateX(5px);
+}
+
+.nav-link:hover i {
+    background: rgba(255, 138, 61, 0.1);
+    color: #FF8A3D;
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 138, 61, 0.15);
+}
+
+.nav-link.active {
+    background: transparent;
+}
+
+.nav-link.active i {
+    background: rgba(255, 138, 61, 0.1);
+    color: #FF8A3D;
+    box-shadow: 0 6px 20px rgba(255, 138, 61, 0.15);
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: var(--gradient-primary);
+    transition: height 0.3s ease;
+    border-radius: 0 4px 4px 0;
+}
+
+.nav-link:hover::before,
+.nav-link.active::before {
+    height: 70%;
+}
+
+@keyframes fadeIn {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Apply the same styles to both sidebars */
+.recording-studio .sidebar-nav {
+    animation: slideIn 0.5s ease-out;
+}
+
+.content-area {
+    padding: 2rem;
+}
+
+.class-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    padding: 1.8rem;
+    border-radius: 1.5rem;
+    height: 100%;
+    border: var(--card-border);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+
+.class-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: var(--gradient-primary);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+}
+
+.class-card:hover {
+    transform: translateY(-5px);
+    border: 1px solid rgba(255, 138, 61, 0.2);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.class-card:hover::before {
+    opacity: 0.05;
+}
+
+.class-info {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+.badge {
+    background: var(--gradient-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(255, 138, 61, 0.2);
+}
+
+.mic-button {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255, 138, 61, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mic-button:hover {
+    transform: scale(1.05) rotate(5deg);
+    background: var(--gradient-hover);
+    box-shadow: 0 6px 25px rgba(255, 138, 61, 0.4);
+}
+
+.sidebar {
+    position: fixed;
+    right: -400px;
+    top: 0;
+    width: 400px;
+    height: 100vh;
+    background: rgba(42, 42, 42, 0.98);
+    backdrop-filter: blur(10px);
+    padding: 2rem;
+    transition: right 0.3s ease;
+    z-index: 1000;
+    border-left: 1px solid var(--light-gray);
+}
+
+.sidebar.active {
+    right: 0;
+}
+
+.sidebar-header h3 {
+    color: white;
+    margin: 0;
+    background: linear-gradient(45deg, var(--primary-orange), var(--secondary-orange));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.close-btn:hover {
+    transform: rotate(90deg);
+}
+
+#startRecordingBtn {
+    background: var(--gradient-primary);
+    border: none;
+    padding: 1rem;
+    border-radius: 0.8rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(255, 138, 61, 0.2);
+}
+
+#startRecordingBtn:hover {
+    transform: translateY(-2px);
+    background: var(--gradient-hover);
+    box-shadow: 0 6px 20px rgba(255, 138, 61, 0.3);
+}
+
+.recording-info {
+    padding: 0 0.8rem;
+    text-align: left;
+}
+
+.recording-info h6 {
+    text-align: center;
+    color: #A1A1A1;
+}
+
+.text-secondary {
+    color: #A1A1A1 !important;
+}
+
+.welcome-section h2 {
+    color: #ffffff;
+}
+
+.welcome-section p {
+    color: #A1A1A1;
+}
+
+.class-card h3 {
+    color: #ffffff;
+}
+
+.class-card p {
+    color: #A1A1A1;
+}
+
+.class-info span {
+    color: #A1A1A1;
+}
+
+.app-brand h1 {
+    color: #ffffff;
+}
+
+.app-brand p {
+    color: #A1A1A1;
+}
+
+.recording-info h6 {
+    color: #A1A1A1;
+}
+
+.sidebar-header h3 {
+    color: #ffffff;
+}
+
+.sidebar-content p {
+    color: #A1A1A1;
+}
+
+/* Add these styles for the extending bar effect */
+.class-card h3 {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 0.5rem;
+}
+
+.class-card h3::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 30px;
+    background: var(--gradient-primary);
+    border-radius: 2px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.class-card:hover h3::after {
+    width: 100%;
+}
+
+/* Update the existing class-card styles to ensure proper positioning */
+.class-card .d-flex {
+    position: relative;
+    z-index: 1;
+}
+
+.class-card h3 {
+    margin-bottom: 0;  /* Remove default margin to keep the bar close */
+}
+ 
