@@ -254,3 +254,48 @@ function updateTranscriptionDisplay(text) {
 
 // Load recordings when page loads
 document.addEventListener('DOMContentLoaded', loadRecordings);
+
+// Add this function to your existing app.js
+async function updateRecentRecordingsList() {
+    try {
+        const response = await fetch('/api/recordings');
+        const data = await response.json();
+        
+        const recordingsList = document.getElementById('recentRecordings');
+        recordingsList.innerHTML = ''; // Clear existing list
+        
+        data.recordings.forEach(recording => {
+            const card = createRecordingCard(recording);
+            recordingsList.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Error loading recordings:', error);
+    }
+}
+
+function createRecordingCard(recording) {
+    const card = document.createElement('div');
+    card.className = 'recording-card';
+    
+    const title = document.createElement('h3');
+    title.textContent = recording.title;
+    
+    const date = document.createElement('p');
+    date.textContent = new Date(recording.createdAt).toLocaleDateString();
+    
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = `/uploads/${recording.audioFile.filename}`;
+    
+    card.appendChild(title);
+    card.appendChild(date);
+    card.appendChild(audio);
+    
+    return card;
+}
+
+// Call this after successful recording upload
+function onRecordingComplete(recordingData) {
+    updateRecentRecordingsList();
+    updateTranscriptionDisplay(recordingData.text);
+}

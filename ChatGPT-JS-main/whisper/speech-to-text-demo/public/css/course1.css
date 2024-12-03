@@ -137,42 +137,50 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .section-header h2 {
     color: var(--primary-color);
-    font-size: 2.5rem;
+    font-size: 2rem;
+    font-weight: 600;
     margin: 0;
 }
 
 .lecture-count {
-    color: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
 }
 
 .lecture-item {
-    background-color: var(--card-bg);
-    border-radius: 0.8rem;
-    padding: 1.2rem;
+    background-color: #494949;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1.2rem;
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 1rem;
-    cursor: pointer;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.lecture-play i {
-    font-size: 2rem;
-    color: white;
-    opacity: 0.9;
+.lecture-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.lecture-info {
+    flex: 1;
 }
 
 .lecture-info h3 {
     color: white;
-    font-size: 1.1rem;
-    margin: 0;
-    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
 }
 
 .lecture-meta {
@@ -182,19 +190,37 @@ body {
     font-size: 0.9rem;
 }
 
-.lecture-actions {
-    margin-left: auto;
+.lecture-meta span {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
 }
 
-.lecture-actions button {
-    background: none;
-    border: none;
+.lecture-meta i {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+.lecture-actions {
+    margin-left: 2rem;
+}
+
+.view-lecture {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-color);
     color: white;
-    opacity: 0.7;
-    padding: 0.5rem;
-    cursor: pointer;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.view-lecture:hover {
+    background: #d14a44;
+    transform: translateY(-1px);
+    color: white;
 }
 
 /* Month Section */
@@ -238,4 +264,130 @@ body {
 .lecture-item:hover {
     transform: translateY(-2px);
     transition: transform 0.2s ease;
+}
+
+/* Add these styles to your existing CSS */
+.lecture-list {
+    margin-top: 20px;
+}
+
+.lecture-card {
+    background: #494949;
+    border-radius: 15px;
+    margin-bottom: 1.2rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.lecture-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.lecture-content {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #494949;
+}
+
+.lecture-info {
+    flex: 1;
+}
+
+.lecture-info h3 {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+}
+
+.lecture-meta {
+    display: flex;
+    gap: 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.lecture-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lecture-meta i {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+.lecture-actions {
+    margin-left: 2rem;
+    background: #494949;
+}
+
+.view-lecture {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.view-lecture:hover {
+    background: #d14a44;
+    transform: translateY(-1px);
+    color: white;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #1a1a1a;
+    color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    width: 80%;
+    max-width: 800px;
+    border-radius: 10px;
+    position: relative;
+}
+
+.close {
+    color: #fff;
+    position: absolute;
+    right: 20px;
+    top: 10px;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#modalTranscript {
+    margin-top: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    line-height: 1.6;
+}
+
+#modalAudio {
+    width: 100%;
+    margin: 20px 0;
 }

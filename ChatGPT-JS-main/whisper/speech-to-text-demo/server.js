@@ -48,30 +48,19 @@ const upload = multer({
 // API Routes
 app.get('/api/recordings', async (req, res) => {
     try {
-        console.log('Fetching recordings...');
         const recordings = await Recording.find()
-            .select('title audioFile transcription createdAt')
             .sort({ createdAt: -1 })
             .limit(10);
         
-        console.log('Found recordings:', recordings);
-        
         res.json({
             success: true,
-            recordings: recordings.map(rec => ({
-                id: rec._id,
-                title: rec.title,
-                date: rec.createdAt,
-                audioUrl: `/uploads/${rec.audioFile?.filename || ''}`,
-                text: rec.transcription?.text || ''
-            }))
+            recordings: recordings
         });
     } catch (error) {
         console.error('Error fetching recordings:', error);
         res.status(500).json({ 
             success: false, 
-            error: 'Failed to fetch recordings',
-            details: error.message 
+            error: 'Failed to fetch recordings' 
         });
     }
 });
@@ -134,9 +123,113 @@ app.post('/upload', upload.single('data'), async (req, res) => {
     }
 });
 
+// Get single recording with notes
+app.get('/api/recordings/:id', async (req, res) => {
+    try {
+        console.log('Fetching recording with ID:', req.params.id);
+        const recording = await Recording.findById(req.params.id);
+        
+        if (!recording) {
+            console.log('Recording not found');
+            return res.status(404).json({
+                success: false,
+                error: 'Recording not found'
+            });
+        }
+
+        console.log('Found recording:', recording);
+        console.log('Audio file:', recording.audioFile);
+        console.log('Transcription:', recording.transcription);
+
+        // Add full URLs for audio file
+        const audioUrl = `/uploads/${recording.audioFile.filename}`;
+        
+        const responseData = {
+            success: true,
+            recording: {
+                _id: recording._id,
+                title: recording.title,
+                createdAt: recording.createdAt,
+                audioFile: {
+                    filename: recording.audioFile.filename,
+                    path: recording.audioFile.path,
+                    url: audioUrl
+                },
+                transcription: {
+                    text: recording.transcription.text,
+                    createdAt: recording.transcription.createdAt
+                }
+            }
+        };
+
+        console.log('Sending response:', responseData);
+        res.json(responseData);
+    } catch (error) {
+        console.error('Error fetching recording:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch recording',
+            details: error.message
+        });
+    }
+});
+
+// Get notes for a recording
+app.get('/api/recordings/:id/notes', async (req, res) => {
+    try {
+        const recording = await Recording.findById(req.params.id);
+        if (!recording) {
+            return res.status(404).json({
+                success: false,
+                error: 'Recording not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            notes: recording.notes[0] || null
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch notes'
+        });
+    }
+});
+
+// Save notes for a recording
+app.post('/api/recordings/:id/notes', async (req, res) => {
+    try {
+        const recording = await Recording.findById(req.params.id);
+        if (!recording) {
+            return res.status(404).json({
+                success: false,
+                error: 'Recording not found'
+            });
+        }
+
+        recording.notes = [{
+            content: req.body.content,
+            timestamp: new Date()
+        }];
+
+        await recording.save();
+
+        res.json({
+            success: true,
+            notes: recording.notes[0]
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Failed to save notes'
+        });
+    }
+});
+
 // Serve static files
-app.use('/uploads', express.static('uploads'));
 app.use(express.static('public'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -173,4 +266,9 @@ process.on('SIGTERM', () => {
         console.log('Server closed');
         process.exit(0);
     });
+});
+
+// Update the lectures route to use lecture-notes.html instead
+app.get('/lectures/:slug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'lecture-notes.html'));
 }); 

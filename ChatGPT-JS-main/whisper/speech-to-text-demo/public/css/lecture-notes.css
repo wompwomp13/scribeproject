@@ -1,0 +1,114 @@
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.audio-section {
+    grid-column: 1 / -1;
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 1rem;
+}
+
+.audio-section audio {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.transcription-section,
+.notes-section {
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 1rem;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.transcription-content {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    color: white;
+    margin-top: 1rem;
+    line-height: 1.6;
+}
+
+.notes-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+#notesEditor {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    color: white;
+    resize: none;
+    font-family: inherit;
+}
+
+.save-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.8rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.save-btn:hover {
+    opacity: 0.9;
+}
+
+h2 {
+    color: white;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.breadcrumb {
+    margin: 1rem 0 2rem;
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb i {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+#lectureAudio {
+    width: 100%;
+    margin: 1rem 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+}
+
+#transcriptionText {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    color: white;
+} 

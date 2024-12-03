@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Lectures</title>
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="courseName">Course Name</h1>
+            <div class="stats">
+                <span id="recentCount">0</span> new lectures this week
+            </div>
+        </header>
+
+        <main>
+            <section id="lecturesList">
+                <!-- Lectures will be loaded here -->
+            </section>
+        </main>
+
+        <!-- Lecture Modal -->
+        <div id="lectureModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modalTitle"></h2>
+                <audio id="modalAudio" controls></audio>
+                <div id="modalTranscript"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates -->
+    <template id="lecture-card-template">
+        <div class="lecture-card">
+            <h3 class="lecture-title"></h3>
+            <div class="lecture-meta">
+                <span class="lecture-date"></span>
+                <span class="lecture-duration"></span>
+            </div>
+            <button class="view-lecture">View Lecture</button>
+        </div>
+    </template>
+
+    <script src="js/coursePage.js"></script>
+</body>
+</html> 
