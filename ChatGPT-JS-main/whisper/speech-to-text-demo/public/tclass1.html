@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCRIBE - Physics 101</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/tclass1.css">
+</head>
+<body class="bg-dark">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 sidebar-nav">
+                <div class="app-brand mb-4">
+                    <h1>SCRIBE</h1>
+                    <p class="text-secondary">Lecture Assistant</p>
+                </div>
+                
+                <nav class="nav-menu">
+                    <a href="/dashboard.html" class="nav-link">
+                        <div class="nav-content">
+                            <i class="bi bi-house-door"></i>
+                            <div class="nav-text">
+                                Dashboard
+                                <span class="text-secondary d-block small">View your classes</span>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="/index.html" class="nav-link">
+                        <div class="nav-content">
+                            <i class="bi bi-mic"></i>
+                            <div class="nav-text">
+                                Recording Studio
+                                <span class="text-secondary d-block small">Create new recording</span>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="#" class="nav-link">
+                        <div class="nav-content">
+                            <i class="bi bi-gear"></i>
+                            <div class="nav-text">
+                                Settings
+                                <span class="text-secondary d-block small">Customize your app</span>
+                            </div>
+                        </div>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 content-area">
+                <!-- Course Header -->
+                <div class="course-header">
+                    <div class="course-info">
+                        <div class="course-tag">PHYSICS 101</div>
+                        <span class="semester">Fall 2024</span>
+                    </div>
+                    <h1>Introduction to Physics</h1>
+                    <div class="instructor-info">
+                        <img src="https://ui-avatars.com/api/?name=Sarah+Johnson&background=FF8A3D&color=fff" alt="Prof. Sarah Johnson" class="instructor-avatar">
+                        <div>
+                            <p class="instructor-name">Prof. Sarah Johnson</p>
+                            <p class="instructor-details">25 Students • MWF 10:00 AM</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Course Actions -->
+                <div class="course-actions">
+                    <button class="action-button primary">
+                        <i class="bi bi-plus-lg"></i>
+                        New Recording
+                    </button>
+                    <div class="search-container">
+                        <i class="bi bi-search"></i>
+                        <input type="text" placeholder="Search lectures..." class="search-input">
+                        <button class="filter-button">
+                            <i class="bi bi-funnel"></i>
+                            Filters
+                        </button>
+                    </div>
+                </div>
+
+                <div class="course-content">
+                    <!-- Left Section: Lectures -->
+                    <div class="lectures-section">
+                        <!-- Recent Lectures -->
+                        <div class="section-header">
+                            <h2>Recent Lectures</h2>
+                            <span class="lecture-count">2 lectures this week</span>
+                        </div>
+                        
+                        <div class="lecture-cards">
+                            <div class="lecture-card">
+                                <div class="lecture-card-header">
+                                    <div class="lecture-icon">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                    <div class="lecture-info">
+                                        <h3>Introduction to Kinematics</h3>
+                                        <div class="lecture-meta">
+                                            <span class="topic-tag">Mechanics</span>
+                                            <span class="lecture-date">
+                                                <i class="bi bi-calendar3"></i>
+                                                March 15, 2024
+                                            </span>
+                                            <span class="lecture-duration">
+                                                <i class="bi bi-clock"></i>
+                                                45 min
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="lecture-actions">
+                                    <button class="btn-action" title="Play Recording">
+                                        <i class="bi bi-play-fill"></i>
+                                    </button>
+                                    <button class="btn-action" title="Edit Transcript">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn-action" title="More Options">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Add more recent lecture cards here -->
+                        </div>
+
+                        <!-- Previous Lectures -->
+                        <div class="section-header">
+                            <h2>Previous Lectures</h2>
+                            <button class="view-all-btn">View All</button>
+                        </div>
+                        
+                        <div class="lecture-folders">
+                            <div class="month-folder">
+                                <div class="folder-header">
+                                    <i class="bi bi-folder2"></i>
+                                    <span>March 2024</span>
+                                    <span class="folder-count">8 lectures</span>
+                                </div>
+                                <div class="folder-content">
+                                    <!-- Lecture items within folder -->
+                                    <div class="lecture-item">
+                                        <div class="lecture-item-info">
+                                            <i class="bi bi-file-text"></i>
+                                            <div>
+                                                <h4>Understanding Velocity and Acceleration</h4>
+                                                <span>March 8, 2024 • 55 min</span>
+                                            </div>
+                                        </div>
+                                        <div class="lecture-item-actions">
+                                            <button class="btn-icon" title="Play"><i class="bi bi-play-fill"></i></button>
+                                            <button class="btn-icon" title="Edit"><i class="bi bi-pencil"></i></button>
+                                        </div>
+                                    </div>
+                                    <!-- Add more lecture items -->
+                                </div>
+                            </div>
+                            <!-- Add more month folders -->
+                        </div>
+                    </div>
+
+                    <!-- Right Section: Quick Stats -->
+                    <div class="course-sidebar">
+                        <div class="stats-card">
+                            <h3>Course Stats</h3>
+                            <div class="stat-item">
+                                <i class="bi bi-clock-history"></i>
+                                <div>
+                                    <span class="stat-value">24h 30m</span>
+                                    <span class="stat-label">Total Recording Time</span>
+                                </div>
+                            </div>
+                            <div class="stat-item">
+                                <i class="bi bi-file-text"></i>
+                                <div>
+                                    <span class="stat-value">32</span>
+                                    <span class="stat-label">Recorded Lectures</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="upcoming-card">
+                            <h3>Next Lecture</h3>
+                            <div class="upcoming-lecture">
+                                <div class="upcoming-date">
+                                    <span class="day">17</span>
+                                    <span class="month">MAR</span>
+                                </div>
+                                <div class="upcoming-info">
+                                    <h4>Forces and Motion</h4>
+                                    <span>10:00 AM - 11:30 AM</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Drop Zone (hidden by default) -->
+    <div class="upload-dropzone" id="uploadDropzone">
+        <i class="bi bi-cloud-upload"></i>
+        <h3>Drop files to upload</h3>
+        <p>or click to select files</p>
+    </div>
+</body>
+</html>

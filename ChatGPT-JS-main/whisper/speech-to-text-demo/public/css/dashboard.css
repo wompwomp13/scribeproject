@@ -1,28 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 :root {
-    --primary: #FF8A3D;
-    --accent: #FF6B1A;
+    --primary: #f75b52;
+    --accent: #5fe5de;
+    --dark: #0e2334;
+    --dark-lighter: #1a3449;
+    --text: #ffffff;
     --background: #1A1A1A;
     --secondary: #1A1A1A;
     --muted: #2A2A2A;
     --text-muted: #A1A1A1;
     --text-subtle: #888888;
-    --gradient-primary: linear-gradient(135deg, #FF8A3D 0%, #FF6B1A 100%);
-    --gradient-hover: linear-gradient(135deg, #FF6B1A 0%, #FF8A3D 100%);
-    --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%);
-    --card-border: 1px solid rgba(255, 138, 61, 0.1);
-    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    --card-bg: rgba(42, 42, 42, 0.5);
+    --gradient-primary: linear-gradient(135deg, #f75b52 0%, #ff7b73 100%);
+    --gradient-accent: linear-gradient(135deg, #5fe5de 0%, #4ad1ca 100%);
+    --gradient-dark: linear-gradient(145deg, #0e2334 0%, #1a3449 100%);
+    --card-border: 1px solid rgba(95, 229, 222, 0.1);
+    --card-shadow: 0 8px 32px rgba(14, 35, 52, 0.3);
+    --card-bg: rgba(14, 35, 52, 0.95);
+    --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.5rem;
+    --font-size-2xl: 2rem;
+    --font-size-3xl: 2.5rem;
+}
+
+/* Add this to ensure the font is applied to all elements */
+* {
+    font-family: var(--font-primary);
 }
 
 body {
     min-height: 100vh;
-    font-family: system-ui, -apple-system, sans-serif;
-    background: var(--gradient-dark);
+    font-family: var(--font-primary);
+    background: var(--accent);
+    background-image: 
+        radial-gradient(circle at 100% 0%, rgba(95, 229, 222, 0.4) 0%, transparent 50%),
+        radial-gradient(circle at 0% 100%, rgba(95, 229, 222, 0.4) 0%, transparent 50%);
+    color: var(--text);
 }
 
 .sidebar-nav {
-    background: linear-gradient(180deg, rgba(26, 26, 26, 0.98) 0%, rgba(42, 42, 42, 0.95) 100%);
-    backdrop-filter: blur(20px);
+    background: var(--dark);
+    border-right: 1px solid rgba(95, 229, 222, 0.1);
+    box-shadow: 4px 0 32px rgba(14, 35, 52, 0.3);
     min-height: 100vh;
     padding: 2rem 1rem;
     border-right: var(--card-border);
@@ -49,17 +72,21 @@ body {
 }
 
 .app-brand h1 {
-    font-size: 2rem;
-    margin: 0;
-    color: #ffffff;
+    font-size: var(--font-size-2xl);
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: -0.3px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.25rem;
 }
 
 .app-brand p {
-    color: #A1A1A1;
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 .nav-menu {
@@ -91,16 +118,20 @@ body {
     align-items: flex-start;
     gap: 0.2rem;
     color: #ffffff;
+    font-weight: 500;
+    font-size: var(--font-size-base);
+    letter-spacing: -0.1px;
 }
 
 .nav-text span {
     color: #A1A1A1;
-    font-size: 0.75rem;
-    line-height: 1.2;
+    font-size: var(--font-size-xs);
+    font-weight: 400;
+    letter-spacing: normal;
 }
 
 .nav-link i {
-    background: rgba(26, 26, 26, 0.8);
+    background: rgba(247, 91, 82, 0.1);
     width: 40px;
     height: 40px;
     display: flex;
@@ -108,7 +139,7 @@ body {
     justify-content: center;
     border-radius: 1rem;
     margin: 0;
-    color: #A1A1A1;
+    color: var(--primary);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     transition: all 300ms ease;
 }
@@ -125,10 +156,10 @@ body {
 }
 
 .nav-link:hover i {
-    background: rgba(255, 138, 61, 0.1);
-    color: #FF8A3D;
+    background: rgba(95, 229, 222, 0.1);
+    color: var(--accent);
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(255, 138, 61, 0.15);
+    box-shadow: 0 6px 20px rgba(95, 229, 222, 0.15);
 }
 
 .nav-link.active {
@@ -136,9 +167,9 @@ body {
 }
 
 .nav-link.active i {
-    background: rgba(255, 138, 61, 0.1);
-    color: #FF8A3D;
-    box-shadow: 0 6px 20px rgba(255, 138, 61, 0.15);
+    background: rgba(247, 91, 82, 0.1);
+    color: var(--primary);
+    box-shadow: 0 6px 20px rgba(247, 91, 82, 0.15);
 }
 
 .nav-link::before {
@@ -180,7 +211,9 @@ body {
 }
 
 .class-card {
-    background: var(--card-bg);
+    background: var(--dark);
+    border: 1px solid rgba(95, 229, 222, 0.1);
+    box-shadow: var(--card-shadow);
     backdrop-filter: blur(20px);
     padding: 1.8rem;
     border-radius: 1.5rem;
@@ -190,25 +223,26 @@ body {
     position: relative;
     overflow: hidden;
     box-shadow: var(--card-shadow);
+    cursor: pointer;
+    user-select: none;
 }
 
 .class-card::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
     right: 0;
-    height: 100%;
-    background: var(--gradient-primary);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    z-index: 0;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(247, 91, 82, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
 }
 
 .class-card:hover {
     transform: translateY(-5px);
     border: 1px solid rgba(255, 138, 61, 0.2);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    background: rgba(42, 42, 42, 0.8);
 }
 
 .class-card:hover::before {
@@ -250,8 +284,8 @@ body {
 
 .mic-button:hover {
     transform: scale(1.05) rotate(5deg);
-    background: var(--gradient-hover);
-    box-shadow: 0 6px 25px rgba(255, 138, 61, 0.4);
+    background: var(--gradient-accent);
+    box-shadow: 0 6px 25px rgba(95, 229, 222, 0.4);
 }
 
 .sidebar {
@@ -305,7 +339,7 @@ body {
 
 #startRecordingBtn:hover {
     transform: translateY(-2px);
-    background: var(--gradient-hover);
+    background: var(--gradient-accent);
     box-shadow: 0 6px 20px rgba(255, 138, 61, 0.3);
 }
 
@@ -317,6 +351,11 @@ body {
 .recording-info h6 {
     text-align: center;
     color: #A1A1A1;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
 }
 
 .text-secondary {
@@ -325,14 +364,24 @@ body {
 
 .welcome-section h2 {
     color: #ffffff;
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.5rem;
 }
 
 .welcome-section p {
     color: #A1A1A1;
+    font-size: var(--font-size-lg);
+    font-weight: 300;
+    letter-spacing: 0.2px;
 }
 
 .class-card h3 {
     color: #ffffff;
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    letter-spacing: -0.5px;
 }
 
 .class-card p {
@@ -394,5 +443,65 @@ body {
 
 .class-card h3 {
     margin-bottom: 0;  /* Remove default margin to keep the bar close */
+}
+
+.class-card:active {
+    transform: translateY(-2px);
+    transition: all 0.1s ease;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+/* Add animations */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(247, 91, 82, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(247, 91, 82, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(247, 91, 82, 0); }
+}
+
+.class-card:hover .badge {
+    animation: pulse 2s infinite;
+}
+
+/* Recording Sidebar */
+.sidebar {
+    background: var(--dark);
+    border-left: 1px solid rgba(95, 229, 222, 0.1);
+}
+
+#startRecordingBtn {
+    background: var(--gradient-primary);
+}
+
+#startRecordingBtn:hover {
+    background: var(--gradient-accent);
+}
+
+/* Form Elements */
+.form-select {
+    background-color: var(--dark-lighter);
+    border: 1px solid rgba(95, 229, 222, 0.2);
+    color: var(--text);
+}
+
+.form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.2rem rgba(95, 229, 222, 0.25);
 }
  

@@ -37,10 +37,10 @@ app.post('/upload', upload.any(), async function (req, res) {
     try {
         console.log('Uploaded files to local server: ', req.files);
         const apiResponse = await text2SpeechGPT(req.files[0]);
-        res.send(apiResponse.text);
+        res.json(apiResponse);
     } catch (error) {
         console.error('Error processing audio:', error);
-        res.status(500).send('Error processing audio file');
+        res.status(500).json({ error: 'Error processing audio file' });
     }
 });
 

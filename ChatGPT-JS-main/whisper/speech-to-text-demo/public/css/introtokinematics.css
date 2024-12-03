@@ -1,0 +1,253 @@
+:root {
+    --sidebar-bg: #4a4a4a;
+    --card-bg: #4a4a4a;
+    --primary-color: #e85d56;
+    --sidebar-width: 280px;
+    --notes-sidebar-width: 300px;
+    --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #4a4a4a;
+    font-family: var(--font-primary);
+}
+
+.dashboard-container {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    min-height: 100vh;
+}
+
+/* Sidebar Styles - Same as course1.css */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    color: white;
+    padding: 2rem 3rem;
+    height: 100vh;
+}
+
+.logo {
+    text-align: center;
+}
+
+.logo h1 {
+    font-size: 2.5rem;
+    margin-bottom: 4rem;
+    color: white;
+    font-weight: 600;
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    color: white;
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: 500;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.nav-item:hover {
+    opacity: 1;
+}
+
+.nav-item i {
+    font-size: 1.5rem;
+}
+
+/* Main Content Styles */
+.main-content {
+    background-color: white;
+    border-radius: 2rem;
+    padding: 2rem;
+    margin: 1.5rem;
+    margin-left: 0;
+}
+
+/* Content Header */
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.content-header h1 {
+    color: var(--primary-color);
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.options-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #494949;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+/* Lecture Content */
+.lecture-title {
+    background-color: var(--card-bg);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.lecture-title h2 {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.transcription-container {
+    background-color: var(--card-bg);
+    border-radius: 1rem;
+    padding: 1.5rem;
+}
+
+.transcription-container h3 {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.transcription-container h3 .save-btn {
+    order: -1;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.transcription-text {
+    background-color: #3a3a3a;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.6;
+}
+
+/* Notes Sidebar */
+.notes-sidebar {
+    position: fixed;
+    right: -100%;
+    top: 0;
+    width: var(--notes-sidebar-width);
+    height: 100vh;
+    background-color: #f5e9dd;
+    padding: 2rem;
+    transition: right 0.3s ease;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+}
+
+/* Show when active */
+.notes-sidebar.active {
+    right: 0;
+    visibility: visible;
+    opacity: 1;
+}
+
+.notes-header {
+    position: relative;
+    margin-bottom: 2.5rem;
+    padding-top: 2rem;
+}
+
+.back-btn {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: none;
+    border: none;
+    color: #494949;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+.notes-header h2 {
+    color: var(--primary-color);
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 0;
+    margin-top: 1rem;
+}
+
+.modification-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1rem;
+    color: #494949;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.option-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #494949;
+    border-radius: 4px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+/* Add styles for the Save Preferences button */
+.preferences-save-btn {
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
+    right: 2rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    font-size: 1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.preferences-save-btn:hover {
+    opacity: 0.9;
+}
+
+.preferences-save-btn i {
+    font-size: 1.2rem;
+}
