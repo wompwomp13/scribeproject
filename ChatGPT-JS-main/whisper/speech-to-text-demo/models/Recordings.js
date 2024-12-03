@@ -9,12 +9,12 @@ const RecordingSchema = new mongoose.Schema({
     teacher: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false
     },
     class: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Class',
-        required: true
+        required: false
     },
     audioFile: {
         filename: String,
@@ -36,7 +36,8 @@ const RecordingSchema = new mongoose.Schema({
         }
     }]
 }, {
-    timestamps: true
+    timestamps: true,
+    collection: 'Lecture Recordings'
 });
 
 module.exports = mongoose.model('Recording', RecordingSchema);

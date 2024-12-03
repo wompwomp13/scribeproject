@@ -137,10 +137,19 @@ function createDownloadLink(blob, encoding) {
         try {
             let fd = new FormData();
             fd.append('data', blob);
+            const lectureTitle = document.getElementById('lectureTitle').value || 'Untitled Lecture';
+            fd.append('title', lectureTitle);
+            
             const response = await fetch('/upload', {
                 method: 'POST',
                 body: fd
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || 'Upload failed');
+            }
+            
             const data = await response.json();
             
             // Update the transcription text box
@@ -154,7 +163,8 @@ function createDownloadLink(blob, encoding) {
             button.disabled = true;
         } catch (error) {
             console.error('Error:', error);
-            document.getElementById('transcriptionText').textContent = 'Error during transcription. Please try again.';
+            document.getElementById('transcriptionText').textContent = 
+                `Error during transcription: ${error.message}. Please try again.`;
             document.getElementById('transcriptionStatus').textContent = 'Error';
         }
     }
@@ -175,7 +185,6 @@ function createDownloadLink(blob, encoding) {
 
 function uploadBlob(soundBlob, encoding) {
     let fd = new FormData();
-    fd.append('fname', Date.now().toString() + "." + encoding);
     fd.append('data', soundBlob);
     const lectureTitle = document.getElementById('lectureTitle').value || 'Untitled Lecture';
     fd.append('title', lectureTitle);
@@ -202,8 +211,16 @@ function uploadBlob(soundBlob, encoding) {
 async function loadRecordings() {
     try {
         const response = await fetch('/api/recordings');
-        const recordings = await response.json();
-        console.log('Loaded recordings:', recordings);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Loaded recordings:', data);
+        
+        if (data.success && data.recordings) {
+            // Update UI with recordings
+            // ... rest of your code ...
+        }
     } catch (error) {
         console.error('Error loading recordings:', error);
     }
