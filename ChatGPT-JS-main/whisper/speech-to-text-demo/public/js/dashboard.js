@@ -7,12 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle microphone button click
     const handleMicButtonClick = () => {
-        sidebar.classList.add('active');
+        sidebar.classList.add('open');
     };
 
     // Handle sidebar close
     const handleSidebarClose = () => {
-        sidebar.classList.remove('active');
+        sidebar.classList.remove('open');
     };
 
     // Handle recording start
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close sidebar when clicking outside
     document.addEventListener('click', (e) => {
-        if (!sidebar.contains(e.target) && !micButton.contains(e.target) && sidebar.classList.contains('active')) {
+        if (!sidebar.contains(e.target) && !micButton.contains(e.target) && sidebar.classList.contains('open')) {
             handleSidebarClose();
         }
     });

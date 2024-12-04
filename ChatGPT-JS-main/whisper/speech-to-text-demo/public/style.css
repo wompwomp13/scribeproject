@@ -1,19 +1,28 @@
-/* Recording Studio Styles */
-.content-area {
-    padding: 2rem;
+:root {
+    --sidebar-bg: #4a4a4a;
+    --card-bg: #4a4a4a;
+    --primary-color: #ff7171;
+    --sidebar-width: 280px;
+    --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+    --record-color: #2ecc71;
+    --stop-color: #e74c3c;
 }
 
-.studio-header {
-    margin-bottom: 2rem;
+/* Main Content Styles */
+.content-area {
+    background-color: white;
+    border-radius: 2rem;
+    padding: 3rem;
+    margin: 1.5rem;
+    margin-left: 0;
 }
 
 .studio-header h2 {
-    font-weight: 600;
-    color: #ffffff;
-}
-
-.studio-header p {
-    color: #A1A1A1;
+    color: var(--primary-color);
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
 }
 
 /* Recording Controls */
@@ -24,9 +33,6 @@
     background: var(--card-bg);
     padding: 1.8rem;
     border-radius: 1.2rem;
-    box-shadow: var(--card-shadow);
-    border: var(--card-border);
-    backdrop-filter: blur(20px);
 }
 
 .control-btn {
@@ -34,45 +40,35 @@
     border: none;
     border-radius: 12px;
     font-weight: 600;
-    font-size: var(--font-size-base);
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.control-btn i {
-    font-size: 1.4rem;
     transition: all 0.3s ease;
 }
 
 .record-btn {
-    background: var(--gradient-primary);
+    background: var(--record-color);
     color: white;
-    box-shadow: 0 4px 15px rgba(255, 138, 61, 0.2);
 }
 
 .record-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 138, 61, 0.3);
+    opacity: 0.9;
 }
 
 .record-btn.recording {
     animation: pulse 2s infinite;
-    background: #dc3545;
+    background: var(--stop-color);
 }
 
 .stop-btn {
-    background: rgba(42, 42, 42, 0.8);
+    background: var(--stop-color);
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .stop-btn:hover:not(:disabled) {
-    background: #dc3545;
-    border-color: #dc3545;
+    opacity: 0.9;
     transform: translateY(-2px);
 }
 
@@ -81,178 +77,128 @@
     cursor: not-allowed;
 }
 
-.recording-status {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-left: auto;
-    padding: 0.5rem 1rem;
-    background: rgba(26, 26, 26, 0.5);
-    border-radius: 8px;
-    backdrop-filter: blur(10px);
-}
-
-.status-text {
-    color: #A1A1A1;
-    font-size: var(--font-size-sm);
-}
-
-.timer {
-    font-family: var(--font-primary);
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: var(--primary);
-    min-width: 80px;
-    text-align: right;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-    }
-}
-
-.recording-dot {
-    width: 10px;
-    height: 10px;
-    background: #dc3545;
-    border-radius: 50%;
-    margin-right: 8px;
-    animation: blink 1s infinite;
-}
-
-@keyframes blink {
-    0% { opacity: 1; }
-    50% { opacity: 0.4; }
-    100% { opacity: 1; }
-}
-
 /* Transcription Styles */
 .transcription-container {
-    background: #2A2A2A;
-    border-radius: 12px;
+    background: var(--card-bg);
+    border-radius: 1.2rem;
     padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     margin-top: 2rem;
 }
 
-.transcription-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
 .transcription-header h3 {
-    color: #ffffff;
-}
-
-.status-badge {
-    padding: 0.25rem 0.75rem;
-    background: #FF8A3D;
-    color: #ffffff;
-    border-radius: 9999px;
-    font-size: 0.875rem;
+    color: white;
+    font-size: 1.6rem;
     font-weight: 500;
 }
 
+.status-badge {
+    background: var(--primary-color);
+    color: white;
+}
+
 .transcription-box {
-    background: #1A1A1A;
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.8rem;
     padding: 1.5rem;
 }
 
 .transcription-content {
-    min-height: 200px;
-    max-height: 400px;
-    overflow-y: auto;
-    font-size: 1.1rem;
-    line-height: 1.6;
-    color: #ffffff;
-    padding: 1rem;
-    background: #2A2A2A;
-    border-radius: 8px;
-    border: 1px solid #FF8A3D;
-    margin-bottom: 1rem;
-}
-
-.transcription-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .action-btn {
-    padding: 0.5rem 1rem;
-    border: 1px solid #FF8A3D;
-    border-radius: 6px;
-    background: #2A2A2A;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    background: var(--primary-color);
+    border: none;
+    color: white;
+    padding: 0.8rem 1.5rem;
+    border-radius: 0.8rem;
     transition: all 0.2s ease;
 }
 
 .action-btn:hover {
-    background: #FF8A3D;
+    opacity: 0.9;
+    transform: translateY(-2px);
 }
 
-/* Recordings List */
+/* Recordings Section */
 .recordings-section {
-    background: #2A2A2A;
-    border-radius: 12px;
+    background: var(--card-bg);
+    border-radius: 1.2rem;
     padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     margin-top: 2rem;
+    color: white;
 }
 
-.recordings-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+.recordings-section h3 {
+    font-size: 1.6rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
 }
 
 .recordings-list li {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.8rem;
     padding: 1rem;
-    border-bottom: 1px solid #FF8A3D;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.recordings-list li:last-child {
-    border-bottom: none;
+/* Lecture Title Input */
+.lecture-title-container {
+    background: var(--card-bg);
+    border-radius: 1.2rem;
+    padding: 1.5rem;
 }
 
-.recording-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+.lecture-title-input {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 0.8rem;
+    color: white;
+    font-size: 1.2rem;
+    padding: 1rem;
+    width: 100%;
 }
 
-.recording-item audio {
-    flex: 1;
-    filter: invert(100%);
+.lecture-title-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.lecture-title-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Recording Timer */
+.recording-status {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.8rem 1.5rem;
+    border-radius: 0.8rem;
+    color: white;
+}
+
+.timer {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.2rem;
+}
+
+/* Recording Dot Animation */
+.recording-dot {
+    background: var(--stop-color);
 }
 
 /* Form Elements */
 .form-select {
-    background-color: #2A2A2A;
-    border: 1px solid #FF8A3D;
-    color: #ffffff;
-}
-
-.form-select:focus {
-    border-color: #FF6B1A;
-    box-shadow: 0 0 0 0.2rem rgba(255, 138, 61, 0.25);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 0.8rem;
 }
 
 .form-label {
-    color: #A1A1A1;
+    color: white;
 }
 
 /* Custom Scrollbar */
@@ -261,61 +207,14 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: #1A1A1A;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #FF8A3D;
+    background: var(--primary-color);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #FF6B1A;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .content-area {
-        padding: 1rem;
-    }
-
-    .recording-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .recording-status {
-        margin-left: 0;
-        margin-top: 1rem;
-        justify-content: center;
-    }
-}
-
-/* Lecture Title Input */
-.lecture-title-container {
-    background: var(--card-bg);
-    border: var(--card-border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: var(--card-shadow);
-}
-
-.lecture-title-input {
-    width: 100%;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid rgba(95, 229, 222, 0.1);
-    color: var(--text-primary);
-    font-size: var(--font-size-lg);
-    padding: 0.5rem 0;
-    transition: all 0.3s ease;
-}
-
-.lecture-title-input:focus {
-    outline: none;
-    border-bottom-color: var(--primary);
-}
-
-.lecture-title-input::placeholder {
-    color: var(--text-muted);
+    opacity: 0.9;
 }

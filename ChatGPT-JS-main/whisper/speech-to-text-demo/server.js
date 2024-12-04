@@ -5,6 +5,8 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const Recording = require('./models/Recordings');
 const { text2SpeechGPT } = require('./speechToText.js');
+const Groq = require('groq-sdk');
+require('dotenv').config();
 
 // Create uploads directory if it doesn't exist
 const fs = require('fs');
@@ -223,6 +225,61 @@ app.post('/api/recordings/:id/notes', async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to save notes'
+        });
+    }
+});
+
+// Add this new endpoint after your existing routes
+app.post('/api/get-definition', async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) {
+            return res.status(400).json({
+                success: false,
+                error: 'No text provided'
+            });
+        }
+
+        if (!process.env.GROQ_API_KEY) {
+            console.error('GROQ API key not found in environment variables');
+            return res.status(500).json({
+                success: false,
+                error: 'API configuration error'
+            });
+        }
+
+        const groq = new Groq({ 
+            apiKey: process.env.GROQ_API_KEY 
+        });
+
+        console.log('Sending request to Groq API...'); // Debug log
+
+        const completion = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a helpful academic assistant. When given a term or phrase, provide a clear, concise definition or explanation in an academic context."
+                },
+                {
+                    role: "user",
+                    content: `Define this term or concept: "${text}"`
+                }
+            ],
+            model: "llama3-8b-8192",  // Changed to a more reliable model
+            temperature: 0.5,
+            max_tokens: 200,
+        });
+
+        console.log('Received response from Groq API'); // Debug log
+
+        const definition = completion.choices[0]?.message?.content || "No definition available";
+        
+        res.json({ success: true, definition });
+    } catch (error) {
+        console.error('Definition error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message || 'Failed to get definition'
         });
     }
 });
