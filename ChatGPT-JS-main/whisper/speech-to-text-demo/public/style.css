@@ -4,7 +4,7 @@
     --primary-color: #ff7171;
     --sidebar-width: 280px;
     --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
-    --record-color: #2ecc71;
+    --record-color: #f5e9dd;
     --stop-color: #e74c3c;
 }
 
@@ -103,8 +103,26 @@
 }
 
 .transcription-content {
-    color: white;
+    width: 100%;
+    min-height: 200px;
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.8rem;
+    color: white;
+    padding: 1rem;
+    font-family: var(--font-primary);
+    resize: vertical;
+    margin-bottom: 1rem;
+}
+
+.transcription-content:disabled {
+    background: rgba(255, 255, 255, 0.05);
+    cursor: not-allowed;
+}
+
+.transcription-content:focus {
+    outline: none;
+    border-color: var(--primary-color);
 }
 
 .action-btn {
@@ -121,27 +139,16 @@
     transform: translateY(-2px);
 }
 
+/* Style for disabled save button */
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* Recordings Section */
 .recordings-section {
-    background: var(--card-bg);
-    border-radius: 1.2rem;
-    padding: 1.5rem;
-    margin-top: 2rem;
-    color: white;
-}
-
-.recordings-section h3 {
-    font-size: 1.6rem;
-    font-weight: 500;
-    margin-bottom: 1rem;
-}
-
-.recordings-list li {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 0.8rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: none;
 }
 
 /* Lecture Title Input */
@@ -217,4 +224,79 @@
 
 ::-webkit-scrollbar-thumb:hover {
     opacity: 0.9;
+}
+
+/* Update existing transcription styles */
+.transcription-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.status-badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.status-ready {
+    background: #f5e9dd;
+    color: #4a4a4a;
+    margin: 1rem 0;
+}
+
+.status-processing {
+    background: #f5e9dd;
+    color: #4a4a4a;
+}
+
+.status-success {
+    background: #e85d56;
+    color: white;
+}
+
+.status-error {
+    background: #e74c3c;
+    color: white;
+}
+
+/* Style for transcribe button */
+.transcribe-btn {
+    background: #f5e9dd;
+    color: #4a4a4a;
+}
+
+.transcribe-btn:hover:not(:disabled) {
+    background: #e6d6c4;
+}
+
+.transcribe-btn:disabled {
+    background: rgba(245, 233, 221, 0.5);
+}
+
+/* Update action button styles */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.action-btn i {
+    font-size: 1.1rem;
 }

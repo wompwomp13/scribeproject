@@ -73,17 +73,26 @@ app.post('/upload', upload.single('data'), async (req, res) => {
             throw new Error('No file uploaded');
         }
 
-        console.log('Uploaded file:', req.file);
-        console.log('Form data:', req.body);
-
         // Transcribe audio
         const apiResponse = await text2SpeechGPT({
             filename: req.file.filename,
             path: req.file.path
         });
-        console.log('Transcription response:', apiResponse);
 
-        // Save to MongoDB
+        // If preview mode, just return the transcription
+        if (req.query.preview === 'true') {
+            // Clean up the uploaded file since we're not saving it yet
+            fs.unlink(req.file.path, (err) => {
+                if (err) console.error('Error deleting preview file:', err);
+            });
+            
+            return res.json({
+                success: true,
+                text: apiResponse.text
+            });
+        }
+
+        // Save to MongoDB with edited transcription if provided
         const recording = new Recording({
             title: req.body.title || 'Untitled Recording',
             audioFile: {
@@ -91,28 +100,25 @@ app.post('/upload', upload.single('data'), async (req, res) => {
                 path: req.file.path
             },
             transcription: {
-                text: apiResponse.text,
+                text: req.body.transcription || apiResponse.text,
                 createdAt: new Date()
             }
         });
 
         const savedRecording = await recording.save();
-        console.log('Recording saved:', savedRecording);
 
         res.json({
             success: true,
-            text: apiResponse.text,
             recording: {
                 id: savedRecording._id,
                 title: savedRecording.title,
                 date: savedRecording.createdAt,
                 audioUrl: `/uploads/${req.file.filename}`,
-                text: apiResponse.text
+                text: savedRecording.transcription.text
             }
         });
     } catch (error) {
         console.error('Upload error:', error);
-        // Clean up uploaded file if there's an error
         if (req.file) {
             fs.unlink(req.file.path, (err) => {
                 if (err) console.error('Error deleting file:', err);
@@ -280,6 +286,134 @@ app.post('/api/get-definition', async (req, res) => {
         res.status(500).json({ 
             success: false, 
             error: error.message || 'Failed to get definition'
+        });
+    }
+});
+
+// Add this with your other routes
+app.delete('/api/recordings/:id', async (req, res) => {
+    try {
+        const recording = await Recording.findById(req.params.id);
+        
+        if (!recording) {
+            return res.status(404).json({
+                success: false,
+                error: 'Recording not found'
+            });
+        }
+
+        // Delete the audio file from uploads directory
+        if (recording.audioFile && recording.audioFile.filename) {
+            const filePath = path.join(__dirname, 'uploads', recording.audioFile.filename);
+            fs.unlink(filePath, (err) => {
+                if (err) console.error('Error deleting audio file:', err);
+            });
+        }
+
+        // Delete the recording from database
+        await Recording.findByIdAndDelete(req.params.id);
+
+        res.json({
+            success: true,
+            message: 'Recording deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to delete recording'
+        });
+    }
+});
+
+// Add this new endpoint after your existing routes
+app.post('/api/summarize-lecture', async (req, res) => {
+    try {
+        const { transcription } = req.body;
+        if (!transcription) {
+            return res.status(400).json({
+                success: false,
+                error: 'No transcription provided'
+            });
+        }
+
+        const groq = new Groq({ 
+            apiKey: process.env.GROQ_API_KEY 
+        });
+
+        const completion = await groq.chat.completions.create({
+            messages: [
+                {
+                    role: "system",
+                    content: `You are an expert at summarizing academic lectures. Create clear, well-structured summaries that are easy to understand.
+                    Your response MUST be in valid JSON format with the following structure (no additional text, just the JSON object):
+                    {
+                        "title": "Main topic of the lecture",
+                        "overview": "Brief 2-3 sentence overview",
+                        "keyPoints": [
+                            {
+                                "heading": "Key point heading",
+                                "details": ["Detail 1", "Detail 2"]
+                            }
+                        ],
+                        "importantConcepts": ["Concept 1", "Concept 2"],
+                        "conclusion": "Brief conclusion"
+                    }
+                    IMPORTANT: Ensure your response is ONLY the JSON object, with no additional text before or after.`
+                },
+                {
+                    role: "user",
+                    content: `Create a JSON summary of this lecture: "${transcription}"`
+                }
+            ],
+            model: "llama3-8b-8192",
+            temperature: 0.3, // Reduced temperature for more consistent output
+            max_tokens: 1000,
+        });
+
+        let summary;
+        try {
+            const content = completion.choices[0]?.message?.content || '';
+            
+            // Try to extract JSON if it's wrapped in other text
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            const jsonStr = jsonMatch ? jsonMatch[0] : content;
+            
+            try {
+                summary = JSON.parse(jsonStr);
+            } catch (parseError) {
+                // If parsing fails, create a structured summary from the text
+                console.log('Failed to parse JSON, creating structured format');
+                summary = {
+                    title: "Lecture Summary",
+                    overview: content.substring(0, 200) + "...",
+                    keyPoints: [{
+                        heading: "Main Points",
+                        details: content.split('\n').filter(line => line.trim().length > 0).slice(0, 5)
+                    }],
+                    importantConcepts: [],
+                    conclusion: "Please see the full transcription for more details."
+                };
+            }
+        } catch (error) {
+            console.error('Response parsing error:', error);
+            throw new Error('Failed to format summary properly');
+        }
+
+        // Validate the summary structure
+        if (!summary.title || !summary.overview || !Array.isArray(summary.keyPoints)) {
+            throw new Error('Invalid summary structure');
+        }
+
+        res.json({ 
+            success: true, 
+            summary 
+        });
+    } catch (error) {
+        console.error('Summarization error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message || 'Failed to generate summary'
         });
     }
 });

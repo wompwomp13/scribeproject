@@ -32,10 +32,15 @@
         <!-- Main Content -->
         <main class="main-content">
             <div class="lecture-header">
-                <h1 id="lectureTitle">Loading...</h1>
-                <div class="lecture-meta">
-                    <span id="lectureDate"></span>
+                <div class="header-content">
+                    <h1 id="lectureTitle">Loading...</h1>
+                    <div class="lecture-meta">
+                        <span id="lectureDate"></span>
+                    </div>
                 </div>
+                <button id="modifyNotesBtn" class="modify-notes-btn" aria-label="Modify Notes">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
             </div>
 
             <div class="breadcrumb">
@@ -67,6 +72,39 @@
                 </section>
             </div>
         </main>
+    </div>
+
+    <div class="modify-sidebar" id="modifySidebar">
+        <div class="sidebar-header">
+            <h3>Modify Your Notes</h3>
+            <button class="close-btn" id="closeSidebar" aria-label="Close sidebar">×</button>
+        </div>
+        <div class="sidebar-content">
+            <p>Select modifications to apply to your notes:</p>
+            <div class="modification-options">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="summarization">
+                    <label class="form-check-label" for="summarization">
+                        Summarization
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="flashcards">
+                    <label class="form-check-label" for="flashcards">
+                        Flashcards
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="auditory">
+                    <label class="form-check-label" for="auditory">
+                        Auditory
+                    </label>
+                </div>
+            </div>
+            <button class="save-preferences-btn" id="savePreferences">
+                Save Preferences
+            </button>
+        </div>
     </div>
 
     <script src="/js/lecture-notes.js"></script>

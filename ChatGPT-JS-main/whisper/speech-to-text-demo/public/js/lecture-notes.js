@@ -140,7 +140,210 @@ class LectureNotes {
     }
 }
 
-// Initialize when page loads
+// Add this class to handle the modify notes functionality
+class ModifyNotesHandler {
+    constructor() {
+        this.sidebar = document.getElementById('modifySidebar');
+        this.modifyBtn = document.getElementById('modifyNotesBtn');
+        this.closeBtn = document.getElementById('closeSidebar');
+        this.saveBtn = document.getElementById('savePreferences');
+        this.contentGrid = document.querySelector('.content-grid');
+        this.transcriptionText = document.getElementById('transcriptionText');
+        
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        // Toggle sidebar
+        this.modifyBtn.addEventListener('click', () => this.toggleSidebar());
+        this.closeBtn.addEventListener('click', () => this.closeSidebar());
+        
+        // Handle click outside
+        document.addEventListener('click', (e) => {
+            if (!this.sidebar.contains(e.target) && 
+                !this.modifyBtn.contains(e.target) && 
+                this.sidebar.classList.contains('active')) {
+                this.closeSidebar();
+            }
+        });
+
+        // Save preferences
+        this.saveBtn.addEventListener('click', () => this.handleSavePreferences());
+    }
+
+    toggleSidebar() {
+        this.sidebar.classList.toggle('active');
+    }
+
+    closeSidebar() {
+        this.sidebar.classList.remove('active');
+    }
+
+    async handleSavePreferences() {
+        const preferences = {
+            summarization: document.getElementById('summarization').checked,
+            flashcards: document.getElementById('flashcards').checked,
+            auditory: document.getElementById('auditory').checked
+        };
+
+        // Save preferences to localStorage
+        localStorage.setItem('notePreferences', JSON.stringify(preferences));
+
+        // Handle summarization if selected
+        if (preferences.summarization) {
+            await this.handleSummarization();
+        }
+
+        // Show success message
+        alert('Preferences saved successfully!');
+        this.closeSidebar();
+    }
+
+    async handleSummarization() {
+        try {
+            // Show loading state
+            this.showLoadingState();
+
+            // Get the transcription text
+            const transcription = this.transcriptionText.textContent;
+
+            // Send request to summarize
+            const response = await fetch('/api/summarize-lecture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ transcription })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get summary');
+            }
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to generate summary');
+            }
+
+            // Create and add the summary section
+            this.createSummarySection(data.summary);
+
+        } catch (error) {
+            console.error('Summarization error:', error);
+            alert('Failed to generate summary: ' + error.message);
+        } finally {
+            this.hideLoadingState();
+        }
+    }
+
+    createSummarySection(summary) {
+        // Remove existing summary section if it exists
+        const existingSummary = document.querySelector('.summary-section');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+
+        // Clean up the summary data
+        const cleanSummary = {
+            title: this.cleanText(summary.title),
+            overview: this.cleanText(summary.overview),
+            keyPoints: Array.isArray(summary.keyPoints) ? summary.keyPoints.map(point => ({
+                heading: this.cleanText(point.heading),
+                details: Array.isArray(point.details) ? point.details.map(detail => this.cleanText(detail)) : []
+            })) : [],
+            importantConcepts: Array.isArray(summary.importantConcepts) ? 
+                summary.importantConcepts.map(concept => this.cleanText(concept)) : [],
+            conclusion: this.cleanText(summary.conclusion)
+        };
+
+        // Create new summary section
+        const summarySection = document.createElement('section');
+        summarySection.className = 'summary-section';
+
+        // Create the HTML structure
+        summarySection.innerHTML = `
+            <h2>Lecture Summary</h2>
+            <div class="summary-content">
+                <h3 class="summary-title">${cleanSummary.title}</h3>
+                
+                <div class="summary-overview">
+                    <p>${cleanSummary.overview}</p>
+                </div>
+
+                <div class="key-points">
+                    <h4>Key Points</h4>
+                    ${cleanSummary.keyPoints.map(point => `
+                        <div class="key-point">
+                            <h5>${point.heading}</h5>
+                            <ul>
+                                ${point.details.map(detail => `
+                                    <li>${detail}</li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `).join('')}
+                </div>
+
+                ${cleanSummary.importantConcepts.length > 0 ? `
+                    <div class="important-concepts">
+                        <h4>Important Concepts</h4>
+                        <div class="concepts-grid">
+                            ${cleanSummary.importantConcepts.map(concept => `
+                                <div class="concept-card">
+                                    <i class="bi bi-lightbulb"></i>
+                                    <span>${concept}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="summary-conclusion">
+                    <h4>Conclusion</h4>
+                    <p>${cleanSummary.conclusion}</p>
+                </div>
+            </div>
+        `;
+
+        // Add to content grid
+        this.contentGrid.appendChild(summarySection);
+    }
+
+    // Add this helper method to clean up text
+    cleanText(text) {
+        if (!text) return '';
+        
+        // Remove JSON-like formatting and quotes
+        return text
+            .replace(/^["']|["']$/g, '') // Remove surrounding quotes
+            .replace(/\\n/g, ' ') // Replace newlines with spaces
+            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+            .replace(/[{}"]/g, '') // Remove curly braces and quotes
+            .replace(/^\s*[a-z]+:\s*/i, '') // Remove property names (e.g., "title:", "overview:")
+            .trim(); // Remove leading/trailing whitespace
+    }
+
+    showLoadingState() {
+        const loader = document.createElement('div');
+        loader.className = 'summary-loader';
+        loader.innerHTML = `
+            <div class="loader-spinner"></div>
+            <p>Generating summary...</p>
+        `;
+        document.body.appendChild(loader);
+    }
+
+    hideLoadingState() {
+        const loader = document.querySelector('.summary-loader');
+        if (loader) {
+            loader.remove();
+        }
+    }
+}
+
+// Initialize both handlers when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    new ModifyNotesHandler();
     new LectureNotes();
 }); 

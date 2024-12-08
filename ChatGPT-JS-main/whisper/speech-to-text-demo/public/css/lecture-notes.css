@@ -270,4 +270,297 @@ h2 {
     .definition-paper::before {
         margin-left: 2.5rem;
     }
+}
+
+.lecture-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modify-notes-btn {
+    position: absolute;
+    top: 3.5rem;
+    right: 2.5rem;
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0.8rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.modify-notes-btn:hover {
+    background-color: rgba(232, 93, 86, 0.1);
+    transform: scale(1.1);
+}
+
+.modify-sidebar {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background-color: #f5e9dd;
+    color: #333333;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    border-top-left-radius: 25px;
+    border-bottom-left-radius: 25px;
+    background-image: 
+        radial-gradient(circle at 90% 10%, rgba(232, 93, 86, 0.1) 0%, transparent 60%),
+        radial-gradient(circle at 10% 90%, rgba(232, 93, 86, 0.08) 0%, transparent 50%);
+}
+
+.modify-sidebar.active {
+    right: 0;
+    transform: translateX(0) rotate(0deg);
+}
+
+.modify-sidebar::before {
+    content: '';
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    right: 40px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(44, 62, 80, 0.1), transparent);
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px dashed rgba(44, 62, 80, 0.1);
+}
+
+.sidebar-header h3 {
+    color: #2c3e50;
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 600;
+    position: relative;
+}
+
+.modify-sidebar .close-btn {
+    background: none;
+    border: none;
+    color: #2c3e50;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.modify-sidebar .close-btn:hover {
+    transform: rotate(90deg);
+}
+
+.modification-options {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.modify-sidebar .form-check {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 10px;
+    transition: transform 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.modify-sidebar .form-check:hover {
+    transform: translateX(5px);
+}
+
+.modify-sidebar .form-check:last-child {
+    margin-bottom: 0;
+}
+
+.modify-sidebar .form-check-input {
+    margin-right: 1rem;
+    transform: scale(1.2);
+}
+
+.modify-sidebar .form-check-label {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.modify-sidebar p {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.save-preferences-btn {
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(232, 93, 86, 0.2);
+    margin-top: 2rem;
+}
+
+.save-preferences-btn:hover {
+    background-color: #d14a44;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(232, 93, 86, 0.3);
+}
+
+/* Summary Section Styles */
+.summary-section {
+    grid-column: 1 / -1;
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: 1rem;
+    color: white;
+    margin-top: 2rem;
+}
+
+.summary-content {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    line-height: 1.6;
+}
+
+.summary-title {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.summary-overview {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--primary-color);
+}
+
+.key-points h4, 
+.important-concepts h4,
+.summary-conclusion h4 {
+    font-size: 1.4rem;
+    color: var(--primary-color);
+    margin: 2rem 0 1rem;
+    font-weight: 600;
+}
+
+.key-point {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+}
+
+.key-point h5 {
+    font-size: 1.2rem;
+    color: white;
+    margin-bottom: 0.8rem;
+    font-weight: 500;
+}
+
+.key-point ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.key-point li {
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.concept-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    transition: transform 0.2s ease;
+}
+
+.concept-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.concept-card i {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+}
+
+.summary-conclusion {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--primary-color);
+}
+
+.summary-conclusion p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+}
+
+/* Loading Spinner */
+.summary-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    color: white;
+}
+
+.loader-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 } 

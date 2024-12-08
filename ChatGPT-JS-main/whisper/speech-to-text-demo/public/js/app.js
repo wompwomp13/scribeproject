@@ -13,6 +13,7 @@ let audioContext;
 let encodingTypeSelect = document.getElementById("encodingTypeSelect");
 let recordButton = document.getElementById("recordButton");
 let stopButton = document.getElementById("stopButton");
+const transcribeButton = document.getElementById('transcribeButton');
 
 //add events to those 2 buttons
 recordButton.addEventListener("click", startRecording);
@@ -22,6 +23,9 @@ stopButton.addEventListener("click", stopRecording);
 let timerInterval;
 let recordingStartTime;
 let isRecording = false;
+let currentRecordingBlob = null;
+const transcriptionText = document.getElementById('transcriptionText');
+const saveButton = document.getElementById('saveRecording');
 
 // Update the startRecording function
 function startRecording() {
@@ -87,6 +91,7 @@ function stopRecording() {
 
     stopButton.disabled = true;
     recordButton.disabled = false;
+    transcribeButton.disabled = false; // Enable transcribe button after recording
     
     // Update UI to show stopped state
     recordButton.classList.remove('recording');
@@ -124,23 +129,22 @@ window.onbeforeunload = function() {
     }
 };
 
+// Update the createDownloadLink function
 function createDownloadLink(blob, encoding) {
-    let url = URL.createObjectURL(blob);
-    let au = document.createElement('audio');
-    let li = document.createElement('li');
-    let link = document.createElement('a');
-    let button = document.createElement('button');
+    currentRecordingBlob = blob; // Store the blob for later use
     
-    button.innerText = "Speech To Text";
-    button.onclick = async function () {
-        console.log("Uploading blob...");
+    // Setup transcribe button handler
+    transcribeButton.onclick = async function() {
         try {
+            transcribeButton.disabled = true;
+            const status = document.getElementById('transcriptionStatus');
+            status.className = 'status-badge status-processing';
+            status.textContent = 'Processing...';
+
             let fd = new FormData();
             fd.append('data', blob);
-            const lectureTitle = document.getElementById('lectureTitle').value || 'Untitled Lecture';
-            fd.append('title', lectureTitle);
             
-            const response = await fetch('/upload', {
+            const response = await fetch('/upload?preview=true', {
                 method: 'POST',
                 body: fd
             });
@@ -152,36 +156,84 @@ function createDownloadLink(blob, encoding) {
             
             const data = await response.json();
             
-            // Update the transcription text box
-            const transcriptionText = document.getElementById('transcriptionText');
-            transcriptionText.textContent = data.text || 'No transcription available';
+            // Enable editing and save button
+            transcriptionText.value = data.text || 'No transcription available';
+            transcriptionText.disabled = false;
+            saveButton.disabled = false;
             
             // Update the status
-            document.getElementById('transcriptionStatus').textContent = 'Complete';
+            status.className = 'status-badge status-success';
+            status.textContent = 'Ready to edit';
             
-            // Disable the button after successful transcription
-            button.disabled = true;
         } catch (error) {
             console.error('Error:', error);
-            document.getElementById('transcriptionText').textContent = 
-                `Error during transcription: ${error.message}. Please try again.`;
-            document.getElementById('transcriptionStatus').textContent = 'Error';
+            transcriptionText.value = `Error during transcription: ${error.message}. Please try again.`;
+            const status = document.getElementById('transcriptionStatus');
+            status.className = 'status-badge status-error';
+            status.textContent = 'Error';
+            transcribeButton.disabled = false;
         }
-    }
-
-    au.controls = true;
-    au.src = url;
-
-    link.href = url;
-    link.download = new Date().toISOString() + '.' + encoding;
-    link.innerHTML = link.download;
-
-    li.appendChild(au);
-    li.appendChild(link);
-    li.appendChild(button);
-
-    recordingsList.appendChild(li);
+    };
 }
+
+// Update save button handler
+saveButton.addEventListener('click', async () => {
+    try {
+        if (!currentRecordingBlob) {
+            throw new Error('No recording available');
+        }
+
+        const lectureTitle = document.getElementById('lectureTitle').value || 'Untitled Lecture';
+        const editedTranscription = transcriptionText.value;
+
+        let fd = new FormData();
+        fd.append('data', currentRecordingBlob);
+        fd.append('title', lectureTitle);
+        fd.append('transcription', editedTranscription);
+
+        saveButton.disabled = true;
+        const status = document.getElementById('transcriptionStatus');
+        status.className = 'status-badge status-processing';
+        status.textContent = 'Saving...';
+
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: fd
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save recording');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+            status.className = 'status-badge status-success';
+            status.textContent = 'Saved!';
+            
+            // Add a timeout to revert back to ready state
+            setTimeout(() => {
+                status.className = 'status-badge status-ready';
+                status.textContent = 'Ready';
+            }, 2000);
+
+            // Clear the current recording
+            currentRecordingBlob = null;
+            // Disable editing
+            transcriptionText.disabled = true;
+            transcribeButton.disabled = true;
+        } else {
+            throw new Error(data.error || 'Failed to save recording');
+        }
+    } catch (error) {
+        console.error('Save error:', error);
+        const status = document.getElementById('transcriptionStatus');
+        status.className = 'status-badge status-error';
+        status.textContent = 'Save failed';
+        saveButton.disabled = false;
+        alert('Failed to save recording: ' + error.message);
+    }
+});
 
 function uploadBlob(soundBlob, encoding) {
     let fd = new FormData();

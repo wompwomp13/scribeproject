@@ -75,29 +75,24 @@
                     <div class="transcription-header">
                         <h3>Live Transcription</h3>
                         <div class="transcription-status">
-                            <span id="transcriptionStatus" class="status-badge">Ready</span>
+                            <span id="transcriptionStatus" class="status-badge status-ready">Ready</span>
                         </div>
                     </div>
                     <div class="transcription-box">
-                        <div id="transcriptionText" class="transcription-content">
-                            Your transcription will appear here...
-                        </div>
+                        <textarea 
+                            id="transcriptionText" 
+                            class="transcription-content"
+                            placeholder="Your transcription will appear here..."
+                            disabled
+                        ></textarea>
                         <div class="transcription-actions">
-                            <button id="copyTranscription" class="action-btn">
-                                <i class="bi bi-clipboard"></i> Copy
+                            <button id="transcribeButton" class="action-btn transcribe-btn" disabled>
+                                <i class="bi bi-soundwave"></i> Speech to Text
                             </button>
-                            <button id="downloadTranscription" class="action-btn">
-                                <i class="bi bi-download"></i> Download
+                            <button id="saveRecording" class="action-btn" disabled>
+                                <i class="bi bi-save"></i> Save Recording
                             </button>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Recordings List -->
-                <div class="recordings-section">
-                    <h3>Recent Recordings</h3>
-                    <div class="recordings-container">
-                        <ol id="recordingsList" class="recordings-list"></ol>
                     </div>
                 </div>
             </div>
