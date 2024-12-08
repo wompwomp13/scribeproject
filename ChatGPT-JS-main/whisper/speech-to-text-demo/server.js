@@ -341,6 +341,8 @@ app.post('/api/summarize-lecture', async (req, res) => {
             apiKey: process.env.GROQ_API_KEY 
         });
 
+        console.log('Sending request to Groq API...');
+
         const completion = await groq.chat.completions.create({
             messages: [
                 {
@@ -359,7 +361,7 @@ app.post('/api/summarize-lecture', async (req, res) => {
                         "importantConcepts": ["Concept 1", "Concept 2"],
                         "conclusion": "Brief conclusion"
                     }
-                    IMPORTANT: Ensure your response is ONLY the JSON object, with no additional text before or after.`
+                    IMPORTANT: Return ONLY the JSON object above, with no markdown formatting or additional text.`
                 },
                 {
                     role: "user",
@@ -367,32 +369,74 @@ app.post('/api/summarize-lecture', async (req, res) => {
                 }
             ],
             model: "llama3-8b-8192",
-            temperature: 0.3, // Reduced temperature for more consistent output
+            temperature: 0.3,
             max_tokens: 1000,
         });
 
         let summary;
         try {
             const content = completion.choices[0]?.message?.content || '';
+            console.log('Raw API response:', content);
+
+            // Clean and format the JSON string before parsing
+            let jsonStr = content;
             
-            // Try to extract JSON if it's wrapped in other text
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            const jsonStr = jsonMatch ? jsonMatch[0] : content;
+            // Ensure the JSON is properly formatted
+            if (!content.endsWith('}')) {
+                // Add missing closing brackets and braces if needed
+                if (content.includes('"importantConcepts":')) {
+                    jsonStr = content + '],"conclusion":""}';
+                } else {
+                    jsonStr = content + '}';
+                }
+            }
+
+            // Remove any trailing commas before closing brackets
+            jsonStr = jsonStr.replace(/,(\s*[\]}])/g, '$1');
             
+            // Fix newlines in strings
+            jsonStr = jsonStr.replace(/\n/g, ' ').replace(/\r/g, '');
+            
+            console.log('Cleaned JSON string:', jsonStr);
+
             try {
                 summary = JSON.parse(jsonStr);
+                console.log('Successfully parsed JSON:', summary);
             } catch (parseError) {
-                // If parsing fails, create a structured summary from the text
-                console.log('Failed to parse JSON, creating structured format');
+                console.log('JSON parse error:', parseError);
+                console.log('Creating fallback structure...');
+                
+                // Create a more structured fallback format
+                const lines = content.split('\n').filter(line => line.trim());
+                
+                // Extract title and overview from the partial JSON
+                const titleMatch = content.match(/"title":\s*"([^"]+)"/);
+                const overviewMatch = content.match(/"overview":\s*"([^"]+)"/);
+                const keyPointsMatch = content.match(/"keyPoints":\s*\[(.*?)\]/s);
+                
                 summary = {
-                    title: "Lecture Summary",
-                    overview: content.substring(0, 200) + "...",
-                    keyPoints: [{
-                        heading: "Main Points",
-                        details: content.split('\n').filter(line => line.trim().length > 0).slice(0, 5)
-                    }],
-                    importantConcepts: [],
-                    conclusion: "Please see the full transcription for more details."
+                    title: titleMatch ? titleMatch[1] : (
+                        lines.find(line => line.toLowerCase().includes('title'))?.split(':')[1]?.trim() || 
+                        "Lecture Summary"
+                    ),
+                    overview: overviewMatch ? overviewMatch[1] : (
+                        lines.find(line => line.toLowerCase().includes('overview'))?.split(':')[1]?.trim() || 
+                        content.substring(0, 200) + "..."
+                    ),
+                    keyPoints: keyPointsMatch ? 
+                        JSON.parse(`[${keyPointsMatch[1]}]`) : 
+                        [{
+                            heading: "Main Points",
+                            details: lines
+                                .filter(line => line.startsWith('-') || line.startsWith('•'))
+                                .map(line => line.replace(/^[-•]\s*/, '').trim())
+                        }],
+                    importantConcepts: lines
+                        .filter(line => line.toLowerCase().includes('concept'))
+                        .map(line => line.split(':')[1]?.trim())
+                        .filter(Boolean),
+                    conclusion: lines.find(line => line.toLowerCase().includes('conclusion'))?.split(':')[1]?.trim() || 
+                               "Please see the full transcription for more details."
                 };
             }
         } catch (error) {
@@ -400,7 +444,7 @@ app.post('/api/summarize-lecture', async (req, res) => {
             throw new Error('Failed to format summary properly');
         }
 
-        // Validate the summary structure
+        // Validate and clean the summary structure
         if (!summary.title || !summary.overview || !Array.isArray(summary.keyPoints)) {
             throw new Error('Invalid summary structure');
         }
