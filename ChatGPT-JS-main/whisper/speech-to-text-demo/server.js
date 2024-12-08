@@ -381,22 +381,25 @@ app.post('/api/summarize-lecture', async (req, res) => {
             // Clean and format the JSON string before parsing
             let jsonStr = content;
             
-            // Ensure the JSON is properly formatted
-            if (!content.endsWith('}')) {
-                // Add missing closing brackets and braces if needed
-                if (content.includes('"importantConcepts":')) {
-                    jsonStr = content + '],"conclusion":""}';
-                } else {
-                    jsonStr = content + '}';
-                }
+            // Remove any additional content after the main JSON structure
+            const mainJsonMatch = jsonStr.match(/\{[\s\S]*?\}(?=\s*$)/);
+            if (mainJsonMatch) {
+                jsonStr = mainJsonMatch[0];
             }
 
-            // Remove any trailing commas before closing brackets
-            jsonStr = jsonStr.replace(/,(\s*[\]}])/g, '$1');
-            
-            // Fix newlines in strings
-            jsonStr = jsonStr.replace(/\n/g, ' ').replace(/\r/g, '');
-            
+            // Fix common JSON formatting issues
+            jsonStr = jsonStr
+                // Remove newlines and extra spaces
+                .replace(/\s+/g, ' ')
+                // Fix any trailing commas before closing brackets
+                .replace(/,(\s*[\]}])/g, '$1')
+                // Ensure arrays are properly closed
+                .replace(/\[(.*?)\s*(?:\]"|$)/g, '[$1]')
+                // Fix double conclusions
+                .replace(/\],"conclusion":""}/g, '}')
+                // Ensure proper object closure
+                .replace(/}+$/g, '}');
+
             console.log('Cleaned JSON string:', jsonStr);
 
             try {
@@ -406,37 +409,44 @@ app.post('/api/summarize-lecture', async (req, res) => {
                 console.log('JSON parse error:', parseError);
                 console.log('Creating fallback structure...');
                 
-                // Create a more structured fallback format
-                const lines = content.split('\n').filter(line => line.trim());
-                
-                // Extract title and overview from the partial JSON
-                const titleMatch = content.match(/"title":\s*"([^"]+)"/);
-                const overviewMatch = content.match(/"overview":\s*"([^"]+)"/);
-                const keyPointsMatch = content.match(/"keyPoints":\s*\[(.*?)\]/s);
-                
-                summary = {
-                    title: titleMatch ? titleMatch[1] : (
-                        lines.find(line => line.toLowerCase().includes('title'))?.split(':')[1]?.trim() || 
-                        "Lecture Summary"
-                    ),
-                    overview: overviewMatch ? overviewMatch[1] : (
-                        lines.find(line => line.toLowerCase().includes('overview'))?.split(':')[1]?.trim() || 
-                        content.substring(0, 200) + "..."
-                    ),
-                    keyPoints: keyPointsMatch ? 
-                        JSON.parse(`[${keyPointsMatch[1]}]`) : 
-                        [{
+                // Extract information using regex
+                const extractValue = (key) => {
+                    const match = content.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`));
+                    return match ? match[1] : null;
+                };
+
+                const extractArray = (key) => {
+                    const match = content.match(new RegExp(`"${key}"\\s*:\\s*\\[(.*?)\\]`));
+                    return match ? match[1].split(',').map(item => 
+                        item.trim().replace(/^"|"$/g, '')
+                    ).filter(Boolean) : [];
+                };
+
+                const extractKeyPoints = () => {
+                    const keyPointsMatch = content.match(/"keyPoints"\s*:\s*\[(.*?)\]/s);
+                    if (!keyPointsMatch) return [{
+                        heading: "Main Points",
+                        details: []
+                    }];
+
+                    try {
+                        return JSON.parse(`[${keyPointsMatch[1]}]`);
+                    } catch {
+                        return [{
                             heading: "Main Points",
-                            details: lines
-                                .filter(line => line.startsWith('-') || line.startsWith('•'))
-                                .map(line => line.replace(/^[-•]\s*/, '').trim())
-                        }],
-                    importantConcepts: lines
-                        .filter(line => line.toLowerCase().includes('concept'))
-                        .map(line => line.split(':')[1]?.trim())
-                        .filter(Boolean),
-                    conclusion: lines.find(line => line.toLowerCase().includes('conclusion'))?.split(':')[1]?.trim() || 
-                               "Please see the full transcription for more details."
+                            details: keyPointsMatch[1].split(',').map(item => 
+                                item.trim().replace(/^"|"$/g, '')
+                            ).filter(Boolean)
+                        }];
+                    }
+                };
+
+                summary = {
+                    title: extractValue('title') || "Lecture Summary",
+                    overview: extractValue('overview') || content.substring(0, 200) + "...",
+                    keyPoints: extractKeyPoints(),
+                    importantConcepts: extractArray('importantConcepts'),
+                    conclusion: extractValue('conclusion') || "Please see the full transcription for more details."
                 };
             }
         } catch (error) {
