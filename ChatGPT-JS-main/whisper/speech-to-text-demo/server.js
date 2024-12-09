@@ -246,37 +246,31 @@ app.post('/api/get-definition', async (req, res) => {
             });
         }
 
-        if (!process.env.GROQ_API_KEY) {
-            console.error('GROQ API key not found in environment variables');
-            return res.status(500).json({
-                success: false,
-                error: 'API configuration error'
-            });
-        }
-
         const groq = new Groq({ 
             apiKey: process.env.GROQ_API_KEY 
         });
-
-        console.log('Sending request to Groq API...'); // Debug log
 
         const completion = await groq.chat.completions.create({
             messages: [
                 {
                     role: "system",
-                    content: "You are a helpful academic assistant. When given a term or phrase, provide a clear, concise definition or explanation in an academic context."
+                    content: `You are a concise academic assistant. Provide brief, clear definitions that are 2-3 sentences maximum. Focus on the most important aspects only. Format your response in a way that's easy to read and understand quickly.
+
+If the term is a concept, start with "A concept in [field] that..." or similar.
+If it's a process, start with "The process of..." or similar.
+If it's an object or thing, start with "A [type] that..." or similar.
+
+Keep your response under 50 words when possible.`
                 },
                 {
                     role: "user",
-                    content: `Define this term or concept: "${text}"`
+                    content: `Define this term or concept in 2-3 sentences: "${text}"`
                 }
             ],
-            model: "llama3-8b-8192",  // Changed to a more reliable model
-            temperature: 0.5,
-            max_tokens: 200,
+            model: "llama3-8b-8192",
+            temperature: 0.3,
+            max_tokens: 100,
         });
-
-        console.log('Received response from Groq API'); // Debug log
 
         const definition = completion.choices[0]?.message?.content || "No definition available";
         
@@ -381,24 +375,48 @@ app.post('/api/summarize-lecture', async (req, res) => {
             // Clean and format the JSON string before parsing
             let jsonStr = content;
             
-            // Remove any additional content after the main JSON structure
-            const mainJsonMatch = jsonStr.match(/\{[\s\S]*?\}(?=\s*$)/);
-            if (mainJsonMatch) {
-                jsonStr = mainJsonMatch[0];
-            }
+            // Ensure proper JSON structure
+            const fixJsonStructure = (str) => {
+                let result = str;
+                
+                // Find the last closing bracket of each section
+                const lastImportantConceptsBracket = str.lastIndexOf(']", "conclusion"');
+                const lastKeyPointsBracket = str.lastIndexOf(']}, {');
+                
+                if (lastImportantConceptsBracket !== -1) {
+                    // Fix the importantConcepts array closure
+                    result = str.substring(0, lastImportantConceptsBracket + 1) + 
+                            ', "conclusion": ' + 
+                            str.substring(str.lastIndexOf('"conclusion": ') + 13).replace(/}+$/, '}');
+                }
 
-            // Fix common JSON formatting issues
+                // Ensure proper object closure
+                if (!result.endsWith('}')) {
+                    result = result + '}';
+                }
+
+                // Remove any trailing commas before closing brackets
+                result = result
+                    .replace(/,(\s*[}\]])/g, '$1')
+                    .replace(/\]\s*\]/g, ']]')
+                    .replace(/}\s*}/g, '}}');
+
+                return result;
+            };
+
+            // Clean the JSON string
             jsonStr = jsonStr
                 // Remove newlines and extra spaces
                 .replace(/\s+/g, ' ')
-                // Fix any trailing commas before closing brackets
-                .replace(/,(\s*[\]}])/g, '$1')
-                // Ensure arrays are properly closed
-                .replace(/\[(.*?)\s*(?:\]"|$)/g, '[$1]')
+                // Fix any trailing commas
+                .replace(/,(\s*[}\]])/g, '$1')
+                // Ensure proper string value closure
+                .replace(/([:\[,]\s*)"([^"]*?)$/g, '$1"$2"')
                 // Fix double conclusions
-                .replace(/\],"conclusion":""}/g, '}')
-                // Ensure proper object closure
-                .replace(/}+$/g, '}');
+                .replace(/\],"conclusion":""}/g, '}');
+
+            // Apply final structure fixes
+            jsonStr = fixJsonStructure(jsonStr);
 
             console.log('Cleaned JSON string:', jsonStr);
 
@@ -409,7 +427,7 @@ app.post('/api/summarize-lecture', async (req, res) => {
                 console.log('JSON parse error:', parseError);
                 console.log('Creating fallback structure...');
                 
-                // Extract information using regex
+                // Extract information using regex with improved patterns
                 const extractValue = (key) => {
                     const match = content.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`));
                     return match ? match[1] : null;
@@ -417,26 +435,26 @@ app.post('/api/summarize-lecture', async (req, res) => {
 
                 const extractArray = (key) => {
                     const match = content.match(new RegExp(`"${key}"\\s*:\\s*\\[(.*?)\\]`));
-                    return match ? match[1].split(',').map(item => 
-                        item.trim().replace(/^"|"$/g, '')
-                    ).filter(Boolean) : [];
+                    if (!match) return [];
+                    return match[1].split(',')
+                        .map(item => item.trim().replace(/^"|"$/g, ''))
+                        .filter(Boolean);
                 };
 
                 const extractKeyPoints = () => {
-                    const keyPointsMatch = content.match(/"keyPoints"\s*:\s*\[(.*?)\]/s);
+                    const keyPointsMatch = content.match(/"keyPoints"\s*:\s*\[(.*?)\](?=\s*,\s*")/);
                     if (!keyPointsMatch) return [{
                         heading: "Main Points",
                         details: []
                     }];
 
                     try {
-                        return JSON.parse(`[${keyPointsMatch[1]}]`);
+                        const keyPointsStr = `[${keyPointsMatch[1]}]`;
+                        return JSON.parse(keyPointsStr);
                     } catch {
                         return [{
                             heading: "Main Points",
-                            details: keyPointsMatch[1].split(',').map(item => 
-                                item.trim().replace(/^"|"$/g, '')
-                            ).filter(Boolean)
+                            details: []
                         }];
                     }
                 };
@@ -472,7 +490,12 @@ app.post('/api/summarize-lecture', async (req, res) => {
     }
 });
 
-// Serve static files
+// Add this near your other routes, before the static file middleware
+app.get('/', (req, res) => {
+    res.redirect('/login.html');
+});
+
+// Keep your existing static file middleware
 app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

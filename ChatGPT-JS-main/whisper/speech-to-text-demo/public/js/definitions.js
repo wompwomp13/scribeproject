@@ -1,42 +1,19 @@
 class DefinitionsHandler {
     constructor() {
-        this.transcriptionElement = document.getElementById('transcriptionText');
-        this.setupEventListeners();
         this.isModalOpen = false;
         this.longPressTimeout = null;
         this.isLongPress = false;
+        
+        // Add global event listeners
+        this.setupGlobalListeners();
     }
 
-    setupEventListeners() {
-        // Desktop right-click
-        this.transcriptionElement.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            this.handleSelectionAction(e);
-        });
-
-        // Mobile long-press and touch events
-        this.transcriptionElement.addEventListener('touchstart', (e) => {
-            this.isLongPress = false;
-            this.longPressTimeout = setTimeout(() => {
-                this.isLongPress = true;
-                const touch = e.touches[0];
-                this.handleSelectionAction(touch);
-            }, 500); // 500ms for long press
-        });
-
-        this.transcriptionElement.addEventListener('touchend', () => {
-            clearTimeout(this.longPressTimeout);
-        });
-
-        this.transcriptionElement.addEventListener('touchmove', () => {
-            clearTimeout(this.longPressTimeout);
-        });
-
+    setupGlobalListeners() {
         // Close context menu when clicking/touching elsewhere
         document.addEventListener('click', (e) => {
             const contextMenu = document.querySelector('.context-menu');
             if (contextMenu && !contextMenu.contains(e.target)) {
-                contextMenu.remove();
+                this.removeContextMenu();
             }
         });
 
@@ -48,11 +25,34 @@ class DefinitionsHandler {
         });
     }
 
-    capitalizeText(text) {
-        return text
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
+    initializeSection(section) {
+        // Add context menu event listeners to all definable elements
+        const definableElements = section.querySelectorAll('.definable');
+        definableElements.forEach(element => {
+            // Desktop right-click
+            element.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.handleSelectionAction(e);
+            });
+
+            // Mobile long-press
+            element.addEventListener('touchstart', (e) => {
+                this.isLongPress = false;
+                this.longPressTimeout = setTimeout(() => {
+                    this.isLongPress = true;
+                    const touch = e.touches[0];
+                    this.handleSelectionAction(touch);
+                }, 500);
+            });
+
+            element.addEventListener('touchend', () => {
+                clearTimeout(this.longPressTimeout);
+            });
+
+            element.addEventListener('touchmove', () => {
+                clearTimeout(this.longPressTimeout);
+            });
+        });
     }
 
     handleSelectionAction(e) {
@@ -73,7 +73,6 @@ class DefinitionsHandler {
         `;
 
         // Position context menu
-        const rect = this.transcriptionElement.getBoundingClientRect();
         const x = e.clientX || e.pageX;
         const y = e.clientY || e.pageY;
 
@@ -133,6 +132,13 @@ class DefinitionsHandler {
         }
     }
 
+    capitalizeText(text) {
+        return text
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
+
     showDefinition(term, definition) {
         this.isModalOpen = true;
         
@@ -148,12 +154,18 @@ class DefinitionsHandler {
                     <div class="definition-body">
                         ${definition}
                     </div>
-                    <div class="paper-footer">
-                        <div class="paper-edge"></div>
-                    </div>
+                    <div class="paper-footer"></div>
                 </div>
             </div>
         `;
+
+        // Add fade-in animation
+        modal.style.opacity = '0';
+        document.body.appendChild(modal);
+        requestAnimationFrame(() => {
+            modal.style.transition = 'opacity 0.2s ease';
+            modal.style.opacity = '1';
+        });
 
         modal.querySelector('.close-btn').addEventListener('click', () => {
             this.closeModal();
@@ -164,22 +176,53 @@ class DefinitionsHandler {
                 this.closeModal();
             }
         });
-
-        document.body.appendChild(modal);
     }
 
     closeModal() {
         const modal = document.querySelector('.definition-modal');
         if (modal) {
-            modal.remove();
-            this.isModalOpen = false;
-            // Clear text selection
-            window.getSelection().removeAllRanges();
+            // Add fade-out animation
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.remove();
+                this.isModalOpen = false;
+                window.getSelection().removeAllRanges();
+            }, 200);
         }
     }
 }
 
-// Initialize the handler when the page loads
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new DefinitionsHandler();
+    const handler = new DefinitionsHandler();
+    
+    // Make transcription text definable
+    const transcriptionText = document.getElementById('transcriptionText');
+    if (transcriptionText) {
+        transcriptionText.classList.add('definable');
+        handler.initializeSection(transcriptionText.parentElement);
+    }
+
+    // Initialize for summary section if it exists
+    const summarySection = document.querySelector('.summary-section');
+    if (summarySection) {
+        handler.initializeSection(summarySection);
+    }
+
+    // Watch for new summary sections being added
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.classList && node.classList.contains('summary-section')) {
+                    handler.initializeSection(node);
+                }
+            });
+        });
+    });
+
+    // Start observing the content grid for new summary sections
+    const contentGrid = document.querySelector('.content-grid');
+    if (contentGrid) {
+        observer.observe(contentGrid, { childList: true });
+    }
 }); 

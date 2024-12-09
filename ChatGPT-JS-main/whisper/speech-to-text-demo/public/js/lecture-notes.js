@@ -194,8 +194,8 @@ class ModifyNotesHandler {
             await this.handleSummarization();
         }
 
-        // Show success message
-        alert('Preferences saved successfully!');
+        // Show toast notification
+        this.showToastNotification('Preferences saved successfully');
         this.closeSidebar();
     }
 
@@ -260,6 +260,7 @@ class ModifyNotesHandler {
         // Create new summary section
         const summarySection = document.createElement('section');
         summarySection.className = 'summary-section';
+        summarySection.setAttribute('data-definitions-enabled', 'true');
 
         // Create the HTML structure
         summarySection.innerHTML = `
@@ -268,7 +269,7 @@ class ModifyNotesHandler {
                 <h3 class="summary-title">${cleanSummary.title}</h3>
                 
                 <div class="summary-overview">
-                    <p>${cleanSummary.overview}</p>
+                    <p class="definable">${cleanSummary.overview}</p>
                 </div>
 
                 <div class="key-points">
@@ -278,7 +279,7 @@ class ModifyNotesHandler {
                             <h5>${point.heading}</h5>
                             <ul>
                                 ${point.details.map(detail => `
-                                    <li>${detail}</li>
+                                    <li class="definable">${detail}</li>
                                 `).join('')}
                             </ul>
                         </div>
@@ -290,7 +291,7 @@ class ModifyNotesHandler {
                         <h4>Important Concepts</h4>
                         <div class="concepts-grid">
                             ${cleanSummary.importantConcepts.map(concept => `
-                                <div class="concept-card">
+                                <div class="concept-card definable">
                                     <i class="bi bi-lightbulb"></i>
                                     <span>${concept}</span>
                                 </div>
@@ -301,13 +302,16 @@ class ModifyNotesHandler {
 
                 <div class="summary-conclusion">
                     <h4>Conclusion</h4>
-                    <p>${cleanSummary.conclusion}</p>
+                    <p class="definable">${cleanSummary.conclusion}</p>
                 </div>
             </div>
         `;
 
         // Add to content grid
         this.contentGrid.appendChild(summarySection);
+
+        // Initialize definitions handler for the summary section
+        new DefinitionsHandler().initializeSection(summarySection);
     }
 
     // Add this helper method to clean up text
@@ -339,6 +343,38 @@ class ModifyNotesHandler {
         if (loader) {
             loader.remove();
         }
+    }
+
+    // Add this new method to the ModifyNotesHandler class
+    showToastNotification(message) {
+        // Remove existing toast if any
+        const existingToast = document.querySelector('.toast-notification');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        // Create new toast
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.innerHTML = `
+            <i class="bi bi-check-circle-fill"></i>
+            <span class="message">${message}</span>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Trigger animation
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 3000);
     }
 }
 

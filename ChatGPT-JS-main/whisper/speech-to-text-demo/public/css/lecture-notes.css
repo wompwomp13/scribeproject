@@ -119,110 +119,182 @@ h2 {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
     padding: 1rem;
+    backdrop-filter: blur(4px);
 }
 
 .definition-content {
-    max-width: 500px;
+    max-width: 400px;
     width: 100%;
     perspective: 1000px;
+    margin: 1rem;
+    animation: modalAppear 0.2s ease forwards;
 }
 
 .definition-paper {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    color: #333;
+    background: var(--card-bg);
+    padding: 1.8rem;
+    border-radius: 1.2rem;
+    color: white;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     transform: rotateX(2deg);
     position: relative;
-    background-image: linear-gradient(#fff 1.1rem, #ccc 1.2rem);
-    background-size: 100% 1.2rem;
-    line-height: 1.2rem;
-    padding: 1.2rem 1rem;
-}
-
-.definition-paper::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: rgba(255, 0, 0, 0.2);
-    margin-left: 3.2rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .definition-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1.2rem;
-    background: #fff;
-    padding: 0.5rem;
-    border-radius: 0.3rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    background: rgba(255, 255, 255, 0.05);
+    margin: -1.8rem -1.8rem 1.5rem -1.8rem;
+    padding: 1.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .definition-header h3 {
     margin: 0;
-    color: #2c3e50;
-    font-family: 'Inter', sans-serif;
+    color: var(--primary-color);
+    font-family: var(--font-primary);
     font-weight: 600;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
+    line-height: 1.3;
+    max-width: 85%;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.definition-header h3::after {
+    content: '';
+    position: absolute;
+    bottom: -0.5rem;
+    left: 0;
+    width: 2rem;
+    height: 2px;
+    background: var(--primary-color);
+    border-radius: 1px;
 }
 
 .definition-body {
-    padding-left: 3.2rem;
-    font-size: 1rem;
-    color: #444;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.05rem;
+    line-height: 1.6;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.2rem;
+    border-radius: 0.8rem;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 1rem;
+}
+
+.definition-body::before {
+    content: 'Definition';
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
 }
 
 .close-btn {
-    background: none;
+    background: rgba(255, 255, 255, 0.1);
     border: none;
-    color: #666;
+    color: rgba(255, 255, 255, 0.8);
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0.2rem;
     line-height: 1;
-    opacity: 0.7;
-    transition: opacity 0.2s;
+    transition: all 0.3s ease;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    position: relative;
+    z-index: 2;
 }
 
 .close-btn:hover {
-    opacity: 1;
+    background: var(--primary-color);
+    color: white;
+    transform: rotate(90deg);
 }
 
-.paper-footer {
+/* Add a subtle gradient overlay to the modal */
+.definition-paper::before {
+    content: '';
     position: absolute;
-    bottom: -5px;
+    top: 0;
     left: 0;
     right: 0;
-    height: 5px;
-    background: #fff;
-    border-bottom-left-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.paper-edge {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 5px,
-        rgba(0, 0, 0, 0.1) 5px,
-        rgba(0, 0, 0, 0.1) 10px
+    height: 80px;
+    background: linear-gradient(
+        135deg,
+        rgba(232, 93, 86, 0.1) 0%,
+        transparent 100%
     );
+    pointer-events: none;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+    .definition-content {
+        max-width: 340px;
+        margin: 0.8rem;
+    }
+
+    .definition-paper {
+        padding: 1.5rem;
+    }
+
+    .definition-header {
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+        padding: 1.5rem;
+    }
+
+    .definition-header h3 {
+        font-size: 1.2rem;
+    }
+
+    .definition-body {
+        font-size: 1rem;
+        padding: 1rem;
+        line-height: 1.5;
+    }
+
+    .close-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 1.3rem;
+    }
+}
+
+/* Add a subtle scale animation when the modal appears */
+@keyframes modalAppear {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.definition-content {
+    animation: modalAppear 0.2s ease forwards;
 }
 
 /* Context Menu Styles */
@@ -276,6 +348,7 @@ h2 {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin-top: 0.5rem;
 }
 
 .modify-notes-btn {
@@ -563,4 +636,93 @@ h2 {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
-} 
+}
+
+/* Add these styles for definable elements */
+.definable {
+    position: relative;
+    cursor: context-menu;
+}
+
+.definable:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+/* Update concept card styles */
+.concept-card.definable {
+    cursor: context-menu;
+}
+
+.concept-card.definable:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Update summary text styles */
+.summary-overview p.definable,
+.key-point li.definable,
+.summary-conclusion p.definable {
+    padding: 0.25rem;
+    margin: -0.25rem;
+    transition: background-color 0.2s ease;
+}
+
+#lectureDate {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.95rem;
+}
+
+.lecture-meta:hover #lectureDate {
+    color: rgba(255, 255, 255, 0.9);
+    transition: color 0.2s ease;
+}
+
+/* Add toast notification styles */
+.toast-notification {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--card-bg);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.8rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    transform: translateY(150%);
+    transition: transform 0.3s ease;
+    z-index: 2000;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toast-notification.show {
+    transform: translateY(0);
+}
+
+.toast-notification i {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+}
+
+.toast-notification .message {
+    font-weight: 500;
+}
+
+/* Add animation for the checkmark icon */
+@keyframes checkmark {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.toast-notification i {
+    animation: checkmark 0.3s ease forwards;
+}
+  

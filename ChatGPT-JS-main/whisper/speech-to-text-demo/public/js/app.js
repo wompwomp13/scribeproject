@@ -351,3 +351,70 @@ function onRecordingComplete(recordingData) {
     updateRecentRecordingsList();
     updateTranscriptionDisplay(recordingData.text);
 }
+
+// Add this function to create and show the loading animation
+function showTranscriptionLoading() {
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.innerHTML = `
+        <div class="loading-content">
+            <div class="loading-animation">
+                <svg class="progress-ring" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45"/>
+                </svg>
+                <div class="sound-wave">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            <div class="loading-text">Generating Transcription</div>
+            <div class="loading-subtext">This may take a few moments...</div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+// Add this function to hide the loading animation
+function hideTranscriptionLoading() {
+    const overlay = document.querySelector('.loading-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
+
+// Update your transcribeButton click handler
+transcribeButton.addEventListener('click', async function() {
+    const loadingOverlay = showTranscriptionLoading();
+    
+    try {
+        // Your existing transcription code here
+        const response = await fetch('/upload?preview=true', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            transcriptionText.value = data.text;
+            transcriptionStatus.textContent = 'Completed';
+            transcriptionStatus.className = 'status-badge status-success';
+        } else {
+            throw new Error(data.error || 'Transcription failed');
+        }
+    } catch (error) {
+        console.error('Transcription error:', error);
+        transcriptionStatus.textContent = 'Failed';
+        transcriptionStatus.className = 'status-badge status-error';
+        alert('Failed to transcribe audio: ' + error.message);
+    } finally {
+        hideTranscriptionLoading();
+    }
+});
