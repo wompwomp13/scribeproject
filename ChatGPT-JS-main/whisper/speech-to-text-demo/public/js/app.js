@@ -26,6 +26,90 @@ let isRecording = false;
 let currentRecordingBlob = null;
 const transcriptionText = document.getElementById('transcriptionText');
 const saveButton = document.getElementById('saveRecording');
+let currentStep = 0;
+const progressContainer = document.getElementById('progressContainer');
+const progressLineFill = document.getElementById('progressLineFill');
+const progressStatus = document.getElementById('progressStatus');
+const recordingIndicator = document.getElementById('recordingIndicator');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loadingText = document.getElementById('loadingText');
+const statusText = document.getElementById('statusText');
+let recordingChunks = [];
+let currentChunkNumber = 0;
+let transcriptionParts = [];
+let isProcessingComplete = false;
+const CHUNK_DURATION = 120; // 2 minutes in seconds
+
+// Function to update progress steps
+function updateProgress(step, status) {
+    currentStep = step;
+    
+    // Update progress line
+    progressLineFill.style.width = `${(step - 1) * 50}%`;
+    
+    // Update step indicators
+    document.querySelectorAll('.progress-step').forEach(stepEl => {
+        const stepNum = parseInt(stepEl.dataset.step);
+        if (stepNum <= step) {
+            stepEl.classList.add('active');
+        } else {
+            stepEl.classList.remove('active');
+        }
+    });
+    
+    // Update status text
+    if (status) {
+        progressStatus.textContent = status;
+    }
+    
+    // Show/hide progress container
+    if (step > 0) {
+        progressContainer.classList.add('active');
+    } else {
+        progressContainer.classList.remove('active');
+    }
+}
+
+// Function to show/hide loading
+function setLoading(show, message = 'Processing...') {
+    const overlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
+    
+    if (show) {
+        overlay.classList.add('active');
+        loadingText.textContent = message;
+    } else {
+        overlay.classList.remove('active');
+    }
+}
+
+// Function to update status text
+function updateStatus(message) {
+    statusText.textContent = message;
+}
+
+// Function to combine transcriptions
+function combineTranscriptions() {
+    return transcriptionParts.join(' ');
+}
+
+// Function to start timer
+function startTimer() {
+    const timerDisplay = document.getElementById('recordingTimer');
+    recordingStartTime = Date.now();
+    timerInterval = setInterval(() => {
+        const elapsed = Date.now() - recordingStartTime;
+        const seconds = Math.floor((elapsed / 1000) % 60);
+        const minutes = Math.floor((elapsed / 1000 / 60) % 60);
+        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }, 1000);
+}
+
+// Function to stop timer
+function stopTimer() {
+    clearInterval(timerInterval);
+    document.getElementById('recordingTimer').textContent = '00:00';
+}
 
 // Update the startRecording function
 function startRecording() {
@@ -35,13 +119,16 @@ function startRecording() {
 
     recordButton.disabled = true;
     stopButton.disabled = false;
-    
-    // Update UI to show recording state
     recordButton.classList.add('recording');
-    document.getElementById('recordingStatus').innerHTML = '<div class="recording-dot"></div>Recording...';
+    recordingIndicator.classList.add('active');
+    
+    // Clear previous transcription
+    transcriptionText.value = '';
+    transcriptionParts = [];
+    recordingChunks = [];
+    currentChunkNumber = 0;
     
     // Start timer
-    recordingStartTime = Date.now();
     startTimer();
 
     navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
@@ -51,38 +138,107 @@ function startRecording() {
         gumStream = stream;
         input = audioContext.createMediaStreamSource(stream);
 
-        recorder = new WebAudioRecorder(input, {
-            workerDir: "js/",
-            encoding: 'mp3',
-            numChannels: 2,
-            onEncoderLoading: function(recorder, encoding) {
-                console.log("Loading "+encoding+" encoder...");
-            },
-            onEncoderLoaded: function(recorder, encoding) {
-                console.log(encoding+" encoder loaded");
-            }
-        });
-
-        recorder.onComplete = function(recorder, blob) { 
-            console.log("Encoding complete");
-            createDownloadLink(blob,recorder.encoding);
-        }
-
-        recorder.setOptions({
-            timeLimit: 120,
-            encodeAfterRecord: encodeAfterRecord,
-            mp3: {bitRate: 160}
-        });
-
-        recorder.startRecording();
-        isRecording = true;
-        console.log("Recording started");
+        startNewChunk();
 
     }).catch(function(err) {
         recordButton.disabled = false;
         stopButton.disabled = true;
+        recordButton.classList.remove('recording');
+        recordingIndicator.classList.remove('active');
+        stopTimer();
         console.error('Error getting user media:', err);
+        alert('Error starting recording. Please check your microphone permissions.');
     });
+}
+
+// Function to start recording a new chunk
+function startNewChunk() {
+    currentChunkNumber++;
+    isProcessingComplete = false;
+
+    recorder = new WebAudioRecorder(input, {
+        workerDir: "js/",
+        encoding: 'mp3',
+        numChannels: 2,
+        onEncoderLoading: function(recorder, encoding) {
+            console.log("Loading "+encoding+" encoder...");
+        },
+        onEncoderLoaded: function(recorder, encoding) {
+            console.log(encoding+" encoder loaded");
+        }
+    });
+
+    recorder.onComplete = function(recorder, blob) { 
+        console.log("Chunk encoding complete");
+        processChunk(blob);
+    }
+
+    recorder.setOptions({
+        timeLimit: CHUNK_DURATION,
+        encodeAfterRecord: encodeAfterRecord,
+        mp3: {bitRate: 160}
+    });
+
+    recorder.startRecording();
+    isRecording = true;
+
+    // Set timeout to automatically process chunk after 2 minutes
+    setTimeout(() => {
+        if (isRecording) {
+            recorder.finishRecording();
+            startNewChunk();
+        }
+    }, CHUNK_DURATION * 1000);
+}
+
+// Function to process each chunk
+async function processChunk(blob) {
+    try {
+        recordingChunks.push(blob);
+        
+        // Show loading only for final chunk
+        if (!isRecording) {
+            setLoading(true, 'Finalizing transcription...');
+        }
+
+        // Upload and transcribe the chunk
+        const formData = new FormData();
+        formData.append('data', blob);
+        
+        const response = await fetch('/upload?preview=true', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to process audio');
+        }
+        
+        const data = await response.json();
+        transcriptionParts.push(data.text);
+        
+        // Update the transcription text area with all parts
+        const transcription = combineTranscriptions();
+        transcriptionText.value = transcription;
+        transcriptionText.disabled = false;
+
+        // Scroll to bottom of textarea to show latest text
+        transcriptionText.scrollTop = transcriptionText.scrollHeight;
+
+        // If this was the final chunk, enable save button
+        if (!isRecording) {
+            isProcessingComplete = true;
+            setLoading(false);
+            saveButton.disabled = false;
+        }
+        
+    } catch (error) {
+        console.error('Error processing chunk:', error);
+        if (!isRecording) {
+            setLoading(false);
+            alert('Error processing the recording. Please try again.');
+        }
+    }
 }
 
 // Update the stopRecording function
@@ -91,35 +247,22 @@ function stopRecording() {
 
     stopButton.disabled = true;
     recordButton.disabled = false;
-    transcribeButton.disabled = false; // Enable transcribe button after recording
-    
-    // Update UI to show stopped state
     recordButton.classList.remove('recording');
-    document.getElementById('recordingStatus').textContent = 'Ready';
+    recordingIndicator.classList.remove('active');
     
     // Stop timer
     stopTimer();
     
-    recorder.finishRecording();
+    if (recorder && recorder.isRecording()) {
+        setLoading(true, 'Processing final recording...');
+        recorder.finishRecording();
+    }
     isRecording = false;
 
     gumStream.getAudioTracks()[0].stop();
-}
-
-// Add these new timer functions
-function startTimer() {
-    const timerDisplay = document.getElementById('recordingTimer');
-    timerInterval = setInterval(() => {
-        const elapsed = Date.now() - recordingStartTime;
-        const seconds = Math.floor((elapsed / 1000) % 60);
-        const minutes = Math.floor((elapsed / 1000 / 60) % 60);
-        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }, 1000);
-}
-
-function stopTimer() {
-    clearInterval(timerInterval);
-    document.getElementById('recordingTimer').textContent = '00:00';
+    
+    // Save button will be enabled after final chunk is processed
+    saveButton.disabled = true;
 }
 
 // Add this to handle page unload
@@ -129,72 +272,46 @@ window.onbeforeunload = function() {
     }
 };
 
-// Update the createDownloadLink function
-function createDownloadLink(blob, encoding) {
-    currentRecordingBlob = blob; // Store the blob for later use
-    
-    // Setup transcribe button handler
-    transcribeButton.onclick = async function() {
-        try {
-            transcribeButton.disabled = true;
-            const status = document.getElementById('transcriptionStatus');
-            status.className = 'status-badge status-processing';
-            status.textContent = 'Processing...';
+// Function to show success message
+function showSuccessMessage() {
+    const template = document.getElementById('successMessageTemplate');
+    const message = template.content.cloneNode(true);
+    document.body.appendChild(message.firstElementChild);
 
-            let fd = new FormData();
-            fd.append('data', blob);
-            
-            const response = await fetch('/upload?preview=true', {
-                method: 'POST',
-                body: fd
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || 'Upload failed');
-            }
-            
-            const data = await response.json();
-            
-            // Enable editing and save button
-            transcriptionText.value = data.text || 'No transcription available';
-            transcriptionText.disabled = false;
-            saveButton.disabled = false;
-            
-            // Update the status
-            status.className = 'status-badge status-success';
-            status.textContent = 'Ready to edit';
-            
-        } catch (error) {
-            console.error('Error:', error);
-            transcriptionText.value = `Error during transcription: ${error.message}. Please try again.`;
-            const status = document.getElementById('transcriptionStatus');
-            status.className = 'status-badge status-error';
-            status.textContent = 'Error';
-            transcribeButton.disabled = false;
+    // Remove the message after animation completes
+    setTimeout(() => {
+        const messageElement = document.querySelector('.success-message');
+        if (messageElement) {
+            messageElement.remove();
         }
-    };
+    }, 2500); // Slightly longer than animation duration
 }
 
 // Update save button handler
 saveButton.addEventListener('click', async () => {
+    if (!isProcessingComplete) {
+        alert('Please wait for processing to complete before saving.');
+        return;
+    }
+
     try {
-        if (!currentRecordingBlob) {
+        if (recordingChunks.length === 0) {
             throw new Error('No recording available');
         }
 
         const lectureTitle = document.getElementById('lectureTitle').value || 'Untitled Lecture';
-        const editedTranscription = transcriptionText.value;
+        const combinedTranscription = combineTranscriptions();
+
+        // Create a single blob from all chunks
+        const combinedBlob = new Blob(recordingChunks, { type: 'audio/mp3' });
 
         let fd = new FormData();
-        fd.append('data', currentRecordingBlob);
+        fd.append('data', combinedBlob);
         fd.append('title', lectureTitle);
-        fd.append('transcription', editedTranscription);
+        fd.append('transcription', combinedTranscription);
 
         saveButton.disabled = true;
-        const status = document.getElementById('transcriptionStatus');
-        status.className = 'status-badge status-processing';
-        status.textContent = 'Saving...';
+        setLoading(true, 'Saving recording...');
 
         const response = await fetch('/upload', {
             method: 'POST',
@@ -208,28 +325,23 @@ saveButton.addEventListener('click', async () => {
         const data = await response.json();
         
         if (data.success) {
-            status.className = 'status-badge status-success';
-            status.textContent = 'Saved!';
+            // Clear all recording data
+            recordingChunks = [];
+            transcriptionParts = [];
+            currentChunkNumber = 0;
+            isProcessingComplete = false;
             
-            // Add a timeout to revert back to ready state
-            setTimeout(() => {
-                status.className = 'status-badge status-ready';
-                status.textContent = 'Ready';
-            }, 2000);
-
-            // Clear the current recording
-            currentRecordingBlob = null;
             // Disable editing
             transcriptionText.disabled = true;
-            transcribeButton.disabled = true;
+            
+            setLoading(false);
+            showSuccessMessage();
         } else {
             throw new Error(data.error || 'Failed to save recording');
         }
     } catch (error) {
         console.error('Save error:', error);
-        const status = document.getElementById('transcriptionStatus');
-        status.className = 'status-badge status-error';
-        status.textContent = 'Save failed';
+        setLoading(false);
         saveButton.disabled = false;
         alert('Failed to save recording: ' + error.message);
     }
@@ -351,70 +463,3 @@ function onRecordingComplete(recordingData) {
     updateRecentRecordingsList();
     updateTranscriptionDisplay(recordingData.text);
 }
-
-// Add this function to create and show the loading animation
-function showTranscriptionLoading() {
-    const overlay = document.createElement('div');
-    overlay.className = 'loading-overlay';
-    overlay.innerHTML = `
-        <div class="loading-content">
-            <div class="loading-animation">
-                <svg class="progress-ring" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45"/>
-                </svg>
-                <div class="sound-wave">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </div>
-            <div class="loading-text">Generating Transcription</div>
-            <div class="loading-subtext">This may take a few moments...</div>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-    return overlay;
-}
-
-// Add this function to hide the loading animation
-function hideTranscriptionLoading() {
-    const overlay = document.querySelector('.loading-overlay');
-    if (overlay) {
-        overlay.style.opacity = '0';
-        overlay.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => overlay.remove(), 300);
-    }
-}
-
-// Update your transcribeButton click handler
-transcribeButton.addEventListener('click', async function() {
-    const loadingOverlay = showTranscriptionLoading();
-    
-    try {
-        // Your existing transcription code here
-        const response = await fetch('/upload?preview=true', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            transcriptionText.value = data.text;
-            transcriptionStatus.textContent = 'Completed';
-            transcriptionStatus.className = 'status-badge status-success';
-        } else {
-            throw new Error(data.error || 'Transcription failed');
-        }
-    } catch (error) {
-        console.error('Transcription error:', error);
-        transcriptionStatus.textContent = 'Failed';
-        transcriptionStatus.className = 'status-badge status-error';
-        alert('Failed to transcribe audio: ' + error.message);
-    } finally {
-        hideTranscriptionLoading();
-    }
-});

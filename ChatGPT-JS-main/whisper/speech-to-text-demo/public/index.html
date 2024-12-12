@@ -9,6 +9,163 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="style.css">
+    <style>
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            margin-bottom: 15px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #333;
+            margin: 0;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .recording-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 15px;
+        }
+
+        .timer {
+            font-family: 'Inter', monospace;
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--primary-color);
+            min-width: 55px;
+            text-align: center;
+        }
+
+        .control-btn.record-btn.recording {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .recording-indicator {
+            display: none;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .recording-indicator.active {
+            display: inline;
+        }
+
+        .transcription-container {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .transcription-header h3 {
+            color: #fff;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .transcription-content {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            background: var(--card-bg);
+            color: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        .transcription-content:disabled {
+            background: var(--card-bg);
+            color: rgba(255, 255, 255, 0.9);
+            opacity: 0.8;
+        }
+
+        .transcription-content::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .transcription-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .control-btn {
+            color: #333;
+        }
+
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-out 2s forwards;
+        }
+
+        .success-message i {
+            font-size: 20px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -64,8 +221,8 @@
                             Stop
                         </button>
                         <div class="recording-status">
-                            <span id="recordingStatus" class="status-text"></span>
                             <span id="recordingTimer" class="timer">00:00</span>
+                            <span id="recordingIndicator" class="recording-indicator">Recording</span>
                         </div>
                     </div>
                 </div>
@@ -74,23 +231,18 @@
                 <div class="transcription-container">
                     <div class="transcription-header">
                         <h3>Live Transcription</h3>
-                        <div class="transcription-status">
-                            <span id="transcriptionStatus" class="status-badge status-ready">Ready</span>
-                        </div>
                     </div>
                     <div class="transcription-box">
                         <textarea 
                             id="transcriptionText" 
                             class="transcription-content"
-                            placeholder="Your transcription will appear here..."
+                            placeholder="Your transcription will appear here as you record..."
                             disabled
                         ></textarea>
                         <div class="transcription-actions">
-                            <button id="transcribeButton" class="action-btn transcribe-btn" disabled>
-                                <i class="bi bi-soundwave"></i> Speech to Text
-                            </button>
                             <button id="saveRecording" class="action-btn" disabled>
-                                <i class="bi bi-save"></i> Save Recording
+                                <i class="bi bi-save"></i>
+                                Save Recording
                             </button>
                         </div>
                     </div>
@@ -98,6 +250,22 @@
             </div>
         </main>
     </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p id="loadingText" class="loading-text">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Success message template (will be inserted via JavaScript) -->
+    <template id="successMessageTemplate">
+        <div class="success-message">
+            <i class="bi bi-check-circle"></i>
+            <span>Recording saved successfully!</span>
+        </div>
+    </template>
 
     <script src="js/jquery-3.7.1.min.js"></script>
     <script src="js/WebAudioRecorder.min.js"></script>
