@@ -341,151 +341,271 @@ app.post('/api/summarize-lecture', async (req, res) => {
             messages: [
                 {
                     role: "system",
-                    content: `You are an expert at summarizing academic lectures. Create clear, well-structured summaries that are easy to understand.
-                    Your response MUST be in valid JSON format with the following structure (no additional text, just the JSON object):
+                    content: `You are an expert academic lecturer and note-taking specialist. Create detailed, well-structured summaries that serve as comprehensive study materials. Your summaries should be thorough yet concise, highlighting both main concepts and subtle but important details.
+
+                    Your response MUST be in valid JSON format with the following structure:
                     {
                         "title": "Main topic of the lecture",
-                        "overview": "Brief 2-3 sentence overview",
-                        "keyPoints": [
+                        "overview": {
+                            "mainThesis": "Core argument or main point of the lecture",
+                            "context": "Brief background or context",
+                            "significance": "Why this topic matters"
+                        },
+                        "keyTopics": [
                             {
-                                "heading": "Key point heading",
-                                "details": ["Detail 1", "Detail 2"]
+                                "heading": "Topic heading",
+                                "mainPoints": ["Key point 1", "Key point 2"],
+                                "details": ["Supporting detail or example"],
+                                "relatedConcepts": ["Related terms or ideas"]
                             }
                         ],
-                        "importantConcepts": ["Concept 1", "Concept 2"],
-                        "conclusion": "Brief conclusion"
+                        "conceptualFramework": {
+                            "coreTheories": ["List of main theories discussed"],
+                            "keyTerms": [
+                                {
+                                    "term": "Technical term",
+                                    "definition": "Brief definition",
+                                    "context": "How it's used in this lecture"
+                                }
+                            ]
+                        },
+                        "practicalApplications": [
+                            {
+                                "scenario": "Real-world application",
+                                "explanation": "How the concept applies"
+                            }
+                        ],
+                        "connections": {
+                            "interdisciplinary": ["Links to other fields"],
+                            "prerequisites": ["Important background knowledge"],
+                            "futureTopics": ["What this leads to"]
+                        },
+                        "supplementalInsights": {
+                            "historicalContext": "Relevant historical background",
+                            "currentDevelopments": "Recent developments or debates",
+                            "additionalResources": ["Recommended readings or materials"]
+                        },
+                        "studyGuide": {
+                            "keyHighlights": ["Most important takeaways"],
+                            "commonMisconceptions": ["Points that students often misunderstand"],
+                            "reviewQuestions": ["Questions for self-review"]
+                        },
+                        "formatting": {
+                            "boldTerms": ["Terms to be displayed in bold"],
+                            "highlightedConcepts": ["Concepts to be highlighted"],
+                            "colorCoding": [
+                                {
+                                    "color": "primary",
+                                    "items": ["Main concepts"]
+                                },
+                                {
+                                    "color": "secondary",
+                                    "items": ["Supporting ideas"]
+                                },
+                                {
+                                    "color": "accent",
+                                    "items": ["Examples or applications"]
+                                }
+                            ]
+                        }
                     }
-                    IMPORTANT: Return ONLY the JSON object above, with no markdown formatting or additional text.`
+
+                    Guidelines:
+                    1. Break down long lectures into logical sections while maintaining narrative flow
+                    2. Include both theoretical concepts and practical applications
+                    3. Highlight key terms and their relationships
+                    4. Preserve important contextual information
+                    5. Include real-world examples and applications
+                    6. Note connections to other topics or fields
+                    7. Identify potential areas of confusion
+                    8. Suggest review questions for self-study
+                    
+                    For long lectures:
+                    1. Identify major theme changes or topic transitions
+                    2. Maintain chronological flow while grouping related concepts
+                    3. Preserve important examples and case studies
+                    4. Note time markers for key points
+                    5. Track concept evolution throughout the lecture
+                    
+                    IMPORTANT: Return ONLY the JSON object above, with no additional text or formatting. Ensure all JSON is properly escaped and valid.`
                 },
                 {
                     role: "user",
-                    content: `Create a JSON summary of this lecture: "${transcription}"`
+                    content: `Create a comprehensive academic summary of this lecture: "${transcription}"`
                 }
             ],
             model: "llama3-8b-8192",
             temperature: 0.3,
-            max_tokens: 1000,
+            max_tokens: 2000,
         });
 
+        // Parse and validate the response
         let summary;
         try {
-            const content = completion.choices[0]?.message?.content || '';
-            console.log('Raw API response:', content);
-
-            // Clean and format the JSON string before parsing
-            let jsonStr = content;
-            
-            // Ensure proper JSON structure
-            const fixJsonStructure = (str) => {
-                let result = str;
-                
-                // Find the last closing bracket of each section
-                const lastImportantConceptsBracket = str.lastIndexOf(']", "conclusion"');
-                const lastKeyPointsBracket = str.lastIndexOf(']}, {');
-                
-                if (lastImportantConceptsBracket !== -1) {
-                    // Fix the importantConcepts array closure
-                    result = str.substring(0, lastImportantConceptsBracket + 1) + 
-                            ', "conclusion": ' + 
-                            str.substring(str.lastIndexOf('"conclusion": ') + 13).replace(/}+$/, '}');
-                }
-
-                // Ensure proper object closure
-                if (!result.endsWith('}')) {
-                    result = result + '}';
-                }
-
-                // Remove any trailing commas before closing brackets
-                result = result
-                    .replace(/,(\s*[}\]])/g, '$1')
-                    .replace(/\]\s*\]/g, ']]')
-                    .replace(/}\s*}/g, '}}');
-
-                return result;
-            };
-
-            // Clean the JSON string
-            jsonStr = jsonStr
-                // Remove newlines and extra spaces
-                .replace(/\s+/g, ' ')
-                // Fix any trailing commas
-                .replace(/,(\s*[}\]])/g, '$1')
-                // Ensure proper string value closure
-                .replace(/([:\[,]\s*)"([^"]*?)$/g, '$1"$2"')
-                // Fix double conclusions
-                .replace(/\],"conclusion":""}/g, '}');
-
-            // Apply final structure fixes
-            jsonStr = fixJsonStructure(jsonStr);
-
-            console.log('Cleaned JSON string:', jsonStr);
-
-            try {
-                summary = JSON.parse(jsonStr);
-                console.log('Successfully parsed JSON:', summary);
-            } catch (parseError) {
-                console.log('JSON parse error:', parseError);
-                console.log('Creating fallback structure...');
-                
-                // Extract information using regex with improved patterns
-                const extractValue = (key) => {
-                    const match = content.match(new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`));
-                    return match ? match[1] : null;
-                };
-
-                const extractArray = (key) => {
-                    const match = content.match(new RegExp(`"${key}"\\s*:\\s*\\[(.*?)\\]`));
-                    if (!match) return [];
-                    return match[1].split(',')
-                        .map(item => item.trim().replace(/^"|"$/g, ''))
-                        .filter(Boolean);
-                };
-
-                const extractKeyPoints = () => {
-                    const keyPointsMatch = content.match(/"keyPoints"\s*:\s*\[(.*?)\](?=\s*,\s*")/);
-                    if (!keyPointsMatch) return [{
-                        heading: "Main Points",
-                        details: []
-                    }];
-
-                    try {
-                        const keyPointsStr = `[${keyPointsMatch[1]}]`;
-                        return JSON.parse(keyPointsStr);
-                    } catch {
-                        return [{
-                            heading: "Main Points",
-                            details: []
-                        }];
-                    }
-                };
-
-                summary = {
-                    title: extractValue('title') || "Lecture Summary",
-                    overview: extractValue('overview') || content.substring(0, 200) + "...",
-                    keyPoints: extractKeyPoints(),
-                    importantConcepts: extractArray('importantConcepts'),
-                    conclusion: extractValue('conclusion') || "Please see the full transcription for more details."
-                };
+            const responseText = completion.choices[0]?.message?.content;
+            if (!responseText) {
+                throw new Error('Empty response from Groq API');
             }
+
+            // First try to parse the response directly
+            try {
+                summary = JSON.parse(responseText);
+            } catch (directParseError) {
+                console.error('Direct parse failed, attempting cleanup:', directParseError);
+                
+                // Clean up the JSON string before parsing
+                let cleanedText = responseText
+                    .replace(/^\s*```json\s*/, '') // Remove JSON code block markers
+                    .replace(/\s*```\s*$/, '')     // Remove ending code block markers
+                    .trim();
+
+                // Only apply more aggressive cleaning if needed
+                if (!cleanedText.startsWith('{') || !cleanedText.endsWith('}')) {
+                    cleanedText = cleanedText
+                        .replace(/\n/g, ' ')                 // Remove newlines
+                        .replace(/\r/g, '')                  // Remove carriage returns
+                        .replace(/\t/g, ' ')                 // Remove tabs
+                        .replace(/\s+/g, ' ')                // Normalize spaces
+                        .replace(/,\s*([}\]])/g, '$1')       // Remove trailing commas
+                        .replace(/([{[,])\s*,/g, '$1')       // Remove empty array elements
+                        .replace(/"\s*,\s*([}\]])/g, '"$1')  // Fix trailing commas in objects
+                        .trim();
+
+                    // Ensure the string starts and ends with curly braces
+                    if (!cleanedText.startsWith('{')) cleanedText = '{' + cleanedText;
+                    if (!cleanedText.endsWith('}')) cleanedText = cleanedText + '}';
+                }
+
+                try {
+                    summary = JSON.parse(cleanedText);
+                } catch (cleanParseError) {
+                    console.error('Clean parse failed:', cleanParseError);
+                    throw cleanParseError; // Let it be caught by the outer catch
+                }
+            }
+            
+            // Validate the summary structure
+            const requiredFields = [
+                'title',
+                'overview',
+                'keyTopics',
+                'conceptualFramework',
+                'practicalApplications',
+                'connections',
+                'supplementalInsights',
+                'studyGuide',
+                'formatting'
+            ];
+            
+            for (const field of requiredFields) {
+                if (!summary[field]) {
+                    throw new Error(`Missing required field: ${field}`);
+                }
+            }
+
+            // Ensure arrays are properly initialized
+            summary.keyTopics = Array.isArray(summary.keyTopics) ? summary.keyTopics : [];
+            summary.conceptualFramework.keyTerms = Array.isArray(summary.conceptualFramework.keyTerms) ? summary.conceptualFramework.keyTerms : [];
+            summary.practicalApplications = Array.isArray(summary.practicalApplications) ? summary.practicalApplications : [];
+            summary.studyGuide.keyHighlights = Array.isArray(summary.studyGuide.keyHighlights) ? summary.studyGuide.keyHighlights : [];
+            summary.studyGuide.commonMisconceptions = Array.isArray(summary.studyGuide.commonMisconceptions) ? summary.studyGuide.commonMisconceptions : [];
+            summary.studyGuide.reviewQuestions = Array.isArray(summary.studyGuide.reviewQuestions) ? summary.studyGuide.reviewQuestions : [];
+
         } catch (error) {
-            console.error('Response parsing error:', error);
-            throw new Error('Failed to format summary properly');
+            console.error('Error parsing summary:', error);
+            console.error('Raw response:', completion.choices[0]?.message?.content);
+            
+            // Create a fallback summary structure
+            summary = {
+                title: "Lecture Summary",
+                overview: {
+                    mainThesis: "Main points from the lecture",
+                    context: "Context of the discussion",
+                    significance: "Importance of the topic"
+                },
+                keyTopics: [{
+                    heading: "Key Topics",
+                    mainPoints: ["Main points extracted from the lecture"],
+                    details: ["Details from the lecture"],
+                    relatedConcepts: ["Related concepts discussed"]
+                }],
+                conceptualFramework: {
+                    coreTheories: ["Core theories discussed"],
+                    keyTerms: [{
+                        term: "Important terms",
+                        definition: "Their definitions",
+                        context: "How they were used"
+                    }]
+                },
+                practicalApplications: [{
+                    scenario: "Practical applications",
+                    explanation: "How concepts apply in practice"
+                }],
+                connections: {
+                    interdisciplinary: ["Related fields"],
+                    prerequisites: ["Required background"],
+                    futureTopics: ["Future learning paths"]
+                },
+                supplementalInsights: {
+                    historicalContext: "Historical background",
+                    currentDevelopments: "Current state",
+                    additionalResources: ["Additional materials"]
+                },
+                studyGuide: {
+                    keyHighlights: ["Main takeaways"],
+                    commonMisconceptions: ["Common misunderstandings"],
+                    reviewQuestions: ["Review questions"]
+                },
+                formatting: {
+                    boldTerms: [],
+                    highlightedConcepts: [],
+                    colorCoding: [
+                        {
+                            color: "primary",
+                            items: ["Main concepts"]
+                        }
+                    ]
+                }
+            };
         }
 
-        // Validate and clean the summary structure
-        if (!summary.title || !summary.overview || !Array.isArray(summary.keyPoints)) {
-            throw new Error('Invalid summary structure');
-        }
-
-        res.json({ 
-            success: true, 
-            summary 
+        res.json({
+            success: true,
+            summary: summary
         });
     } catch (error) {
         console.error('Summarization error:', error);
         res.status(500).json({ 
             success: false, 
             error: error.message || 'Failed to generate summary'
+        });
+    }
+});
+
+// Add this route to handle transcription updates
+app.put('/api/recordings/:id/transcription', async (req, res) => {
+    try {
+        const recording = await Recording.findById(req.params.id);
+        
+        if (!recording) {
+            return res.status(404).json({
+                success: false,
+                error: 'Recording not found'
+            });
+        }
+
+        recording.transcription.text = req.body.transcription;
+        await recording.save();
+
+        res.json({
+            success: true,
+            message: 'Transcription updated successfully'
+        });
+    } catch (error) {
+        console.error('Error updating transcription:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to update transcription'
         });
     }
 });

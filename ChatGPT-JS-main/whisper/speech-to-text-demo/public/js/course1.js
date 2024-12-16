@@ -77,10 +77,6 @@ class CoursePage {
                         <i class="bi bi-calendar"></i>
                         ${date}
                     </span>
-                    <span class="duration">
-                        <i class="bi bi-clock"></i>
-                        45 mins
-                    </span>
                 </div>
             </div>
             <div class="lecture-actions">

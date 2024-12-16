@@ -140,9 +140,14 @@ class LectureNotes {
     }
 }
 
-// Add this class to handle the modify notes functionality
+// Add the ModifyNotesHandler class
 class ModifyNotesHandler {
     constructor() {
+        // Check if we're on the student lecture notes page
+        if (!document.querySelector('.modify-sidebar')) {
+            return;
+        }
+
         this.sidebar = document.getElementById('modifySidebar');
         this.modifyBtn = document.getElementById('modifyNotesBtn');
         this.closeBtn = document.getElementById('closeSidebar');
@@ -154,6 +159,11 @@ class ModifyNotesHandler {
     }
 
     setupEventListeners() {
+        if (!this.modifyBtn || !this.closeBtn || !this.saveBtn) {
+            console.error('Required elements not found');
+            return;
+        }
+
         // Toggle sidebar
         this.modifyBtn.addEventListener('click', () => this.toggleSidebar());
         this.closeBtn.addEventListener('click', () => this.closeSidebar());
@@ -244,66 +254,148 @@ class ModifyNotesHandler {
             existingSummary.remove();
         }
 
-        // Clean up the summary data
-        const cleanSummary = {
-            title: this.cleanText(summary.title),
-            overview: this.cleanText(summary.overview),
-            keyPoints: Array.isArray(summary.keyPoints) ? summary.keyPoints.map(point => ({
-                heading: this.cleanText(point.heading),
-                details: Array.isArray(point.details) ? point.details.map(detail => this.cleanText(detail)) : []
-            })) : [],
-            importantConcepts: Array.isArray(summary.importantConcepts) ? 
-                summary.importantConcepts.map(concept => this.cleanText(concept)) : [],
-            conclusion: this.cleanText(summary.conclusion)
-        };
-
         // Create new summary section
         const summarySection = document.createElement('section');
         summarySection.className = 'summary-section';
         summarySection.setAttribute('data-definitions-enabled', 'true');
 
-        // Create the HTML structure
+        // Create the HTML structure with enhanced organization
         summarySection.innerHTML = `
             <h2>Lecture Summary</h2>
             <div class="summary-content">
-                <h3 class="summary-title">${cleanSummary.title}</h3>
+                <h3 class="summary-title">${summary.title || 'Summary'}</h3>
                 
+                <!-- Context and Significance -->
                 <div class="summary-overview">
-                    <p class="definable">${cleanSummary.overview}</p>
+                    <h4>Context & Purpose</h4>
+                    <div class="overview-box">
+                        <p class="definable"><strong>Main Theme:</strong> ${summary.overview?.mainThesis || ''}</p>
+                        <p class="definable"><strong>Scientific Context:</strong> ${summary.overview?.context || ''}</p>
+                        <p class="definable"><strong>Real-World Significance:</strong> ${summary.overview?.significance || ''}</p>
+                    </div>
                 </div>
 
-                <div class="key-points">
-                    <h4>Key Points</h4>
-                    ${cleanSummary.keyPoints.map(point => `
-                        <div class="key-point">
-                            <h5>${point.heading}</h5>
-                            <ul>
-                                ${point.details.map(detail => `
-                                    <li class="definable">${detail}</li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                    `).join('')}
-                </div>
-
-                ${cleanSummary.importantConcepts.length > 0 ? `
-                    <div class="important-concepts">
-                        <h4>Important Concepts</h4>
+                <!-- Key Concepts Section -->
+                <div class="key-concepts">
+                    <h4>Key Scientific Concepts</h4>
+                    ${summary.conceptualFramework?.keyTerms?.length ? `
                         <div class="concepts-grid">
-                            ${cleanSummary.importantConcepts.map(concept => `
+                            ${summary.conceptualFramework.keyTerms.map(term => `
                                 <div class="concept-card definable">
-                                    <i class="bi bi-lightbulb"></i>
-                                    <span>${concept}</span>
+                                    <div class="concept-header">
+                                        <i class="bi bi-lightbulb"></i>
+                                        <h5>${term.term || ''}</h5>
+                                    </div>
+                                    <p>${term.definition || ''}</p>
+                                    ${term.context ? `
+                                        <div class="concept-context">
+                                            <small><strong>Context:</strong> ${term.context}</small>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Main Discussion Points -->
+                <div class="key-points">
+                    <h4>Main Discussion Points</h4>
+                    ${summary.keyTopics?.map(topic => `
+                        <div class="key-point">
+                            <div class="point-header">
+                                <h5><i class="bi bi-arrow-right-circle"></i> ${topic.heading || ''}</h5>
+                            </div>
+                            <div class="point-content">
+                                <ul>
+                                    ${topic.mainPoints?.map(point => `
+                                        <li class="definable">${point}</li>
+                                    `).join('') || ''}
+                                </ul>
+                                ${topic.details?.length ? `
+                                    <div class="supporting-details">
+                                        <h6>Supporting Evidence & Examples</h6>
+                                        <ul class="details-list">
+                                            ${topic.details.map(detail => `
+                                                <li class="definable">${detail}</li>
+                                            `).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('') || ''}
+                </div>
+
+                <!-- Practical Applications -->
+                ${summary.practicalApplications?.length ? `
+                    <div class="practical-applications">
+                        <h4>Practical Applications & Real-World Examples</h4>
+                        ${summary.practicalApplications.map(app => `
+                            <div class="application-card">
+                                <div class="application-header">
+                                    <i class="bi bi-gear"></i>
+                                    <h5>${app.scenario || ''}</h5>
+                                </div>
+                                <p class="definable">${app.explanation || ''}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- Challenges and Limitations -->
+                ${summary.connections?.interdisciplinary?.length ? `
+                    <div class="challenges-section">
+                        <h4>Challenges & Future Directions</h4>
+                        <div class="connections-grid">
+                            <div class="connection-box">
+                                <h5><i class="bi bi-exclamation-triangle"></i> Current Challenges</h5>
+                                <ul>
+                                    ${summary.connections.interdisciplinary.map(challenge => 
+                                        `<li class="definable">${challenge}</li>`
+                                    ).join('')}
+                                </ul>
+                            </div>
+                            ${summary.connections.futureTopics?.length ? `
+                                <div class="connection-box">
+                                    <h5><i class="bi bi-arrow-up-right-circle"></i> Future Outlook</h5>
+                                    <ul>
+                                        ${summary.connections.futureTopics.map(topic => 
+                                            `<li class="definable">${topic}</li>`
+                                        ).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 ` : ''}
 
-                <div class="summary-conclusion">
-                    <h4>Conclusion</h4>
-                    <p class="definable">${cleanSummary.conclusion}</p>
-                </div>
+                <!-- Study Guide -->
+                ${summary.studyGuide ? `
+                    <div class="study-guide">
+                        <h4>Key Takeaways & Study Guide</h4>
+                        <div class="study-sections">
+                            <div class="key-highlights">
+                                <h5><i class="bi bi-star"></i> Essential Points</h5>
+                                <ul>
+                                    ${summary.studyGuide.keyHighlights?.map(highlight => 
+                                        `<li class="definable">${highlight}</li>`
+                                    ).join('') || ''}
+                                </ul>
+                            </div>
+                            ${summary.studyGuide.commonMisconceptions?.length ? `
+                                <div class="misconceptions">
+                                    <h5><i class="bi bi-exclamation-circle"></i> Common Misconceptions</h5>
+                                    <ul>
+                                        ${summary.studyGuide.commonMisconceptions.map(misconception => 
+                                            `<li class="definable">${misconception}</li>`
+                                        ).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
 
@@ -314,7 +406,6 @@ class ModifyNotesHandler {
         new DefinitionsHandler().initializeSection(summarySection);
     }
 
-    // Add this helper method to clean up text
     cleanText(text) {
         if (!text) return '';
         
@@ -324,8 +415,8 @@ class ModifyNotesHandler {
             .replace(/\\n/g, ' ') // Replace newlines with spaces
             .replace(/\s+/g, ' ') // Replace multiple spaces with single space
             .replace(/[{}"]/g, '') // Remove curly braces and quotes
-            .replace(/^\s*[a-z]+:\s*/i, '') // Remove property names (e.g., "title:", "overview:")
-            .trim(); // Remove leading/trailing whitespace
+            .replace(/^\s*[a-z]+:\s*/i, '') // Remove property names
+            .trim();
     }
 
     showLoadingState() {
@@ -345,15 +436,12 @@ class ModifyNotesHandler {
         }
     }
 
-    // Add this new method to the ModifyNotesHandler class
     showToastNotification(message) {
-        // Remove existing toast if any
         const existingToast = document.querySelector('.toast-notification');
         if (existingToast) {
             existingToast.remove();
         }
 
-        // Create new toast
         const toast = document.createElement('div');
         toast.className = 'toast-notification';
         toast.innerHTML = `
@@ -363,12 +451,10 @@ class ModifyNotesHandler {
 
         document.body.appendChild(toast);
 
-        // Trigger animation
         setTimeout(() => {
             toast.classList.add('show');
         }, 10);
 
-        // Remove toast after 3 seconds
         setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => {
@@ -378,8 +464,12 @@ class ModifyNotesHandler {
     }
 }
 
-// Initialize both handlers when the page loads
+// Initialize based on the page we're on
 document.addEventListener('DOMContentLoaded', () => {
-    new ModifyNotesHandler();
-    new LectureNotes();
+    // Check if we're on the student lecture notes page
+    if (document.querySelector('.modify-sidebar')) {
+        new ModifyNotesHandler();
+        new LectureNotes();
+    }
+    // If we're on the teacher page, don't initialize these handlers
 }); 

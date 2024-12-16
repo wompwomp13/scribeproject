@@ -9,6 +9,144 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/course1.css">
     <link rel="stylesheet" href="/css/lecture-notes.css">
+    <style>
+        /* ... keep existing styles ... */
+        
+        .summary-section {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .summary-header {
+            margin-bottom: 20px;
+        }
+
+        .summary-header h2 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .overview-box {
+            background: rgba(var(--primary-rgb), 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .key-topic {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: var(--darker-bg);
+            border-radius: 8px;
+        }
+
+        .key-topic h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .concept-term {
+            background: rgba(var(--primary-rgb), 0.15);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .concept-term .term {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .practical-application {
+            background: rgba(var(--accent-rgb), 0.1);
+            border-left: 4px solid var(--accent-color);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .connections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .connection-box {
+            background: var(--darker-bg);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .study-guide {
+            background: rgba(var(--success-rgb), 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .review-questions {
+            margin-top: 15px;
+        }
+
+        .review-question {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        /* Highlighting and emphasis */
+        .bold-term {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .highlight {
+            background: rgba(var(--accent-rgb), 0.2);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .color-primary {
+            color: var(--primary-color);
+        }
+
+        .color-secondary {
+            color: var(--secondary-color);
+        }
+
+        .color-accent {
+            color: var(--accent-color);
+        }
+
+        /* For longer content */
+        .section-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .section-divider::after {
+            content: attr(data-section);
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: var(--card-bg);
+            padding: 0 10px;
+            color: var(--text-muted);
+            font-size: 0.9em;
+        }
+
+        .time-marker {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-left: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -68,6 +206,47 @@
                     <div class="notes-editor">
                         <textarea id="notesEditor" placeholder="Type your notes here..."></textarea>
                         <button id="saveNotes" class="save-btn">Save Notes</button>
+                    </div>
+                </section>
+
+                <!-- Enhanced Summary Section -->
+                <section class="summary-section" style="display: none;" data-definitions-enabled="true">
+                    <div class="summary-header">
+                        <h2>Lecture Summary</h2>
+                    </div>
+                    
+                    <div class="overview-box definable">
+                        <h3>Overview</h3>
+                        <div id="summaryOverview" class="definable"></div>
+                    </div>
+
+                    <div id="keyTopics" class="definable"></div>
+
+                    <div class="conceptual-framework">
+                        <h3>Key Concepts & Theories</h3>
+                        <div id="conceptTerms" class="definable"></div>
+                    </div>
+
+                    <div class="practical-applications">
+                        <h3>Practical Applications</h3>
+                        <div id="applications" class="definable"></div>
+                    </div>
+
+                    <div class="connections-grid">
+                        <div class="connection-box">
+                            <h4>Related Topics</h4>
+                            <div id="connections" class="definable"></div>
+                        </div>
+                        <div class="connection-box">
+                            <h4>Additional Context</h4>
+                            <div id="supplementalInsights" class="definable"></div>
+                        </div>
+                    </div>
+
+                    <div class="study-guide">
+                        <h3>Study Guide</h3>
+                        <div id="studyGuide" class="definable"></div>
+                        <div class="review-questions definable" id="reviewQuestions"></div>
                     </div>
                 </section>
             </div>

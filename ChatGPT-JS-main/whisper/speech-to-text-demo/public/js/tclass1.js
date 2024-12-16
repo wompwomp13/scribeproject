@@ -30,9 +30,10 @@ class TeacherClass {
 
     createLectureCard(lecture) {
         const date = new Date(lecture.createdAt).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
             month: 'long',
-            day: 'numeric',
-            year: 'numeric'
+            day: 'numeric'
         });
 
         const card = document.createElement('div');
@@ -42,19 +43,14 @@ class TeacherClass {
                 <div class="lecture-info">
                     <h3>${lecture.title}</h3>
                     <div class="lecture-meta">
-                        <span class="topic-tag">Mechanics</span>
                         <span class="date">
                             <i class="bi bi-calendar"></i>
                             ${date}
                         </span>
-                        <span class="duration">
-                            <i class="bi bi-clock"></i>
-                            ${lecture.duration || '45'} mins
-                        </span>
                     </div>
                 </div>
                 <div class="lecture-actions">
-                    <a href="/lecture-notes.html?id=${lecture._id}" class="view-lecture">
+                    <a href="/teacher-lecture-notes.html?id=${lecture._id}" class="view-lecture">
                         View Notes
                     </a>
                     <button class="delete-lecture" data-id="${lecture._id}">
