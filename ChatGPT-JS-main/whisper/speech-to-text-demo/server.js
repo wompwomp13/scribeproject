@@ -7,6 +7,8 @@ const Recording = require('./models/Recordings');
 const { text2SpeechGPT } = require('./speechToText.js');
 const Groq = require('groq-sdk');
 require('dotenv').config();
+const User = require('./models/User');
+const Course = require('./models/Course');
 
 // Create uploads directory if it doesn't exist
 const fs = require('fs');
@@ -627,6 +629,138 @@ app.use((err, req, res, next) => {
         error: 'Something broke!',
         details: err.message 
     });
+});
+
+// Add these routes before your existing routes
+
+// Get all users
+app.get('/api/users', async (req, res) => {
+    try {
+        const query = {};
+        if (req.query.role) {
+            query.role = req.query.role;
+        }
+
+        const users = await User.find(query)
+            .select('-password')
+            .sort({ createdAt: -1 });
+            
+        res.json({ success: true, users });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create new user
+app.post('/api/users', async (req, res) => {
+    try {
+        const user = await User.create(req.body);
+        const userResponse = user.toObject();
+        delete userResponse.password;
+        
+        res.json({ success: true, user: userResponse });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update user
+app.put('/api/users/:id', async (req, res) => {
+    try {
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        ).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.json({ success: true, user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete user
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get all courses
+app.get('/api/courses', async (req, res) => {
+    try {
+        const query = {};
+        if (req.query.instructor) {
+            if (req.query.instructor === 'current') {
+                // In a real app, you would get the current user's ID from the session
+                // For now, we'll return all courses
+                query.status = 'active';
+            } else {
+                query.instructor = req.query.instructor;
+            }
+        }
+
+        const courses = await Course.find(query)
+            .populate('instructor', 'name email')
+            .sort({ createdAt: -1 });
+        res.json({ success: true, courses });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create new course
+app.post('/api/courses', async (req, res) => {
+    try {
+        const course = await Course.create(req.body);
+        res.json({ success: true, course });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update course
+app.put('/api/courses/:id', async (req, res) => {
+    try {
+        const course = await Course.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        ).populate('instructor', 'name email');
+        
+        if (!course) {
+            return res.status(404).json({ error: 'Course not found' });
+        }
+        
+        res.json({ success: true, course });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete course
+app.delete('/api/courses/:id', async (req, res) => {
+    try {
+        const course = await Course.findByIdAndDelete(req.params.id);
+        if (!course) {
+            return res.status(404).json({ error: 'Course not found' });
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Start server only after DB connection

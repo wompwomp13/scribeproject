@@ -13,14 +13,14 @@ const handleLogin = (event) => {
     const remember = document.getElementById('remember').checked;
 
     // In a real application, you would validate credentials against a backend
-    // For demo purposes, we'll just redirect based on role
     if (role === 'student') {
         window.location.href = 'studentdashboard.html';
     } else if (role === 'teacher') {
         window.location.href = 'dashboard.html';
+    } else if (role === 'admin') {
+        window.location.href = 'admin-dashboard.html';
     }
 
-    // If remember me is checked, you could store the email in localStorage
     if (remember) {
         localStorage.setItem('userEmail', email);
     }

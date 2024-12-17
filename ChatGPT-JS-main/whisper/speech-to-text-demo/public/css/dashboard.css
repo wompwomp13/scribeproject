@@ -117,10 +117,21 @@ body {
 }
 
 .course-code {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: white;
     margin: 0;
     margin-bottom: 0.3rem;
+}
+
+.course-description {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.4;
+    margin-bottom: 1rem;
 }
 
 .course-info h3 {
