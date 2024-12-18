@@ -21,17 +21,9 @@
                     <i class="bi bi-house"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="/admin-courses.html" class="nav-item">
-                    <i class="bi bi-book"></i>
-                    <span>Courses</span>
-                </a>
-                <a href="/admin-users.html" class="nav-item">
-                    <i class="bi bi-people"></i>
-                    <span>Users</span>
-                </a>
-                <a href="/admin-monitoring.html" class="nav-item">
-                    <i class="bi bi-graph-up"></i>
-                    <span>Monitoring</span>
+                <a href="#" class="nav-item">
+                    <i class="bi bi-bell"></i>
+                    <span>Notifications</span>
                 </a>
                 <a href="#" class="nav-item">
                     <i class="bi bi-gear"></i>
@@ -46,90 +38,80 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <h2 class="welcome-text">Admin Dashboard</h2>
+            <div class="content-header">
+                <h2 class="welcome-text">Admin Dashboard</h2>
+            </div>
             
-            <!-- Overview Cards -->
-            <div class="overview-grid">
-                <div class="overview-card">
-                    <div class="card-icon">
-                        <i class="bi bi-people"></i>
-                    </div>
-                    <div class="card-info">
-                        <h3>Total Users</h3>
-                        <p class="number">2,543</p>
-                        <span class="trend positive">+12% this month</span>
-                    </div>
-                </div>
-
-                <div class="overview-card">
-                    <div class="card-icon">
+            <!-- Management Cards -->
+            <div class="admin-features">
+                <div class="feature-card" onclick="window.location.href='/admin-courses.html'">
+                    <div class="feature-icon">
                         <i class="bi bi-book"></i>
                     </div>
-                    <div class="card-info">
-                        <h3>Active Courses</h3>
-                        <p class="number">24</p>
-                        <span class="trend positive">+3 this semester</span>
+                    <div class="feature-content">
+                        <h3>Course Management</h3>
+                        <p>Manage courses, assignments, and academic content</p>
+                        <div class="feature-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="courseCount">0</span>
+                                <span class="stat-label">Active Courses</span>
+                            </div>
+                            <button class="feature-btn">Manage Courses</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="overview-card">
-                    <div class="card-icon">
-                        <i class="bi bi-mic"></i>
+                <div class="feature-card" onclick="window.location.href='/admin-users.html'">
+                    <div class="feature-icon">
+                        <i class="bi bi-people"></i>
                     </div>
-                    <div class="card-info">
-                        <h3>Recordings Today</h3>
-                        <p class="number">47</p>
-                        <span class="trend neutral">Same as yesterday</span>
+                    <div class="feature-content">
+                        <h3>User Management</h3>
+                        <p>Manage teachers, students, and user accounts</p>
+                        <div class="feature-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="userCount">0</span>
+                                <span class="stat-label">Total Users</span>
+                            </div>
+                            <button class="feature-btn">Manage Users</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="overview-card">
-                    <div class="card-icon">
-                        <i class="bi bi-hdd"></i>
+                <div class="feature-card" onclick="window.location.href='/admin-monitoring.html'">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up"></i>
                     </div>
-                    <div class="card-info">
-                        <h3>Storage Used</h3>
-                        <p class="number">756 GB</p>
-                        <span class="trend negative">75% of quota</span>
+                    <div class="feature-content">
+                        <h3>Usage Analytics</h3>
+                        <p>Monitor system usage and performance metrics</p>
+                        <div class="feature-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="activeUsers">0</span>
+                                <span class="stat-label">Active Today</span>
+                            </div>
+                            <button class="feature-btn">View Analytics</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Reports</h3>
+                        <p>Generate and download system reports</p>
+                        <div class="feature-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="reportCount">0</span>
+                                <span class="stat-label">Available Reports</span>
+                            </div>
+                            <button class="feature-btn">Generate Report</button>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Recent Activity -->
-            <section class="recent-activity">
-                <h3>Recent Activity</h3>
-                <div class="activity-list">
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="bi bi-person-plus"></i>
-                        </div>
-                        <div class="activity-details">
-                            <p class="activity-text">New teacher account created</p>
-                            <span class="activity-time">5 minutes ago</span>
-                        </div>
-                    </div>
-
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="bi bi-book-fill"></i>
-                        </div>
-                        <div class="activity-details">
-                            <p class="activity-text">New course added: Introduction to Physics</p>
-                            <span class="activity-time">1 hour ago</span>
-                        </div>
-                    </div>
-
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="bi bi-mic-fill"></i>
-                        </div>
-                        <div class="activity-details">
-                            <p class="activity-text">New lecture recording in Calculus I</p>
-                            <span class="activity-time">2 hours ago</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </main>
     </div>
 
