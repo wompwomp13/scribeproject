@@ -39,6 +39,8 @@ let currentChunkNumber = 0;
 let transcriptionParts = [];
 let isProcessingComplete = false;
 const CHUNK_DURATION = 120; // 2 minutes in seconds
+let originalTranscription = '';
+let isTranscriptionEdited = false;
 
 // Function to update progress steps
 function updateProgress(step, status) {
@@ -220,8 +222,13 @@ async function processChunk(blob) {
         // Update the transcription text area with all parts
         const transcription = combineTranscriptions();
         transcriptionText.value = transcription;
-        transcriptionText.disabled = false;
-
+        
+        // If this is the final chunk, enable editing
+        if (!isRecording) {
+            originalTranscription = transcription;
+            enableTranscriptionEditing();
+        }
+        
         // Scroll to bottom of textarea to show latest text
         transcriptionText.scrollTop = transcriptionText.scrollHeight;
 
@@ -239,6 +246,17 @@ async function processChunk(blob) {
             alert('Error processing the recording. Please try again.');
         }
     }
+}
+
+// Add function to enable transcription editing
+function enableTranscriptionEditing() {
+    transcriptionText.disabled = false;
+    transcriptionText.classList.add('editable');
+    
+    // Add event listener for changes
+    transcriptionText.addEventListener('input', () => {
+        isTranscriptionEdited = transcriptionText.value !== originalTranscription;
+    });
 }
 
 // Update the stopRecording function
@@ -300,7 +318,7 @@ saveButton.addEventListener('click', async () => {
         }
 
         const lectureTitle = document.getElementById('lectureTitle').value || 'Untitled Lecture';
-        const combinedTranscription = combineTranscriptions();
+        const editedTranscription = transcriptionText.value; // Get edited transcription
 
         // Create a single blob from all chunks
         const combinedBlob = new Blob(recordingChunks, { type: 'audio/mp3' });
@@ -308,7 +326,7 @@ saveButton.addEventListener('click', async () => {
         let fd = new FormData();
         fd.append('data', combinedBlob);
         fd.append('title', lectureTitle);
-        fd.append('transcription', combinedTranscription);
+        fd.append('transcription', editedTranscription); // Send edited transcription
 
         saveButton.disabled = true;
         setLoading(true, 'Saving recording...');
@@ -330,9 +348,11 @@ saveButton.addEventListener('click', async () => {
             transcriptionParts = [];
             currentChunkNumber = 0;
             isProcessingComplete = false;
+            isTranscriptionEdited = false;
             
             // Disable editing
             transcriptionText.disabled = true;
+            transcriptionText.classList.remove('editable');
             
             setLoading(false);
             showSuccessMessage();
@@ -340,7 +360,7 @@ saveButton.addEventListener('click', async () => {
             throw new Error(data.error || 'Failed to save recording');
         }
     } catch (error) {
-        console.error('Save error:', error);
+        console.error('Error saving recording:', error);
         setLoading(false);
         saveButton.disabled = false;
         alert('Failed to save recording: ' + error.message);
