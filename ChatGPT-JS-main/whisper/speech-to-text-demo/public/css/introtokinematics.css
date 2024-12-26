@@ -251,3 +251,14 @@ body {
 .preferences-save-btn i {
     font-size: 1.2rem;
 }
+
+/* Add these classes for card title centering */
+.card-title-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.card-title {
+    text-align: center;
+}

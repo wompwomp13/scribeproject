@@ -104,9 +104,9 @@ class CourseManager {
 
         card.innerHTML = `
             <div class="course-header">
-                <div class="course-info">
-                    <h3>${course.name || 'Untitled Course'}</h3>
-                    <div class="course-code">${course.code || 'No Code'}</div>
+                <div class="course-info" style="width: 100%; text-align: center;">
+                    <h3 style="text-align: center;">${course.name || 'Untitled Course'}</h3>
+                    <div class="course-code" style="text-align: center;">${course.code || 'No Code'}</div>
                 </div>
                 <div class="course-actions">
                     <button class="action-btn" onclick="courseManager.handleEditCourse('${course._id}')">

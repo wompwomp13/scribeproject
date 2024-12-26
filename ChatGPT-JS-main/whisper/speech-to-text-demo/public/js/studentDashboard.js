@@ -8,31 +8,44 @@ async function loadCourses() {
         const data = await response.json();
 
         const coursesGrid = document.querySelector('.courses-grid');
+        coursesGrid.innerHTML = ''; // Clear existing content
 
-        // Keep the existing Physics 101 card
-        const existingPhysics = coursesGrid.querySelector('.course-card[data-code="PHY101"]');
-        coursesGrid.innerHTML = '';
-        if (existingPhysics) {
-            coursesGrid.appendChild(existingPhysics);
-        }
+        // Add the hard-coded Physics 101 card first
+        const physicsCard = `
+            <div class="course-card">
+                <a href="course1.html" style="text-decoration: none; color: inherit; display: block;">
+                    <div class="course-info">
+                        <p class="course-code">Physics 101</p>
+                        <h3>Introduction to Physics</h3>
+                        <div class="course-meta">
+                            <span class="students">
+                                <i class="bi bi-person"></i>
+                                30 students
+                            </span>
+                            <span class="time">
+                                <i class="bi bi-clock"></i>
+                                1d ago
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        `;
+        coursesGrid.innerHTML = physicsCard;
 
         if (!data.courses || data.courses.length === 0) {
             console.warn('No courses found.');
             return;
         }
 
-        // Load courses dynamically
+        // Load other courses dynamically
         for (const course of data.courses) {
             if (course.code !== 'PHY101') {
                 try {
-                    // Fetch the recording count for the current course
                     const recordingsResponse = await fetch(`/api/courses/${course._id}/recordings`);
                     const recordingsData = await recordingsResponse.json();
-
-                    // Set recording count or default to 0 if unavailable
                     const recordingsCount = recordingsData.success ? recordingsData.recordings.length : 0;
 
-                    // Create the course card
                     const card = document.createElement('div');
                     card.className = 'course-card';
                     card.setAttribute('data-code', course.code);
@@ -54,12 +67,10 @@ async function loadCourses() {
                         </div>
                     `;
 
-                    // Add click event to navigate to the course page
                     card.addEventListener('click', () => {
                         window.location.href = `/scourse.html?id=${course._id}`;
                     });
 
-                    // Append the card to the courses grid
                     coursesGrid.appendChild(card);
                 } catch (error) {
                     console.error(`Error loading recordings for course ${course._id}:`, error);

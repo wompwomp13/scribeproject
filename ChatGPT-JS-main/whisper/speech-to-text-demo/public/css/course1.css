@@ -419,3 +419,25 @@ body {
     width: 100%;
     margin: 20px 0;
 }
+
+/* Add these styles for scourse.html course header */
+.course-header .course-info {
+    text-align: center;
+    width: 100%;
+}
+
+.course-header .course-info #courseCode,
+.course-header .course-info #courseName,
+.course-header .course-info #courseDescription {
+    text-align: center;
+    width: 100%;
+    display: block;
+}
+
+.course-header .course-meta {
+    justify-content: center;
+}
+
+.course-header .course-meta span {
+    justify-content: center;
+}
