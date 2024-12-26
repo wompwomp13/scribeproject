@@ -377,76 +377,19 @@ h2 {
     right: -400px;
     width: 400px;
     height: 100vh;
-    background-color: #f5e9dd;
-    color: #333333;
+    background: #f4e6db;
+    color: #494949;
     padding: 2rem;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    border-top-left-radius: 25px;
-    border-bottom-left-radius: 25px;
-    background-image: 
-        radial-gradient(circle at 90% 10%, rgba(232, 93, 86, 0.1) 0%, transparent 60%),
-        radial-gradient(circle at 10% 90%, rgba(232, 93, 86, 0.08) 0%, transparent 50%);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .modify-sidebar.active {
     right: 0;
-}
-
-.option-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
-}
-
-.option-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-}
-
-.option-card i {
-    font-size: 2rem;
-    color: var(--primary-color);
-    margin-bottom: 1rem;
-}
-
-.option-card h4 {
-    color: #2c3e50;
-    margin-bottom: 0.8rem;
-    font-size: 1.2rem;
-}
-
-.option-card p {
-    color: #666;
-    font-size: 0.95rem;
-    margin-bottom: 1.2rem;
-    line-height: 1.5;
-}
-
-.generate-btn {
-    width: 100%;
-    padding: 0.8rem;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.generate-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
-
-.generate-btn:not(:disabled):hover {
-    background: #ff8585;
-    transform: translateY(-2px);
 }
 
 .sidebar-header {
@@ -455,75 +398,207 @@ h2 {
     align-items: center;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(73, 73, 73, 0.1);
 }
 
 .sidebar-header h3 {
-    color: #2c3e50;
-    margin: 0;
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     font-weight: 600;
+    color: #494949;
+    margin: 0;
 }
 
 .close-btn {
     background: none;
     border: none;
-    color: #2c3e50;
-    font-size: 1.5rem;
+    color: #494949;
+    font-size: 1.8rem;
     cursor: pointer;
     padding: 0.5rem;
     transition: transform 0.2s ease;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
 }
 
 .close-btn:hover {
+    transform: scale(1.1);
+    opacity: 1;
+    background: rgba(73, 73, 73, 0.1);
+}
+
+.sidebar-content {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 150px);
+}
+
+.preferences-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.preference-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.2rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    transition: transform 0.2s ease, background 0.2s ease;
+    border: 1px solid rgba(73, 73, 73, 0.1);
+    min-height: 120px;
+}
+
+.preference-card:hover {
+    transform: translateY(-2px);
+    background: #ffffff;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(73, 73, 73, 0.1);
+}
+
+.preference-icon {
+    background: var(--primary-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.preference-icon i {
+    font-size: 1.2rem;
+    color: #ffffff;
+}
+
+.preference-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.preference-details h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.4rem 0;
+    color: #494949;
+}
+
+.preference-details p {
+    font-size: 0.85rem;
+    color: #666666;
+    margin: 0 0 0.8rem 0;
+    line-height: 1.4;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #d1d1d1;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary-color);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(22px);
+}
+
+.preferences-save-btn {
+    margin-top: auto;
+    padding: 1rem;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    margin: 1rem 0;
+}
+
+.preferences-save-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(232, 93, 86, 0.3);
+}
+
+.preferences-save-btn:active {
+    transform: translateY(0);
+}
+
+/* Modify button animation */
+.modify-notes-btn {
+    position: relative;
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.8rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modify-notes-btn:hover {
+    background-color: rgba(232, 93, 86, 0.1);
     transform: rotate(90deg);
 }
 
-.modification-options {
-    margin: 1.5rem 0;
-}
-
-.form-check {
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: white;
-    border-radius: 10px;
-    transition: transform 0.2s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-
-.form-check:hover {
-    transform: translateX(5px);
-}
-
-.form-check-input {
-    margin-right: 1rem;
-}
-
-.form-check-label {
-    color: #2c3e50;
-    font-weight: 500;
-}
-
-.save-preferences-btn {
-    width: 100%;
-    padding: 1rem;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 15px rgba(232, 93, 86, 0.2);
-    margin-top: 1rem;
-}
-
-.save-preferences-btn:hover {
-    background-color: #ff8585;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(232, 93, 86, 0.3);
+.modify-notes-btn:active {
+    transform: scale(0.95) rotate(90deg);
 }
 
 /* Summary Section Styles */
@@ -1369,5 +1444,144 @@ h2 {
     border-radius: 1rem;
     margin-bottom: 1rem;
     border-left: 4px solid var(--primary-color);
+}
+
+/* Notes Sidebar */
+.notes-sidebar {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background-color: #f5e9dd;
+    color: #333333;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    border-top-left-radius: 25px;
+    border-bottom-left-radius: 25px;
+    background-image: 
+        radial-gradient(circle at 90% 10%, rgba(232, 93, 86, 0.1) 0%, transparent 60%),
+        radial-gradient(circle at 10% 90%, rgba(232, 93, 86, 0.08) 0%, transparent 50%);
+}
+
+.notes-sidebar.active {
+    right: 0;
+}
+
+.notes-header {
+    position: relative;
+    margin-bottom: 2.5rem;
+    padding-top: 2rem;
+}
+
+.back-btn {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: none;
+    border: none;
+    color: #494949;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+.notes-header h2 {
+    color: var(--primary-color);
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 0;
+    margin-top: 1rem;
+}
+
+.modification-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1rem;
+    color: #494949;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.option-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #494949;
+    border-radius: 4px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+/* Save Preferences button */
+.preferences-save-btn {
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
+    right: 2rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    font-size: 1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.preferences-save-btn:hover {
+    opacity: 0.9;
+}
+
+/* Modify button styling */
+.modify-notes-btn {
+    position: absolute;
+    top: 3.5rem;
+    right: 2.5rem;
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0.8rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.modify-notes-btn:hover {
+    background-color: rgba(232, 93, 86, 0.1);
+    transform: scale(1.1);
+}
+
+/* Add custom scrollbar for preferences section */
+.preferences-section::-webkit-scrollbar {
+    width: 6px;
+}
+
+.preferences-section::-webkit-scrollbar-track {
+    background: rgba(73, 73, 73, 0.1);
+    border-radius: 3px;
+}
+
+.preferences-section::-webkit-scrollbar-thumb {
+    background: #494949;
+    border-radius: 3px;
+}
+
+.preferences-section::-webkit-scrollbar-thumb:hover {
+    background: #666666;
 }
   

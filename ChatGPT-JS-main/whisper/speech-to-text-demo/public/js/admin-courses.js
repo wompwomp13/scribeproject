@@ -28,6 +28,10 @@ class CourseManager {
             if (data.success) {
                 this.courses = data.courses;
                 this.renderCourses();
+                // Dispatch event for course list update
+                window.dispatchEvent(new CustomEvent('coursesUpdated', {
+                    detail: { courses: this.courses }
+                }));
             }
         } catch (error) {
             console.error('Error loading courses:', error);
@@ -78,18 +82,31 @@ class CourseManager {
         const card = document.createElement('div');
         card.className = 'course-card';
         
-        // Handle both MongoDB instructor object and plain text instructor
-        const instructorName = course.instructor.name || course.instructor;
-        const instructorInitials = instructorName
-            .split(' ')
-            .map(n => n[0])
-            .join('');
+        // Safely handle instructor data
+        let instructorName = 'No Instructor';
+        let instructorInitials = 'NA';
+        
+        if (course.instructor) {
+            if (typeof course.instructor === 'object' && course.instructor.name) {
+                instructorName = course.instructor.name;
+            } else if (typeof course.instructor === 'string') {
+                instructorName = course.instructor;
+            }
+            
+            // Only create initials if we have a valid instructor name
+            if (instructorName !== 'No Instructor') {
+                instructorInitials = instructorName
+                    .split(' ')
+                    .map(n => n[0])
+                    .join('');
+            }
+        }
 
         card.innerHTML = `
             <div class="course-header">
                 <div class="course-info">
-                    <h3>${course.name}</h3>
-                    <div class="course-code">${course.code}</div>
+                    <h3>${course.name || 'Untitled Course'}</h3>
+                    <div class="course-code">${course.code || 'No Code'}</div>
                 </div>
                 <div class="course-actions">
                     <button class="action-btn" onclick="courseManager.handleEditCourse('${course._id}')">
@@ -108,6 +125,9 @@ class CourseManager {
                     <span>${instructorName}</span>
                 </div>
                 <p class="course-description">${course.description || ''}</p>
+                <div class="course-status ${course.status || 'active'}">
+                    ${course.status || 'active'}
+                </div>
             </div>
         `;
         
@@ -122,21 +142,41 @@ class CourseManager {
     }
 
     handleEditCourse(courseId) {
-        const course = this.courses.find(c => c.id === courseId);
-        if (!course) return;
+        const course = this.courses.find(c => c._id === courseId);
+        if (!course) {
+            console.error('Course not found:', courseId);
+            return;
+        }
 
         this.currentCourseId = courseId;
-        document.getElementById('courseName').value = course.name;
-        document.getElementById('courseCode').value = course.code;
-        document.getElementById('courseDescription').value = course.description;
+        document.getElementById('courseName').value = course.name || '';
+        document.getElementById('courseCode').value = course.code || '';
+        document.getElementById('courseDescription').value = course.description || '';
         
         // Find and select the instructor
         const instructorSelect = document.getElementById('courseInstructor');
-        Array.from(instructorSelect.options).forEach(option => {
-            if (option.text === course.instructor) {
-                option.selected = true;
+        let instructorId = '';
+        
+        if (course.instructor) {
+            if (typeof course.instructor === 'object' && course.instructor._id) {
+                instructorId = course.instructor._id;
+            } else if (typeof course.instructor === 'string') {
+                instructorId = course.instructor;
             }
-        });
+        }
+        
+        // Set the instructor in the dropdown
+        if (instructorId) {
+            instructorSelect.value = instructorId;
+            // If the value wasn't set (instructor not in list), add a temporary option
+            if (instructorSelect.value !== instructorId) {
+                const tempOption = document.createElement('option');
+                tempOption.value = instructorId;
+                tempOption.textContent = course.instructor.name || 'Unknown Instructor';
+                instructorSelect.appendChild(tempOption);
+                instructorSelect.value = instructorId;
+            }
+        }
 
         document.querySelector('#courseModal .modal-title').textContent = 'Edit Course';
         this.courseModal.show();
@@ -185,30 +225,49 @@ class CourseManager {
                 await this.loadCourses();
                 // Clear the form
                 form.reset();
+                // Dispatch event for dashboard update
+                window.dispatchEvent(new CustomEvent('courseChanged', {
+                    detail: { 
+                        action: this.currentCourseId ? 'update' : 'create',
+                        course: data.course
+                    }
+                }));
             } else {
                 throw new Error(data.error || 'Failed to save course');
             }
         } catch (error) {
             console.error('Error saving course:', error);
-            // Fallback to existing functionality if API fails
-            if (!this.currentCourseId) {
-                this.courses.push({
-                    id: Date.now(),
-                    ...courseData,
-                    instructor: document.querySelector('#courseInstructor option:checked').text
-                });
-                this.renderCourses();
-            }
-            // Close modal even if there's an error
-            this.courseModal.hide();
+            alert('Failed to save course: ' + error.message);
         }
     }
 
-    handleDeleteCourse(courseId) {
+    async handleDeleteCourse(courseId) {
         if (confirm('Are you sure you want to delete this course?')) {
-            // In a real app, this would be an API call
-            this.courses = this.courses.filter(c => c.id !== courseId);
-            this.renderCourses();
+            try {
+                const response = await fetch(`/api/courses/${courseId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    await this.loadCourses();
+                    // Dispatch event for dashboard update
+                    window.dispatchEvent(new CustomEvent('courseChanged', {
+                        detail: { 
+                            action: 'delete',
+                            courseId: courseId
+                        }
+                    }));
+                }
+            } catch (error) {
+                console.error('Error deleting course:', error);
+                alert('Failed to delete course: ' + error.message);
+            }
         }
     }
 }

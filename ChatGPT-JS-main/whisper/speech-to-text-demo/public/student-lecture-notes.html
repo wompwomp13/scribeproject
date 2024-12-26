@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture Notes - SCRIBE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/course1.css">
+    <link rel="stylesheet" href="/css/lecture-notes.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>SCRIBE</h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/studentdashboard.html" class="nav-item">
+                    <i class="bi bi-house"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item back-to-course">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Back to Course</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="lecture-header">
+                <div class="header-content">
+                    <h1 id="lectureTitle">Loading...</h1>
+                    <div class="lecture-meta">
+                        <span id="lectureDate"></span>
+                    </div>
+                </div>
+                <button id="modifyNotesBtn" class="modify-notes-btn" aria-label="Modify Notes">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+            </div>
+
+            <div class="breadcrumb">
+                <a href="#" id="courseBreadcrumb">Loading...</a>
+                <i class="bi bi-chevron-right"></i>
+                <span id="lectureBreadcrumb">Loading...</span>
+            </div>
+
+            <div class="content-grid">
+                <!-- Audio Player Section -->
+                <section class="audio-section">
+                    <h2>Lecture Recording</h2>
+                    <audio id="lectureAudio" controls></audio>
+                </section>
+
+                <!-- Transcription Section -->
+                <section class="transcription-section">
+                    <h2>Lecture Transcription</h2>
+                    <div id="transcriptionText" class="transcription-content definable"></div>
+                </section>
+
+                <!-- Notes Section -->
+                <section class="notes-section">
+                    <h2>My Notes</h2>
+                    <div class="notes-editor">
+                        <textarea id="notesEditor" placeholder="Type your notes here..."></textarea>
+                        <button id="saveNotes" class="save-btn">Save Notes</button>
+                    </div>
+                </section>
+
+                <!-- Enhanced Summary Section -->
+                <section class="summary-section" style="display: none;" data-definitions-enabled="true">
+                    <h2>Lecture Summary</h2>
+                    <div class="summary-content">
+                        <h3 class="summary-title"></h3>
+                        
+                        <!-- Context and Significance -->
+                        <div class="summary-overview">
+                            <h4>Context & Purpose</h4>
+                            <div class="overview-box">
+                                <p class="definable"><strong>Main Theme:</strong> <span id="mainThesis"></span></p>
+                                <p class="definable"><strong>Scientific Context:</strong> <span id="context"></span></p>
+                                <p class="definable"><strong>Real-World Significance:</strong> <span id="significance"></span></p>
+                            </div>
+                        </div>
+
+                        <!-- Key Concepts Section -->
+                        <div class="key-concepts">
+                            <h4>Key Scientific Concepts</h4>
+                            <div id="conceptTerms"></div>
+                        </div>
+
+                        <!-- Main Discussion Points -->
+                        <div class="key-points">
+                            <h4>Main Discussion Points</h4>
+                            <div id="keyPoints"></div>
+                        </div>
+
+                        <!-- Practical Applications -->
+                        <div class="practical-applications">
+                            <h4>Practical Applications & Real-World Examples</h4>
+                            <div id="applications"></div>
+                        </div>
+
+                        <!-- Challenges and Limitations -->
+                        <div class="challenges-section">
+                            <h4>Challenges & Future Directions</h4>
+                            <div id="challenges"></div>
+                        </div>
+
+                        <!-- Study Guide -->
+                        <div class="study-guide">
+                            <h4>Key Takeaways & Study Guide</h4>
+                            <div id="studyGuide"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Modify Notes Sidebar -->
+        <div id="modifySidebar" class="modify-sidebar">
+            <div class="sidebar-header">
+                <h3>Modify Your Notes</h3>
+                <button id="closeSidebar" class="close-btn" aria-label="Close sidebar">×</button>
+            </div>
+            <div class="sidebar-content">
+                <p>Select modifications to apply to your notes:</p>
+                <div class="preferences-section">
+                    <div class="preference-card">
+                        <div class="preference-icon">
+                            <i class="bi bi-file-text"></i>
+                        </div>
+                        <div class="preference-details">
+                            <h4>Summarization</h4>
+                            <p>Generate a concise summary of the lecture content</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="summarization">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="preference-card">
+                        <div class="preference-icon">
+                            <i class="bi bi-card-text"></i>
+                        </div>
+                        <div class="preference-details">
+                            <h4>Flashcards</h4>
+                            <p>Create study flashcards from key concepts</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="flashcards">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="preference-card">
+                        <div class="preference-icon">
+                            <i class="bi bi-volume-up"></i>
+                        </div>
+                        <div class="preference-details">
+                            <h4>Auditory Notes</h4>
+                            <p>Enable text-to-speech for your notes</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="auditory">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button class="preferences-save-btn" id="savePreferences">
+                    <i class="bi bi-check2"></i>
+                    Apply Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/definitions.js"></script>
+    <script src="/js/student-lecture-notes.js"></script>
+</body>
+</html> 

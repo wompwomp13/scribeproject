@@ -36,6 +36,42 @@
     color: white;
 }
 
+.course-card .course-info .course-code {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.75rem;
+    margin: 0;
+    margin-bottom: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+.course-card .course-info .course-description {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.course-card .course-meta {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+}
+
+.course-card .course-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.75rem;
+}
+
+.course-card .course-meta i {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
 .course-header {
     display: flex;
     justify-content: space-between;
@@ -49,10 +85,39 @@
     font-weight: 600;
 }
 
-.course-code {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
-    margin-top: 0.3rem;
+.course-info .course-code {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    margin: 0;
+    margin-bottom: 0.75rem;
+    font-weight: 400;
+}
+
+.course-info h3.course-description {
+    color: white;
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.course-meta {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+}
+
+.course-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+}
+
+.course-meta i {
+    font-size: 1rem;
+    opacity: 0.8;
 }
 
 .course-actions {

@@ -156,31 +156,59 @@ body {
 }
 
 .lecture-item {
-    background-color: #494949;
-    border-radius: 15px;
+    background: var(--card-bg);
+    border-radius: 1rem;
     padding: 1.5rem;
-    margin-bottom: 1.2rem;
+    margin-bottom: 1rem;
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    align-items: center;
+    transition: transform 0.2s;
 }
 
 .lecture-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.lecture-info {
-    flex: 1;
+    transform: translateY(-2px);
 }
 
 .lecture-info h3 {
     color: white;
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin: 0 0 0.75rem 0;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.lecture-date {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lecture-date i {
+    font-size: 1rem;
+}
+
+.lecture-actions .view-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.lecture-actions .view-btn:hover {
+    opacity: 0.9;
+    color: white;
+}
+
+.lecture-actions .view-btn i {
+    font-size: 1.1rem;
 }
 
 .lecture-meta {

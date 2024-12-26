@@ -25,9 +25,15 @@ app.use(express.json());
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
-    destination: './uploads',
+    destination: function (req, file, cb) {
+        // Create uploads directory if it doesn't exist
+        const uploadsDir = path.join(__dirname, 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir);
+        }
+        cb(null, uploadsDir);
+    },
     filename: function (req, file, cb) {
-        // Sanitize filename and ensure it's unique
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, uniqueSuffix + '.mp3');
     }
@@ -75,6 +81,9 @@ app.post('/upload', upload.single('data'), async (req, res) => {
             throw new Error('No file uploaded');
         }
 
+        // Get courseId from request body
+        const courseId = req.body.courseId;
+
         // Transcribe audio
         const apiResponse = await text2SpeechGPT({
             filename: req.file.filename,
@@ -83,7 +92,6 @@ app.post('/upload', upload.single('data'), async (req, res) => {
 
         // If preview mode, just return the transcription
         if (req.query.preview === 'true') {
-            // Clean up the uploaded file since we're not saving it yet
             fs.unlink(req.file.path, (err) => {
                 if (err) console.error('Error deleting preview file:', err);
             });
@@ -94,7 +102,15 @@ app.post('/upload', upload.single('data'), async (req, res) => {
             });
         }
 
-        // Save to MongoDB with edited transcription if provided
+        // Verify course exists if courseId is provided
+        if (courseId) {
+            const course = await Course.findById(courseId);
+            if (!course) {
+                throw new Error('Invalid course selected');
+            }
+        }
+
+        // Save to MongoDB
         const recording = new Recording({
             title: req.body.title || 'Untitled Recording',
             audioFile: {
@@ -104,10 +120,19 @@ app.post('/upload', upload.single('data'), async (req, res) => {
             transcription: {
                 text: req.body.transcription || apiResponse.text,
                 createdAt: new Date()
-            }
+            },
+            class: courseId // This will be undefined if no courseId provided
         });
 
         const savedRecording = await recording.save();
+
+        // If courseId exists, add recording to course's recordings array
+        if (courseId) {
+            await Course.findByIdAndUpdate(
+                courseId,
+                { $push: { recordings: savedRecording._id } }
+            );
+        }
 
         res.json({
             success: true,
@@ -116,7 +141,8 @@ app.post('/upload', upload.single('data'), async (req, res) => {
                 title: savedRecording.title,
                 date: savedRecording.createdAt,
                 audioUrl: `/uploads/${req.file.filename}`,
-                text: savedRecording.transcription.text
+                text: savedRecording.transcription.text,
+                courseId: courseId
             }
         });
     } catch (error) {
@@ -151,7 +177,7 @@ app.get('/api/recordings/:id', async (req, res) => {
         console.log('Audio file:', recording.audioFile);
         console.log('Transcription:', recording.transcription);
 
-        // Add full URLs for audio file
+        // Construct the audio URL
         const audioUrl = `/uploads/${recording.audioFile.filename}`;
         
         const responseData = {
@@ -619,6 +645,8 @@ app.get('/', (req, res) => {
 
 // Keep your existing static file middleware
 app.use(express.static('public'));
+
+// Serve files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Error handling middleware
@@ -697,26 +725,46 @@ app.delete('/api/users/:id', async (req, res) => {
     }
 });
 
-// Get all courses
+// Update the courses endpoint
 app.get('/api/courses', async (req, res) => {
     try {
-        const query = {};
-        if (req.query.instructor) {
-            if (req.query.instructor === 'current') {
-                // In a real app, you would get the current user's ID from the session
-                // For now, we'll return all courses
-                query.status = 'active';
-            } else {
-                query.instructor = req.query.instructor;
-            }
+        console.log('Fetching courses from database...');
+        const courses = await Course.find({})
+            .populate('instructor', 'name email') // Populate instructor data
+            .lean();
+        
+        console.log('Raw courses data:', courses); // Debug log
+        
+        if (!courses || courses.length === 0) {
+            console.log('No courses found in database');
+            return res.json({
+                success: true,
+                courses: []
+            });
         }
 
-        const courses = await Course.find(query)
-            .populate('instructor', 'name email')
-            .sort({ createdAt: -1 });
-        res.json({ success: true, courses });
+        const formattedCourses = courses.map(course => ({
+            _id: course._id.toString(),
+            name: course.name || 'Unnamed Course',
+            code: course.code || 'NO_CODE',
+            description: course.description || '',
+            instructor: course.instructor || null,
+            status: course.status || 'active'
+        }));
+
+        console.log('Formatted courses:', formattedCourses); // Debug log
+        
+        res.json({ 
+            success: true, 
+            courses: formattedCourses
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching courses:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch courses',
+            details: error.message 
+        });
     }
 });
 
@@ -752,15 +800,265 @@ app.put('/api/courses/:id', async (req, res) => {
 // Delete course
 app.delete('/api/courses/:id', async (req, res) => {
     try {
-        const course = await Course.findByIdAndDelete(req.params.id);
+        const course = await Course.findById(req.params.id);
         if (!course) {
             return res.status(404).json({ error: 'Course not found' });
         }
+
+        // Don't delete Physics 101
+        if (course.code === 'PHY101') {
+            return res.status(403).json({ error: 'Cannot delete template course' });
+        }
+
+        // Delete all recordings associated with this course
+        await Recording.deleteMany({ class: course._id });
+
+        // Delete the course
+        await course.remove();
         
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// Add these routes before your static file middleware
+
+// Handle dynamic course pages
+app.get('/course/:id', (req, res) => {
+    // Check if it's Physics 101 (keep existing functionality)
+    if (req.params.id === 'physics101') {
+        res.sendFile(path.join(__dirname, 'public', 'course1.html'));
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'course-template.html'));
+    }
+});
+
+// Handle teacher course pages
+app.get('/tcourse/:id', (req, res) => {
+    // Check if it's Physics 101 (keep existing functionality)
+    if (req.params.id === 'physics101') {
+        res.sendFile(path.join(__dirname, 'public', 'tclass1.html'));
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'course-template.html'));
+    }
+});
+
+// Add API endpoint to get course details
+app.get('/api/course/:id', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id)
+            .populate('instructor', 'name');
+        
+        if (!course) {
+            return res.status(404).json({ error: 'Course not found' });
+        }
+
+        res.json({ success: true, course });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add this route before your static file middleware
+app.get('/tcourse/:courseId', (req, res) => {
+    // For Physics 101, use the original file
+    if (req.params.courseId === 'physics101') {
+        res.sendFile(path.join(__dirname, 'public', 'tclass1.html'));
+    } else {
+        // For other courses, use the template
+        res.sendFile(path.join(__dirname, 'public', 'course-template.html'));
+    }
+});
+
+// Add this route to get recordings for a specific course
+app.get('/api/courses/:courseId/recordings', async (req, res) => {
+    try {
+        const recordings = await Recording.find({ 
+            class: req.params.courseId 
+        }).sort({ createdAt: -1 });
+        
+        res.json({
+            success: true,
+            recordings: recordings
+        });
+    } catch (error) {
+        console.error('Error fetching course recordings:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch recordings' 
+        });
+    }
+});
+
+// Add this route to get active courses for the current user
+app.get('/api/user/courses', async (req, res) => {
+    try {
+        // In a real app, you would get the current user's ID from the session
+        // For now, we'll return all active courses
+        const courses = await Course.find({ status: 'active' })
+            .select('name code')
+            .sort({ code: 1 });
+        
+        res.json({ success: true, courses });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Test route to verify database connection and course retrieval
+app.get('/api/test/courses', async (req, res) => {
+    try {
+        const courses = await Course.find().lean();
+        res.json({
+            success: true,
+            count: courses.length,
+            courses: courses
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+// Add this route for testing
+app.get('/api/courses/debug', async (req, res) => {
+    try {
+        console.log('Debug: Fetching courses...');
+        const courses = await Course.find({}).lean();
+        
+        console.log('Debug: Raw courses found:', courses);
+        
+        const formattedCourses = courses.map(course => ({
+            _id: course._id.toString(),
+            name: course.name || 'Unnamed Course',
+            code: course.code || 'NO_CODE',
+            description: course.description || ''
+        }));
+        
+        console.log('Debug: Formatted courses:', formattedCourses);
+        
+        res.json({
+            success: true,
+            count: formattedCourses.length,
+            courses: formattedCourses
+        });
+    } catch (error) {
+        console.error('Debug: Error fetching courses:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+// Add this new route for preview transcriptions
+app.post('/upload/preview', upload.single('data'), async (req, res) => {
+    try {
+        if (!req.file) {
+            throw new Error('No file uploaded');
+        }
+
+        console.log('Processing preview file:', req.file.path);
+
+        // Transcribe audio for preview
+        const apiResponse = await text2SpeechGPT({
+            filename: req.file.filename,
+            path: req.file.path
+        });
+
+        // Clean up the preview file
+        fs.unlink(req.file.path, (err) => {
+            if (err) console.error('Error deleting preview file:', err);
+        });
+        
+        res.json({
+            success: true,
+            text: apiResponse.text
+        });
+    } catch (error) {
+        console.error('Preview error:', error);
+        if (req.file) {
+            fs.unlink(req.file.path, (err) => {
+                if (err) console.error('Error deleting file:', err);
+            });
+        }
+        res.status(500).json({ 
+            error: 'Preview failed', 
+            details: error.message 
+        });
+    }
+});
+
+// Get single course details
+app.get('/api/courses/:id', async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id)
+            .populate('instructor', 'name email')
+            .lean();
+        
+        if (!course) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Course not found' 
+            });
+        }
+
+        // Format the response
+        const formattedCourse = {
+            _id: course._id.toString(),
+            name: course.name || 'Unnamed Course',
+            code: course.code || 'NO_CODE',
+            description: course.description || '',
+            instructor: course.instructor ? course.instructor.name : 'TBA',
+            schedule: course.schedule || 'Schedule TBA'
+        };
+
+        res.json(formattedCourse);
+    } catch (error) {
+        console.error('Error fetching course:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch course details',
+            details: error.message 
+        });
+    }
+});
+
+// Get recordings for a specific course
+app.get('/api/courses/:courseId/recordings', async (req, res) => {
+    try {
+        const recordings = await Recording.find({ class: req.params.courseId })
+            .sort({ createdAt: -1 })
+            .lean();
+        
+        // Format the recordings
+        const formattedRecordings = recordings.map(recording => ({
+            _id: recording._id.toString(),
+            title: recording.title || 'Untitled Recording',
+            date: recording.createdAt,
+            audioUrl: `/uploads/${recording.audioFile.filename}`,
+            transcript: recording.transcription.text
+        }));
+
+        res.json(formattedRecordings);
+    } catch (error) {
+        console.error('Error fetching course recordings:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch recordings',
+            details: error.message 
+        });
+    }
+});
+
+// Handle student course pages
+app.get('/scourse/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'scourse.html'));
 });
 
 // Start server only after DB connection

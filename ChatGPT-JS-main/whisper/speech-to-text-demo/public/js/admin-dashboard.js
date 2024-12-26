@@ -1,5 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     loadDashboardStats();
+    
+    // Listen for course changes
+    window.addEventListener('courseChanged', () => {
+        loadDashboardStats();
+    });
+
+    // Listen for course updates
+    window.addEventListener('coursesUpdated', (event) => {
+        updateCourseStats(event.detail.courses);
+    });
 });
 
 async function loadDashboardStats() {
@@ -8,8 +18,7 @@ async function loadDashboardStats() {
         const coursesResponse = await fetch('/api/courses');
         const coursesData = await coursesResponse.json();
         if (coursesData.success) {
-            const activeCourses = coursesData.courses.filter(course => course.status === 'active');
-            document.getElementById('courseCount').textContent = activeCourses.length;
+            updateCourseStats(coursesData.courses);
         }
 
         // Fetch users count
@@ -30,4 +39,40 @@ async function loadDashboardStats() {
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
     }
+}
+
+function updateCourseStats(courses) {
+    // Count all courses that are either explicitly active or don't have a status (default to active)
+    const activeCourses = courses.filter(course => 
+        !course.status || course.status === 'active'
+    );
+    
+    // Update the course count in the dashboard
+    const courseCountElement = document.getElementById('courseCount');
+    if (courseCountElement) {
+        courseCountElement.textContent = activeCourses.length;
+    }
+    
+    // Update recent courses list if the container exists
+    updateRecentCourses(courses.slice(0, 5)); // Show 5 most recent courses
+}
+
+function updateRecentCourses(recentCourses) {
+    const recentCoursesContainer = document.querySelector('.recent-courses');
+    if (!recentCoursesContainer) return;
+
+    recentCoursesContainer.innerHTML = recentCourses.map(course => {
+        const instructorName = course.instructor && course.instructor.name 
+            ? course.instructor.name 
+            : 'No Instructor';
+            
+        return `
+            <div class="recent-course-item">
+                <div class="course-name">${course.name || 'Untitled Course'}</div>
+                <div class="course-code">${course.code || 'No Code'}</div>
+                <div class="instructor-name">${instructorName}</div>
+                <div class="course-status ${course.status || 'active'}">${course.status || 'active'}</div>
+            </div>
+        `;
+    }).join('');
 } 

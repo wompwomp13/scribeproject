@@ -165,6 +165,46 @@
             from { opacity: 1; }
             to { opacity: 0; }
         }
+
+        .course-selection {
+            margin-bottom: 2rem;
+        }
+
+        .course-selection label {
+            color: white;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .form-select {
+            background-color: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(255, 113, 113, 0.2);
+            outline: none;
+        }
+
+        .form-select option {
+            background-color: var(--card-bg);
+            color: white;
+            padding: 10px;
+        }
+
+        .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 16px 12px;
+        }
     </style>
 </head>
 <body>
@@ -178,10 +218,6 @@
                 <a href="dashboard.html" class="nav-item">
                     <i class="bi bi-house"></i>
                     <span>Dashboard</span>
-                </a>
-                <a href="#" class="nav-item active">
-                    <i class="bi bi-mic"></i>
-                    <span>Recording Studio</span>
                 </a>
                 <a href="#" class="nav-item">
                     <i class="bi bi-gear"></i>
@@ -202,6 +238,15 @@
             </div>
 
             <div class="recording-section">
+                <!-- Add this before the recording controls -->
+                <div class="course-selection mb-4">
+                    <label for="courseSelect" class="form-label">Select Course</label>
+                    <select class="form-select" id="courseSelect" required>
+                        <option value="">Loading courses...</option>
+                    </select>
+                    <div id="courseDebug" style="color: white; margin-top: 0.5rem; font-size: 0.8rem;"></div>
+                </div>
+
                 <!-- Recording Controls -->
                 <div class="controls-container mb-4">
                     <div class="lecture-title-container mb-3">
@@ -269,6 +314,22 @@
 
     <script src="js/jquery-3.7.1.min.js"></script>
     <script src="js/WebAudioRecorder.min.js"></script>
+    <script src="js/recording.js"></script>
     <script src="js/app.js"></script>
+    <script>
+        // Debug function to show course loading status
+        function updateDebug(message) {
+            const debugEl = document.getElementById('courseDebug');
+            if (debugEl) {
+                debugEl.textContent = message;
+            }
+        }
+
+        // Initialize RecordingStudio after DOM loads
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDebug('Initializing...');
+            window.recordingStudio = new RecordingStudio();
+        });
+    </script>
 </body>
 </html>

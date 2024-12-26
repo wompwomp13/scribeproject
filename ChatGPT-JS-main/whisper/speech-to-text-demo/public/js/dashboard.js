@@ -53,7 +53,12 @@ async function loadTeacherCourses() {
             const coursesContainer = document.querySelector('.courses-grid');
             
             // Add new courses from database
-            data.courses.forEach(course => {
+            for (const course of data.courses) {
+                // Get recordings count for this course
+                const recordingsResponse = await fetch(`/api/courses/${course._id}/recordings`);
+                const recordingsData = await recordingsResponse.json();
+                course.recordingsCount = recordingsData.success ? recordingsData.recordings.length : 0;
+                
                 const courseCard = createCourseCard(course);
                 coursesContainer.appendChild(courseCard);
                 
@@ -62,7 +67,7 @@ async function loadTeacherCourses() {
                 option.value = course._id;
                 option.textContent = course.name;
                 classSelect.appendChild(option);
-            });
+            }
         }
     } catch (error) {
         console.error('Error loading courses:', error);
@@ -72,24 +77,35 @@ async function loadTeacherCourses() {
 function createCourseCard(course) {
     const card = document.createElement('div');
     card.className = 'course-card';
-    card.onclick = () => window.location.href = `/courses/${course._id}.html`;
+    
+    // Format course code and name
+    const courseCode = course.code ? course.code.replace(/'/g, '') : '';
+    const courseName = course.name || 'Untitled Course';
     
     card.innerHTML = `
         <div class="course-info">
-            <p class="course-code">${course.code}</p>
-            <h3 class="course-description">${course.name}</h3>
+            <p class="course-code">${courseName} ${courseCode}</p>
+            <h3 class="course-description">${course.description || 'No description available'}</h3>
             <div class="course-meta">
                 <span class="students">
                     <i class="bi bi-person"></i>
-                    25 students
+                    30 students
                 </span>
                 <span class="recordings">
                     <i class="bi bi-mic"></i>
-                    0 recordings
+                    ${course.recordingsCount} lectures
                 </span>
             </div>
         </div>
     `;
-    
+
+    // Add click event to navigate to course page
+    card.addEventListener('click', () => {
+        const courseUrl = course.code === 'PHY101' 
+            ? '/tclass1.html' 
+            : `/tcourse/${course._id}`;
+        window.location.href = courseUrl;
+    });
+
     return card;
 } 

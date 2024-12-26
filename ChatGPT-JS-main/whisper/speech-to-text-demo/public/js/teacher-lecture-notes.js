@@ -53,7 +53,19 @@ class TeacherLectureNotes {
         });
         document.getElementById('lectureDate').textContent = date;
         
-        document.getElementById('lectureAudio').src = `/uploads/${lecture.audioFile.filename}`;
+        // Debug logging
+        console.log('Audio file data:', lecture.audioFile);
+        console.log('Audio URL:', lecture.audioFile.url);
+        
+        const audioPlayer = document.getElementById('lectureAudio');
+        audioPlayer.onerror = (e) => {
+            console.error('Error loading audio:', e);
+            alert('Failed to load audio file. Please try again later.');
+        };
+        
+        // Set the audio source
+        audioPlayer.src = lecture.audioFile.url;
+        
         document.getElementById('transcriptionEditor').value = lecture.transcription.text;
     }
 

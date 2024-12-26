@@ -207,6 +207,7 @@ async function processChunk(blob) {
         const formData = new FormData();
         formData.append('data', blob);
         
+        // Use the preview endpoint for transcription
         const response = await fetch('/upload?preview=true', {
             method: 'POST',
             body: formData
@@ -317,8 +318,17 @@ saveButton.addEventListener('click', async () => {
             throw new Error('No recording available');
         }
 
+        // Get the selected course ID
+        const courseSelect = document.getElementById('courseSelect');
+        const courseId = courseSelect.value;
+        
+        if (!courseId) {
+            alert('Please select a course before saving');
+            return;
+        }
+
         const lectureTitle = document.getElementById('lectureTitle').value || 'Untitled Lecture';
-        const editedTranscription = transcriptionText.value; // Get edited transcription
+        const editedTranscription = transcriptionText.value;
 
         // Create a single blob from all chunks
         const combinedBlob = new Blob(recordingChunks, { type: 'audio/mp3' });
@@ -326,7 +336,8 @@ saveButton.addEventListener('click', async () => {
         let fd = new FormData();
         fd.append('data', combinedBlob);
         fd.append('title', lectureTitle);
-        fd.append('transcription', editedTranscription); // Send edited transcription
+        fd.append('transcription', editedTranscription);
+        fd.append('courseId', courseId);
 
         saveButton.disabled = true;
         setLoading(true, 'Saving recording...');
@@ -356,6 +367,11 @@ saveButton.addEventListener('click', async () => {
             
             setLoading(false);
             showSuccessMessage();
+
+            // Redirect to course page after successful save
+            setTimeout(() => {
+                window.location.href = `/tcourse/${courseId}`;
+            }, 1500);
         } else {
             throw new Error(data.error || 'Failed to save recording');
         }

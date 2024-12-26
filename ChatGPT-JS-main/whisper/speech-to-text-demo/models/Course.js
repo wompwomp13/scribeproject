@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const courseSchema = new mongoose.Schema({
+const CourseSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true
@@ -15,16 +15,23 @@ const courseSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    description: String,
+    description: {
+        type: String,
+        default: ''
+    },
     status: {
         type: String,
         enum: ['active', 'inactive'],
         default: 'active'
     },
+    recordings: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Recording'
+    }],
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
 
-module.exports = mongoose.model('Course', courseSchema); 
+module.exports = mongoose.model('Course', CourseSchema); 

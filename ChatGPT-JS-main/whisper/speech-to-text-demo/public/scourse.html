@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCRIBE - Course Page</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/course1.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>SCRIBE</h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/studentdashboard.html" class="nav-item">
+                    <i class="bi bi-house"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="bi bi-gear"></i>
+                    <span>Settings</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="bi bi-bell"></i>
+                    <span>Notifications</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Course Header -->
+            <div class="course-header">
+                <div class="course-info">
+                    <p class="course-code" id="courseCode"></p>
+                    <h1 id="courseName"></h1>
+                    <p class="course-description" id="courseDescription"></p>
+                    <div class="course-meta">
+                        <span class="instructor">
+                            <i class="bi bi-person"></i>
+                            <span id="courseInstructor"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Lectures Section -->
+            <div class="lectures-section">
+                <div class="section-header">
+                    <h2>Recent Lectures</h2>
+                    <span id="lectureCount">0 lectures this week</span>
+                </div>
+                
+                <div id="lecturesList" class="lecture-list">
+                    <!-- Lectures will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Modal for viewing lectures -->
+            <div class="modal fade" id="lectureModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Lecture Recording</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="lecture-details">
+                                <h3 id="modalLectureTitle"></h3>
+                                <p id="modalLectureDate" class="text-muted"></p>
+                            </div>
+                            <div class="audio-player mt-3">
+                                <audio id="modalAudio" controls class="w-100"></audio>
+                            </div>
+                            <div class="transcript mt-4">
+                                <h4>Transcript</h4>
+                                <div id="modalTranscript" class="transcript-text"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/scourse.js"></script>
+</body>
+</html> 

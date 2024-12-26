@@ -407,7 +407,7 @@ class ModifyNotesHandler {
     }
 
     cleanText(text) {
-        if (!text) return '';
+        if (!text) return '';yo
         
         // Remove JSON-like formatting and quotes
         return text
