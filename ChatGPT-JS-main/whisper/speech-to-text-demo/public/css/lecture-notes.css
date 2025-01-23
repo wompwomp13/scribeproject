@@ -1584,4 +1584,603 @@ input:checked + .toggle-slider:before {
 .preferences-section::-webkit-scrollbar-thumb:hover {
     background: #666666;
 }
+
+/* Add these styles to your existing CSS file */
+.key-terms-section {
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 1rem;
+}
+
+.key-terms-section h4 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.key-terms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.key-term-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.key-term-card:hover {
+    transform: translateY(-2px);
+}
+
+.key-term-card h5 {
+    color: var(--primary-color);
+    margin: 0;
+    font-size: 1rem;
+    text-align: center;
+}
+
+/* Visual Learning Section Styles */
+.visual-learning-section {
+    grid-column: 1 / -1;
+    background: var(--card-bg);
+    border-radius: 1.2rem;
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.visual-learning-section h2 {
+    color: var(--primary-color);
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.visual-learning-section h2::before {
+    content: '\F341';  /* Bootstrap icon code for eye */
+    font-family: "bootstrap-icons";
+    font-size: 1.6rem;
+}
+
+.key-terms-section {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.key-terms-section h4 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 1.3rem;
+}
+
+.key-terms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.key-term-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.2rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.key-term-card:hover {
+    transform: translateY(-2px);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.key-term-card h5 {
+    color: white;
+    margin: 0;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.visual-term-container {
+    margin-bottom: 2rem;
+}
+
+.term-image-container {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.term-image-container h5 {
+    color: var(--primary-color);
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+}
+
+.term-image {
+    max-width: 100%;
+    height: auto;
+    max-height: 400px;
+    border-radius: 0.8rem;
+    display: none; /* Initially hidden until loaded */
+    margin: 0 auto;
+}
+
+.image-loading {
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+}
+
+.visual-terms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.visual-term-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.term-image-container {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.term-image-container h5 {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.term-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 0.8rem;
+    display: none;
+    margin: 0 auto;
+}
+
+.image-loading {
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.8rem;
+    margin-top: 1rem;
+}
+
+.visual-transcript-section {
+    margin-top: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.visual-transcript-section h4 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 1.3rem;
+    padding: 1.5rem 1.5rem 0;
+}
+
+.visual-transcript-content {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2rem;
+    border-radius: 1rem;
+    line-height: 1.8;
+    font-size: 1.1rem;
+}
+
+.transcript-text p {
+    margin-bottom: 2rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.inline-term-image {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0.5rem;
+    vertical-align: middle;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    max-width: 150px;
+}
+
+.inline-term-image img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 0.3rem;
+    margin-bottom: 0.5rem;
+}
+
+.term-label {
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    text-align: center;
+}
+
+.highlighted-term {
+    color: var(--primary-color);
+    font-weight: 500;
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.2rem;
+    background: rgba(232, 93, 86, 0.1);
+}
+
+.inline-term-image {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 1rem;
+    vertical-align: middle;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    max-width: 200px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.inline-term-image img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    margin-bottom: 0.8rem;
+}
+
+.term-label {
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    text-align: center;
+    font-weight: 500;
+}
+
+.visual-transcript-intro {
+    background: rgba(232, 93, 86, 0.1);
+    padding: 1.5rem;
+    border-radius: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+.visual-transcript-intro h5 {
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.visual-transcript-intro p {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+.term-block {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    margin: 2rem 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.term-text {
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.8;
+    font-size: 1.1rem;
+}
+
+.term-image-wrapper {
+    position: relative;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1rem;
+    border-radius: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.term-image-wrapper img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 0.8rem;
+    margin-bottom: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+.term-image-wrapper img:hover {
+    transform: scale(1.05);
+}
+
+.term-label {
+    text-align: center;
+    color: var(--primary-color);
+    font-weight: 500;
+    font-size: 1rem;
+    background: rgba(232, 93, 86, 0.1);
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.4rem;
+}
+
+.highlighted-term {
+    color: var(--primary-color);
+    font-weight: 500;
+    background: rgba(232, 93, 86, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.3rem;
+    display: inline-block;
+}
+
+.transcript-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.transcript-content > p {
+    color: rgba(255, 255, 255, 0.9);
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 1rem;
+    margin: 0;
+}
+
+/* Loading state styles */
+.visual-loading {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(232, 93, 86, 0.2);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.paragraph-with-image {
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1.5rem;
+    border-radius: 1rem;
+}
+
+.highlighted-term.with-image {
+    position: relative;
+    cursor: pointer;
+}
+
+.highlighted-term.with-image:hover .inline-image-popup {
+    display: block;
+}
+
+.inline-image-popup {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 100%;
+    background: var(--card-bg);
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    width: 250px;
+    margin-top: 0.5rem;
+}
+
+.inline-image-popup img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.inline-image-popup .term-label {
+    display: block;
+    text-align: center;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.paragraph-block {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 1rem;
+}
+
+.textbook-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.95);
+    font-family: 'Inter', sans-serif;
+}
+
+.textbook-section {
+    margin-bottom: 2.5rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 1.2rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background-color 0.3s ease;
+}
+
+.textbook-section:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.content-with-image {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 2.5rem;
+    padding: 2.5rem;
+    align-items: start;
+}
+
+.text-column {
+    font-size: 1.15rem;
+    line-height: 1.9;
+    letter-spacing: 0.01em;
+}
+
+.text-column p {
+    margin: 0;
+    text-align: justify;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.image-column {
+    position: sticky;
+    top: 2rem;
+}
+
+.image-column figure {
+    margin: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.image-column figure:hover {
+    transform: translateY(-4px);
+}
+
+.image-column img {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s ease;
+}
+
+.image-column img:hover {
+    transform: scale(1.03);
+}
+
+.image-column figcaption {
+    padding: 1.2rem;
+    text-align: center;
+    font-weight: 500;
+    color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 1.1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.key-term {
+    color: var(--primary-color);
+    font-weight: 500;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.4rem;
+    background: rgba(232, 93, 86, 0.12);
+    display: inline-block;
+    margin: 0 0.2rem;
+    transition: all 0.2s ease;
+}
+
+.key-term:hover {
+    background: rgba(232, 93, 86, 0.18);
+    transform: translateY(-1px);
+}
+
+/* Add visual hierarchy with typography */
+.textbook-section p {
+    font-weight: 400;
+}
+
+.textbook-section strong {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Improve readability with better spacing */
+.textbook-section + .textbook-section {
+    margin-top: 3rem;
+}
+
+/* Add subtle animations */
+.textbook-section {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive improvements */
+@media (max-width: 1024px) {
+    .content-with-image {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        padding: 2rem;
+    }
+
+    .image-column {
+        position: relative;
+        top: 0;
+    }
+
+    .image-column img {
+        height: 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .textbook-content {
+        font-size: 1rem;
+    }
+
+    .content-with-image {
+        padding: 1.5rem;
+    }
+
+    .image-column img {
+        height: 200px;
+    }
+}
   

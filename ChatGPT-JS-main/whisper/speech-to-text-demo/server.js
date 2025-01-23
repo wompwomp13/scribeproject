@@ -1091,4 +1091,117 @@ process.on('SIGTERM', () => {
 // Update the lectures route to use lecture-notes.html instead
 app.get('/lectures/:slug', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'lecture-notes.html'));
+});
+
+// Add this new endpoint after your summarize-lecture endpoint
+app.post('/api/extract-key-terms', async (req, res) => {
+    try {
+        const { transcription, lectureTitle } = req.body;
+
+        if (!transcription) {
+            return res.status(400).json({
+                success: false,
+                error: 'No transcription provided'
+            });
+        }
+
+        const groq = new Groq({ 
+            apiKey: process.env.GROQ_API_KEY 
+        });
+
+        // Update the cleanup prompt to be more specific
+        const cleanupPrompt = `Clean this lecture transcript by:
+1. Fixing grammar and spelling errors
+2. Removing filler words (um, uh, like, you know)
+3. Fixing any transcription errors or incomplete sentences
+4. Maintaining ALL original content and meaning
+5. Keeping the same level of detail and information
+6. Preserving technical terms and specific examples
+
+DO NOT:
+- Summarize or shorten the content
+- Remove any key information
+- Change technical terminology
+- Alter the lecture's structure
+
+Transcript: ${transcription}
+
+Return the cleaned transcript with the same level of detail as the original.`;
+
+        const cleanupCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: "You are a transcript editor that maintains content accuracy while improving readability." },
+                { role: "user", content: cleanupPrompt }
+            ],
+            model: "mixtral-8x7b-32768",
+            temperature: 0.1,
+            max_tokens: 2048,
+        });
+
+        const cleanedTranscript = cleanupCompletion.choices[0]?.message?.content;
+
+        // Extract key terms that appear in the transcript
+        const termsPrompt = `From this lecture transcript, identify exactly 3 key terms that:
+1. Appear word-for-word in the text
+2. Are concrete objects or specific concepts
+3. Can be illustrated with images
+4. Are important to the lecture content
+
+Transcript:
+${cleanedTranscript}
+
+IMPORTANT: Return ONLY a valid JSON array with exactly 3 terms, like this: ["term1", "term2", "term3"]
+Do not include any explanation or additional text.`;
+
+        const termsCompletion = await groq.chat.completions.create({
+            messages: [
+                { 
+                    role: "system", 
+                    content: "You are a JSON generator that returns ONLY a valid JSON array of 3 terms. No other text." 
+                },
+                { role: "user", content: termsPrompt }
+            ],
+            model: "mixtral-8x7b-32768",
+            temperature: 0.1,
+            max_tokens: 1024,
+        });
+
+        // Clean up the response to ensure valid JSON
+        const response = termsCompletion.choices[0]?.message?.content;
+        const cleanedResponse = response.trim()
+            .replace(/^```json\s*/, '')
+            .replace(/\s*```$/, '')
+            .replace(/^[\s\n]*\[/, '[')
+            .replace(/\][\s\n]*$/, ']');
+
+        try {
+            const keyTerms = JSON.parse(cleanedResponse);
+            // Verify terms appear in transcript
+            const validTerms = keyTerms.filter(term => {
+                const regex = new RegExp(term, 'i');
+                return regex.test(cleanedTranscript);
+            });
+
+            if (validTerms.length !== 3) {
+                throw new Error('Terms not found in transcript');
+            }
+
+            res.json({
+                success: true,
+                keyTerms: validTerms,
+                cleanedTranscript
+            });
+        } catch (error) {
+            console.error('Failed to parse response:', cleanedResponse);
+            throw new Error('Invalid response format from AI');
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to process transcript',
+            details: error.message
+        });
+    }
 }); 

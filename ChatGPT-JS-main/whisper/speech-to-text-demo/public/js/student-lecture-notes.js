@@ -206,7 +206,9 @@ class StudentLectureNotes {
         const preferences = {
             summarization: document.getElementById('summarization').checked,
             flashcards: document.getElementById('flashcards').checked,
-            auditory: document.getElementById('auditory').checked
+            auditory: document.getElementById('auditory').checked,
+            visual: document.getElementById('visual').checked,
+            kinesthetic: document.getElementById('kinesthetic').checked
         };
 
         // Save preferences to localStorage
@@ -215,6 +217,11 @@ class StudentLectureNotes {
         // Handle summarization if selected
         if (preferences.summarization) {
             await this.handleSummarization();
+        }
+
+        // Handle visual learning if selected
+        if (preferences.visual) {
+            await this.handleVisualLearning();
         }
 
         // Show toast notification
@@ -394,6 +401,276 @@ class StudentLectureNotes {
         handler.initializeSection(document.querySelector('.summary-section'));
     }
 
+    async handleVisualLearning() {
+        try {
+            // Show loading state
+            const loader = document.createElement('div');
+            loader.className = 'summary-loader';
+            loader.innerHTML = `
+                <div class="loader-spinner"></div>
+                <p>Preparing visual learning content...</p>
+                <small>This may take a moment as we gather and process visual elements</small>
+            `;
+            document.body.appendChild(loader);
+
+            // Get the data from the server
+            const response = await fetch('/api/extract-key-terms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    transcription: document.getElementById('transcriptionText').textContent,
+                    lectureTitle: document.getElementById('lectureTitle').textContent,
+                    courseName: document.getElementById('courseBreadcrumb').textContent
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to extract key terms');
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error || 'Failed to extract key terms');
+
+            // Ensure we have exactly 3 valid terms
+            const validKeyTerms = data.keyTerms
+                .filter(term => typeof term === 'string')
+                .slice(0, 3);
+
+            if (validKeyTerms.length !== 3) {
+                throw new Error('Failed to generate required number of key terms');
+            }
+
+            // Pre-fetch images with improved search
+            const imageCache = new Map();
+            
+            // Simplified collections focused on educational content
+            const educationalCollections = '317099,4332580';
+
+            await Promise.all(validKeyTerms.map(async (term) => {
+                // Simplify the search query
+                const searchQuery = encodeURIComponent(`${term} education diagram`);
+                
+                const params = new URLSearchParams({
+                    query: searchQuery,
+                    per_page: '20',
+                    order_by: 'relevant',
+                    content_filter: 'high',
+                    orientation: 'landscape',
+                    collections: educationalCollections
+                });
+
+                try {
+                    const response = await fetch(
+                        `https://api.unsplash.com/search/photos?${params.toString()}&client_id=KpzwsxtICNRSkYOMRoDs2dweYyqycu0mU875j_QMKcA`
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.results && data.results.length > 0) {
+                        // Find the most relevant image
+                        const bestMatch = data.results.find(img => {
+                            const description = (img.description || '').toLowerCase();
+                            const altDescription = (img.alt_description || '').toLowerCase();
+                            const termLower = term.toLowerCase();
+                            
+                            return description.includes(termLower) || 
+                                   altDescription.includes(termLower) ||
+                                   description.includes('education') ||
+                                   description.includes('diagram');
+                        }) || data.results[0];
+
+                        imageCache.set(term, bestMatch.urls.regular);
+                    } else {
+                        // Fallback to a more generic search if no results found
+                        const fallbackParams = new URLSearchParams({
+                            query: encodeURIComponent(term),
+                            per_page: '1',
+                            order_by: 'relevant',
+                            content_filter: 'high',
+                            orientation: 'landscape'
+                        });
+
+                        const fallbackResponse = await fetch(
+                            `https://api.unsplash.com/search/photos?${fallbackParams.toString()}&client_id=KpzwsxtICNRSkYOMRoDs2dweYyqycu0mU875j_QMKcA`
+                        );
+
+                        if (fallbackResponse.ok) {
+                            const fallbackData = await fallbackResponse.json();
+                            if (fallbackData.results && fallbackData.results.length > 0) {
+                                imageCache.set(term, fallbackData.results[0].urls.regular);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error fetching image for "${term}":`, error);
+                    // Try fallback without collections
+                    try {
+                        const fallbackParams = new URLSearchParams({
+                            query: encodeURIComponent(term),
+                            per_page: '1',
+                            order_by: 'relevant',
+                            content_filter: 'high'
+                        });
+
+                        const fallbackResponse = await fetch(
+                            `https://api.unsplash.com/search/photos?${fallbackParams.toString()}&client_id=KpzwsxtICNRSkYOMRoDs2dweYyqycu0mU875j_QMKcA`
+                        );
+
+                        if (fallbackResponse.ok) {
+                            const fallbackData = await fallbackResponse.json();
+                            if (fallbackData.results && fallbackData.results.length > 0) {
+                                imageCache.set(term, fallbackData.results[0].urls.regular);
+                            }
+                        }
+                    } catch (fallbackError) {
+                        console.error(`Fallback fetch failed for "${term}":`, fallbackError);
+                    }
+                }
+            }));
+
+            // Proceed if we have at least one image
+            if (imageCache.size > 0) {
+                // Update the UI with whatever images we got
+                await this.updateKeyTermsSection(validKeyTerms, imageCache);
+                await this.processVisualTranscript(data.cleanedTranscript, validKeyTerms, imageCache);
+                this.showToastNotification('Visual learning content ready');
+            } else {
+                throw new Error('Unable to fetch any images for the key terms');
+            }
+
+        } catch (error) {
+            console.error('Visual learning error:', error);
+            alert('Failed to process visual learning: ' + error.message);
+        } finally {
+            const loader = document.querySelector('.summary-loader');
+            if (loader) loader.remove();
+        }
+    }
+
+    async updateKeyTermsSection(keyTerms, imageCache) {
+        const contentGrid = document.querySelector('.content-grid');
+        
+        // Remove existing visual learning section if it exists
+        const existingSection = document.querySelector('.visual-learning-section');
+        if (existingSection) {
+            existingSection.remove();
+        }
+
+        // Create new visual learning section
+        const visualSection = document.createElement('section');
+        visualSection.className = 'visual-learning-section';
+        
+        visualSection.innerHTML = `
+            <h2>Visual Learning</h2>
+            <div class="key-terms-section">
+                <h4><i class="bi bi-eye"></i> Key Visual Terms</h4>
+                <div class="visual-terms-grid">
+                    ${keyTerms.map((term, index) => `
+                        <div class="visual-term-container">
+                            <div class="term-image-container">
+                                <h5>${term}</h5>
+                                <img 
+                                    src="${imageCache.get(term) || 'placeholder.jpg'}" 
+                                    class="term-image" 
+                                    alt="${term}"
+                                    onload="this.style.display='block'"
+                                />
+                                ${!imageCache.get(term) ? `
+                                    <div class="image-loading">Image not available</div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="visual-transcript-section">
+                <h4><i class="bi bi-eye-fill"></i> Visual Transcript</h4>
+                <div class="visual-transcript-content">
+                    <div class="transcript-text">Loading transcript...</div>
+                </div>
+            </div>
+        `;
+
+        contentGrid.appendChild(visualSection);
+        
+        const handler = new DefinitionsHandler();
+        handler.initializeSection(visualSection);
+    }
+
+    async processVisualTranscript(cleanedTranscript, keyTerms, imageCache) {
+        const textContainer = document.querySelector('.visual-transcript-content .transcript-text');
+        if (!textContainer) return;
+
+        try {
+            // Track which terms we've shown images for
+            const shownTerms = new Set();
+            
+            // Split transcript into paragraphs
+            const paragraphs = cleanedTranscript.split('\n\n');
+            
+            // Process each paragraph
+            const processedContent = paragraphs.map(paragraph => {
+                let processedParagraph = paragraph;
+                let hasImage = false;
+
+                // First, check if this paragraph contains any key terms we haven't shown yet
+                for (const term of keyTerms) {
+                    if (!shownTerms.has(term) && imageCache.has(term)) {
+                        const termRegex = new RegExp(`(${term})`, 'i');
+                        if (termRegex.test(paragraph)) {
+                            shownTerms.add(term);
+                            hasImage = true;
+                            
+                            // Split paragraph at the term
+                            const parts = paragraph.split(termRegex);
+                            return `
+                                <div class="textbook-section">
+                                    <div class="content-with-image">
+                                        <div class="text-column">
+                                            <p>
+                                                ${parts[0]}
+                                                <span class="key-term">${term}</span>
+                                                ${parts.slice(2).join('')}
+                                            </p>
+                                        </div>
+                                        <div class="image-column">
+                                            <figure>
+                                                <img src="${imageCache.get(term)}" alt="${term}" />
+                                                <figcaption>${term}</figcaption>
+                                            </figure>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+                
+                // If no new terms to show, just highlight any terms
+                if (!hasImage) {
+                    keyTerms.forEach(term => {
+                        const regex = new RegExp(`(${term})`, 'gi');
+                        processedParagraph = processedParagraph.replace(
+                            regex,
+                            '<span class="key-term">$1</span>'
+                        );
+                    });
+                    return `<div class="textbook-section"><p>${processedParagraph}</p></div>`;
+                }
+            });
+
+            textContainer.innerHTML = `
+                <div class="textbook-content">
+                    ${processedContent.filter(content => content).join('')}
+                </div>
+            `;
+        } catch (error) {
+            console.error('Error processing visual transcript:', error);
+            textContainer.innerHTML = '<div class="error-message">Failed to process content.</div>';
+        }
+    }
+
     loadSavedPreferences() {
         try {
             const savedPreferences = localStorage.getItem('notePreferences');
@@ -402,6 +679,8 @@ class StudentLectureNotes {
                 document.getElementById('summarization').checked = preferences.summarization ?? true;
                 document.getElementById('flashcards').checked = preferences.flashcards ?? false;
                 document.getElementById('auditory').checked = preferences.auditory ?? false;
+                document.getElementById('visual').checked = preferences.visual ?? false;
+                document.getElementById('kinesthetic').checked = preferences.kinesthetic ?? false;
             }
         } catch (error) {
             console.error('Error loading preferences:', error);
