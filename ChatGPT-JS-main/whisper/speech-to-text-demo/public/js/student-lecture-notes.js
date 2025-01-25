@@ -100,8 +100,6 @@ class StudentLectureNotes {
 
     updateUI(lecture) {
         console.log('Updating UI with lecture:', lecture);
-        console.log('Audio file details:', lecture.audioFile);
-        console.log('Transcription details:', lecture.transcription);
         
         // Update title and breadcrumb
         const title = lecture.title || 'Untitled Lecture';
@@ -127,7 +125,6 @@ class StudentLectureNotes {
                 console.log('Setting audio URL:', audioUrl);
                 audio.src = audioUrl;
                 
-                // Add event listeners to check if audio loads
                 audio.onerror = (e) => {
                     console.error('Error loading audio:', e);
                 };
@@ -141,18 +138,32 @@ class StudentLectureNotes {
             console.error('No audio file found in lecture data');
         }
         
-        // Update transcription with error handling
+        // Update transcription
         const transcriptionElement = document.getElementById('transcriptionText');
         if (lecture.transcription && lecture.transcription.text) {
-            console.log('Setting transcription:', lecture.transcription.text);
             transcriptionElement.textContent = lecture.transcription.text;
             
-            // Initialize definitions handler for transcription
             const handler = new DefinitionsHandler();
             handler.initializeSection(transcriptionElement.parentElement);
         } else {
             console.error('No transcription found in lecture data');
             transcriptionElement.textContent = 'No transcription available';
+        }
+
+        // Set initial audio section visibility based on preferences
+        const savedPreferences = localStorage.getItem('notePreferences');
+        if (savedPreferences) {
+            const preferences = JSON.parse(savedPreferences);
+            const audioSection = document.querySelector('.audio-section');
+            if (audioSection) {
+                audioSection.style.display = preferences.audio ? 'block' : 'none';
+            }
+        } else {
+            // Hide audio section by default
+            const audioSection = document.querySelector('.audio-section');
+            if (audioSection) {
+                audioSection.style.display = 'none';
+            }
         }
     }
 
@@ -206,13 +217,19 @@ class StudentLectureNotes {
         const preferences = {
             summarization: document.getElementById('summarization').checked,
             flashcards: document.getElementById('flashcards').checked,
-            auditory: document.getElementById('auditory').checked,
+            audio: document.getElementById('audio').checked,
             visual: document.getElementById('visual').checked,
             kinesthetic: document.getElementById('kinesthetic').checked
         };
 
         // Save preferences to localStorage
         localStorage.setItem('notePreferences', JSON.stringify(preferences));
+
+        // Handle audio section visibility
+        const audioSection = document.querySelector('.audio-section');
+        if (audioSection) {
+            audioSection.style.display = preferences.audio ? 'block' : 'none';
+        }
 
         // Handle summarization if selected
         if (preferences.summarization) {
@@ -611,34 +628,26 @@ class StudentLectureNotes {
             
             // Process each paragraph
             const processedContent = paragraphs.map(paragraph => {
-                let processedParagraph = paragraph;
-                let hasImage = false;
-
-                // First, check if this paragraph contains any key terms we haven't shown yet
+                // Check if this paragraph contains any key terms we haven't shown yet
                 for (const term of keyTerms) {
                     if (!shownTerms.has(term) && imageCache.has(term)) {
                         const termRegex = new RegExp(`(${term})`, 'i');
                         if (termRegex.test(paragraph)) {
                             shownTerms.add(term);
-                            hasImage = true;
                             
                             // Split paragraph at the term
                             const parts = paragraph.split(termRegex);
                             return `
-                                <div class="textbook-section">
-                                    <div class="content-with-image">
-                                        <div class="text-column">
-                                            <p>
-                                                ${parts[0]}
-                                                <span class="key-term">${term}</span>
-                                                ${parts.slice(2).join('')}
-                                            </p>
-                                        </div>
-                                        <div class="image-column">
-                                            <figure>
-                                                <img src="${imageCache.get(term)}" alt="${term}" />
-                                                <figcaption>${term}</figcaption>
-                                            </figure>
+                                <div class="transcript-block with-image">
+                                    <div class="text-content">
+                                        ${parts[0]}
+                                        <span class="key-term">${term}</span>
+                                        ${parts.slice(2).join('')}
+                                    </div>
+                                    <div class="term-image-sidebar">
+                                        <div class="image-wrapper">
+                                            <img src="${imageCache.get(term)}" alt="${term}" />
+                                            <div class="image-caption">${term}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -647,22 +656,34 @@ class StudentLectureNotes {
                     }
                 }
                 
-                // If no new terms to show, just highlight any terms
-                if (!hasImage) {
-                    keyTerms.forEach(term => {
-                        const regex = new RegExp(`(${term})`, 'gi');
-                        processedParagraph = processedParagraph.replace(
-                            regex,
-                            '<span class="key-term">$1</span>'
-                        );
-                    });
-                    return `<div class="textbook-section"><p>${processedParagraph}</p></div>`;
-                }
+                // For paragraphs without new terms, still maintain consistent formatting
+                let processedParagraph = paragraph;
+                keyTerms.forEach(term => {
+                    const regex = new RegExp(`(${term})`, 'gi');
+                    processedParagraph = processedParagraph.replace(
+                        regex,
+                        '<span class="key-term">$1</span>'
+                    );
+                });
+                
+                return `
+                    <div class="transcript-block">
+                        <div class="text-content">
+                            ${processedParagraph}
+                        </div>
+                    </div>
+                `;
             });
 
             textContainer.innerHTML = `
-                <div class="textbook-content">
-                    ${processedContent.filter(content => content).join('')}
+                <div class="visual-transcript-container">
+                    <div class="transcript-intro">
+                        <h3>Enhanced Visual Transcript</h3>
+                        <p>Key terms are highlighted and accompanied by relevant images on first appearance.</p>
+                    </div>
+                    <div class="transcript-blocks">
+                        ${processedContent.filter(content => content).join('')}
+                    </div>
                 </div>
             `;
         } catch (error) {
@@ -676,11 +697,23 @@ class StudentLectureNotes {
             const savedPreferences = localStorage.getItem('notePreferences');
             if (savedPreferences) {
                 const preferences = JSON.parse(savedPreferences);
-                document.getElementById('summarization').checked = preferences.summarization ?? true;
+                document.getElementById('summarization').checked = preferences.summarization ?? false;
                 document.getElementById('flashcards').checked = preferences.flashcards ?? false;
-                document.getElementById('auditory').checked = preferences.auditory ?? false;
+                document.getElementById('audio').checked = preferences.audio ?? false;
                 document.getElementById('visual').checked = preferences.visual ?? false;
                 document.getElementById('kinesthetic').checked = preferences.kinesthetic ?? false;
+
+                // Set initial audio section visibility
+                const audioSection = document.querySelector('.audio-section');
+                if (audioSection) {
+                    audioSection.style.display = preferences.audio ? 'block' : 'none';
+                }
+            } else {
+                // Hide audio section by default
+                const audioSection = document.querySelector('.audio-section');
+                if (audioSection) {
+                    audioSection.style.display = 'none';
+                }
             }
         } catch (error) {
             console.error('Error loading preferences:', error);
