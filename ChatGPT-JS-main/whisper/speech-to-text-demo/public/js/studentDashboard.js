@@ -1,83 +1,124 @@
-document.addEventListener('DOMContentLoaded', function() {
-    loadCourses();
-});
+class CourseManager {
+    constructor() {
+        this.searchInput = document.getElementById('courseSearch');
+        this.sortSelect = document.getElementById('sortCourses');
+        this.coursesGrid = document.querySelector('.courses-grid');
+        this.courses = [];
 
-async function loadCourses() {
-    try {
-        const response = await fetch('/api/courses');
-        const data = await response.json();
+        this.setupEventListeners();
+        this.loadCourses();
+    }
 
-        const coursesGrid = document.querySelector('.courses-grid');
-        coursesGrid.innerHTML = ''; // Clear existing content
+    setupEventListeners() {
+        this.searchInput.addEventListener('input', () => this.filterCourses());
+        this.sortSelect.addEventListener('change', () => this.filterCourses());
+    }
 
-        // Add the hard-coded Physics 101 card first
-        const physicsCard = `
-            <div class="course-card">
-                <a href="course1.html" style="text-decoration: none; color: inherit; display: block;">
-                    <div class="course-info">
-                        <p class="course-code">Physics 101</p>
-                        <h3>Introduction to Physics</h3>
-                        <div class="course-meta">
-                            <span class="students">
-                                <i class="bi bi-person"></i>
-                                30 students
-                            </span>
-                            <span class="time">
-                                <i class="bi bi-clock"></i>
-                                1d ago
-                            </span>
-                        </div>
-                    </div>
-                </a>
-            </div>
-        `;
-        coursesGrid.innerHTML = physicsCard;
+    async loadCourses() {
+        try {
+            const response = await fetch('/api/courses');
+            const data = await response.json();
+            
+            if (data.success) {
+                // Get recordings count for each course
+                const coursesWithRecordings = await Promise.all(data.courses.map(async course => {
+                    const recordingsResponse = await fetch(`/api/courses/${course._id}/recordings`);
+                    const recordingsData = await recordingsResponse.json();
+                    return {
+                        ...course,
+                        recordingsCount: recordingsData.success ? recordingsData.recordings.length : 0
+                    };
+                }));
 
-        if (!data.courses || data.courses.length === 0) {
-            console.warn('No courses found.');
+                this.courses = coursesWithRecordings;
+                this.filterCourses();
+            }
+        } catch (error) {
+            console.error('Error loading courses:', error);
+        }
+    }
+
+    filterCourses() {
+        const searchTerm = this.searchInput.value.toLowerCase();
+        const sortOption = this.sortSelect.value;
+
+        let filteredCourses = this.courses.filter(course => {
+            const courseName = (course.name || '').toLowerCase();
+            const courseCode = (course.code || '').toLowerCase();
+            const description = (course.description || '').toLowerCase();
+            
+            return courseName.includes(searchTerm) || 
+                   courseCode.includes(searchTerm) || 
+                   description.includes(searchTerm);
+        });
+
+        filteredCourses.sort((a, b) => {
+            switch(sortOption) {
+                case 'name-asc':
+                    return (a.name || '').localeCompare(b.name || '');
+                case 'name-desc':
+                    return (b.name || '').localeCompare(a.name || '');
+                case 'date-new':
+                    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                case 'date-old':
+                    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+                default:
+                    return 0;
+            }
+        });
+
+        this.renderCourses(filteredCourses);
+    }
+
+    renderCourses(courses) {
+        this.coursesGrid.innerHTML = '';
+        
+        if (courses.length === 0) {
+            this.coursesGrid.innerHTML += `
+                <div class="no-results">
+                    <i class="bi bi-search"></i>
+                    <p>No courses found</p>
+                </div>
+            `;
             return;
         }
 
-        // Load other courses dynamically
-        for (const course of data.courses) {
-            if (course.code !== 'PHY101') {
-                try {
-                    const recordingsResponse = await fetch(`/api/courses/${course._id}/recordings`);
-                    const recordingsData = await recordingsResponse.json();
-                    const recordingsCount = recordingsData.success ? recordingsData.recordings.length : 0;
+        courses.forEach(course => {
+            const courseCard = this.createCourseCard(course);
+            this.coursesGrid.appendChild(courseCard);
+        });
+    }
 
-                    const card = document.createElement('div');
-                    card.className = 'course-card';
-                    card.setAttribute('data-code', course.code);
+    createCourseCard(course) {
+        const card = document.createElement('div');
+        card.className = 'course-card';
+        
+        const courseCode = course.code ? course.code.replace(/'/g, '') : '';
+        const courseName = course.name || 'Untitled Course';
+        
+        card.innerHTML = `
+            <a href="/scourse.html?id=${course._id}" style="text-decoration: none; color: inherit; display: block;">
+                <div class="course-info">
+                    <p class="course-code">${courseName} ${courseCode}</p>
+                    <h3>${course.description || 'No description available'}</h3>
+                    <div class="course-meta">
+                        <span class="students">
+                            <i class="bi bi-person"></i>
+                            ${course.studentCount || 0} students
+                        </span>
+                        <span class="recordings">
+                            <i class="bi bi-mic"></i>
+                            ${course.recordingsCount || 0} lectures
+                        </span>
+                    </div>
+                </div>
+            </a>
+        `;
 
-                    card.innerHTML = `
-                        <div class="course-info">
-                            <p class="course-code">${course.name} ${course.code}</p>
-                            <h3 class="course-description">${course.description || 'No description available'}</h3>
-                            <div class="course-meta">
-                                <span class="students">
-                                    <i class="bi bi-person"></i>
-                                    30 students
-                                </span>
-                                <span class="recordings">
-                                    <i class="bi bi-mic"></i>
-                                    ${recordingsCount} lectures
-                                </span>
-                            </div>
-                        </div>
-                    `;
-
-                    card.addEventListener('click', () => {
-                        window.location.href = `/scourse.html?id=${course._id}`;
-                    });
-
-                    coursesGrid.appendChild(card);
-                } catch (error) {
-                    console.error(`Error loading recordings for course ${course._id}:`, error);
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Error loading courses:', error);
+        return card;
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    new CourseManager();
+});
