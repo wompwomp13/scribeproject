@@ -1204,4 +1204,215 @@ Do not include any explanation or additional text.`;
             details: error.message
         });
     }
+});
+
+// Add this new endpoint for kinesthetic learning
+app.post('/api/generate-quiz', async (req, res) => {
+    try {
+        const { transcription, lectureTitle } = req.body;
+
+        if (!transcription) {
+            return res.status(400).json({
+                success: false,
+                error: 'No transcription provided'
+            });
+        }
+
+        const groq = new Groq({ 
+            apiKey: process.env.GROQ_API_KEY 
+        });
+
+        // First, determine the best quiz type
+        const quizTypePrompt = `Analyze this lecture and determine the most appropriate quiz type from these options:
+1. Matching: Match key terms to their definitions
+2. Sorting: Arrange events in chronological order
+3. Categorization: Group items into categories
+
+Consider:
+- The lecture content and structure
+- The type of information presented
+- The learning objectives
+
+Lecture Title: ${lectureTitle}
+Transcript: ${transcription}
+
+Return ONLY ONE of these three words: "matching", "sorting", or "categorization"`;
+
+        const quizTypeCompletion = await groq.chat.completions.create({
+            messages: [
+                { 
+                    role: "system", 
+                    content: "You are a quiz type analyzer. Return only one word: matching, sorting, or categorization." 
+                },
+                { role: "user", content: quizTypePrompt }
+            ],
+            model: "mixtral-8x7b-32768",
+            temperature: 0.1,
+            max_tokens: 50,
+        });
+
+        const quizType = quizTypeCompletion.choices[0]?.message?.content.trim().toLowerCase();
+
+        // Now generate the quiz content based on the type
+        let quizPrompt;
+        switch (quizType) {
+            case 'matching':
+                quizPrompt = `Create a matching quiz based on this lecture. Generate exactly 6 pairs of terms and definitions that are important to the lecture content.
+
+Return the quiz in this JSON format:
+{
+    "type": "matching",
+    "pairs": [
+        {"term": "term1", "definition": "definition1"},
+        {"term": "term2", "definition": "definition2"},
+        // etc...
+    ]
+}
+
+Lecture: ${transcription}`;
+                break;
+
+            case 'sorting':
+                quizPrompt = `Create a chronological sorting quiz based on this lecture. Generate exactly 6 events that should be arranged in order.
+
+Return the quiz in this JSON format:
+{
+    "type": "sorting",
+    "events": [
+        {"text": "event1", "order": 1},
+        {"text": "event2", "order": 2},
+        // etc...
+    ]
+}
+
+Lecture: ${transcription}`;
+                break;
+
+            case 'categorization':
+                quizPrompt = `Create a categorization quiz based on this lecture. Generate 3 categories and 6 items that should be sorted into these categories.
+
+Return the quiz in this JSON format:
+{
+    "type": "categorization",
+    "categories": ["category1", "category2", "category3"],
+    "items": [
+        {"text": "item1", "category": "category1"},
+        {"text": "item2", "category": "category2"},
+        // etc...
+    ]
+}
+
+Lecture: ${transcription}`;
+                break;
+
+            default:
+                throw new Error('Invalid quiz type determined');
+        }
+
+        const quizCompletion = await groq.chat.completions.create({
+            messages: [
+                { 
+                    role: "system", 
+                    content: "You are a quiz generator. Return only valid JSON in the specified format." 
+                },
+                { role: "user", content: quizPrompt }
+            ],
+            model: "mixtral-8x7b-32768",
+            temperature: 0.3,
+            max_tokens: 1024,
+        });
+
+        // Parse and validate the quiz content
+        const quizContent = JSON.parse(quizCompletion.choices[0]?.message?.content);
+
+        res.json({
+            success: true,
+            quizType: quizType,
+            quiz: quizContent
+        });
+
+    } catch (error) {
+        console.error('Quiz generation error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to generate quiz',
+            details: error.message
+        });
+    }
+});
+
+// Add this new endpoint for flashcard generation
+app.post('/api/generate-flashcards', async (req, res) => {
+    try {
+        const { transcription, lectureTitle } = req.body;
+
+        if (!transcription) {
+            return res.status(400).json({
+                success: false,
+                error: 'No transcription provided'
+            });
+        }
+
+        const groq = new Groq({ 
+            apiKey: process.env.GROQ_API_KEY 
+        });
+
+        // Generate flashcards content
+        const flashcardsPrompt = `Create educational flashcards based on this lecture. Generate 8 flashcards that cover the most important concepts, definitions, and key points.
+
+Each flashcard should have:
+1. A clear, concise question or term on the front
+2. A comprehensive but concise answer or explanation on the back
+3. A category label (e.g., "Definition", "Concept", "Process", "Example")
+
+Return the flashcards in this JSON format:
+{
+    "flashcards": [
+        {
+            "front": "question or term",
+            "back": "answer or explanation",
+            "category": "category label"
+        },
+        // ... more flashcards
+    ]
+}
+
+Make sure the flashcards:
+- Cover the most important information
+- Are clear and easy to understand
+- Progress from basic to more complex concepts
+- Include a mix of different types of questions
+
+Lecture Title: ${lectureTitle}
+Lecture Content: ${transcription}`;
+
+        const completion = await groq.chat.completions.create({
+            messages: [
+                { 
+                    role: "system", 
+                    content: "You are a flashcard generator. Return only valid JSON in the specified format." 
+                },
+                { role: "user", content: flashcardsPrompt }
+            ],
+            model: "mixtral-8x7b-32768",
+            temperature: 0.3,
+            max_tokens: 1024,
+        });
+
+        // Parse and validate the flashcards content
+        const flashcardsContent = JSON.parse(completion.choices[0]?.message?.content);
+
+        res.json({
+            success: true,
+            flashcards: flashcardsContent.flashcards
+        });
+
+    } catch (error) {
+        console.error('Flashcard generation error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to generate flashcards',
+            details: error.message
+        });
+    }
 }); 

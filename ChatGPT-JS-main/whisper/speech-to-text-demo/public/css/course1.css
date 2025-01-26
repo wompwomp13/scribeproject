@@ -99,14 +99,24 @@ body {
 
 .course-meta {
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
 }
 
 .course-meta span {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.6rem 1.2rem;
+    border-radius: 2rem;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.course-meta i {
+    color: var(--primary-color);
+    font-size: 1.1rem;
 }
 
 /* Search Section */
@@ -440,4 +450,16 @@ body {
 
 .course-header .course-meta span {
     justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .course-meta {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    
+    .course-meta span {
+        width: fit-content;
+    }
 }

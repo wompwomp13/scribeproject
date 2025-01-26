@@ -236,14 +236,37 @@ class StudentLectureNotes {
             await this.handleSummarization();
         }
 
+        // Handle flashcards if selected
+        if (preferences.flashcards) {
+            await this.handleFlashcards();
+        }
+
         // Handle visual learning if selected
         if (preferences.visual) {
             await this.handleVisualLearning();
         }
 
+        // Handle kinesthetic learning if selected
+        if (preferences.kinesthetic) {
+            await this.handleKinestheticLearning();
+        }
+
         // Show toast notification
         this.showToastNotification('Preferences saved successfully');
         this.closeSidebar();
+
+        // Add this to your existing handleSavePreferences method
+        const toggles = document.querySelectorAll('.toggle-switch input[type="checkbox"]');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('change', (e) => {
+                const card = e.target.closest('.preference-card');
+                if (e.target.checked) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        });
     }
 
     async handleSummarization() {
@@ -697,22 +720,41 @@ class StudentLectureNotes {
             const savedPreferences = localStorage.getItem('notePreferences');
             if (savedPreferences) {
                 const preferences = JSON.parse(savedPreferences);
-                document.getElementById('summarization').checked = preferences.summarization ?? false;
-                document.getElementById('flashcards').checked = preferences.flashcards ?? false;
-                document.getElementById('audio').checked = preferences.audio ?? false;
-                document.getElementById('visual').checked = preferences.visual ?? false;
-                document.getElementById('kinesthetic').checked = preferences.kinesthetic ?? false;
+                Object.entries(preferences).forEach(([key, value]) => {
+                    const checkbox = document.getElementById(key);
+                    if (checkbox) {
+                        checkbox.checked = value;
+                        // Set initial active state
+                        const card = checkbox.closest('.preference-card');
+                        if (value) {
+                            card.classList.add('active');
+                        } else {
+                            card.classList.remove('active');
+                        }
+                    }
+                });
 
                 // Set initial audio section visibility
                 const audioSection = document.querySelector('.audio-section');
                 if (audioSection) {
                     audioSection.style.display = preferences.audio ? 'block' : 'none';
                 }
+
+                // Set initial flashcards section visibility
+                const flashcardsSection = document.querySelector('.flashcards-section');
+                if (flashcardsSection && !preferences.flashcards) {
+                    flashcardsSection.style.display = 'none';
+                }
+
             } else {
-                // Hide audio section by default
+                // Hide sections by default
                 const audioSection = document.querySelector('.audio-section');
                 if (audioSection) {
                     audioSection.style.display = 'none';
+                }
+                const flashcardsSection = document.querySelector('.flashcards-section');
+                if (flashcardsSection) {
+                    flashcardsSection.style.display = 'none';
                 }
             }
         } catch (error) {
@@ -762,6 +804,774 @@ class StudentLectureNotes {
                 toast.remove();
             }, 300);
         }, 3000);
+    }
+
+    async handleKinestheticLearning() {
+        try {
+            // Show loading state
+            const loader = document.createElement('div');
+            loader.className = 'summary-loader';
+            loader.innerHTML = `
+                <div class="loader-spinner"></div>
+                <p>Preparing interactive quiz...</p>
+                <small>This may take a moment</small>
+            `;
+            document.body.appendChild(loader);
+
+            // Get the transcription and title
+            const transcription = document.getElementById('transcriptionText').textContent;
+            const lectureTitle = document.getElementById('lectureTitle').textContent;
+
+            // Request quiz from server
+            const response = await fetch('/api/generate-quiz', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    transcription,
+                    lectureTitle
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to generate quiz');
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to generate quiz');
+            }
+
+            // Create and show the quiz section
+            await this.createQuizSection(data.quizType, data.quiz);
+
+        } catch (error) {
+            console.error('Kinesthetic learning error:', error);
+            alert('Failed to generate interactive quiz: ' + error.message);
+        } finally {
+            const loader = document.querySelector('.summary-loader');
+            if (loader) loader.remove();
+        }
+    }
+
+    async createQuizSection(quizType, quizContent) {
+        // Remove existing quiz section if it exists
+        const existingQuiz = document.querySelector('.kinesthetic-section');
+        if (existingQuiz) {
+            existingQuiz.remove();
+        }
+
+        // Create quiz section
+        const quizSection = document.createElement('section');
+        quizSection.className = 'kinesthetic-section';
+        
+        // Create quiz content based on type
+        let quizHTML = '';
+        switch (quizType) {
+            case 'matching':
+                quizHTML = this.createMatchingQuiz(quizContent);
+                break;
+            case 'sorting':
+                quizHTML = this.createSortingQuiz(quizContent);
+                break;
+            case 'categorization':
+                quizHTML = this.createCategorizationQuiz(quizContent);
+                break;
+        }
+
+        quizSection.innerHTML = quizHTML;
+        
+        // Add to content grid
+        const contentGrid = document.querySelector('.content-grid');
+        contentGrid.appendChild(quizSection);
+
+        // Initialize drag and drop
+        this.initializeDragAndDrop(quizType);
+    }
+
+    createMatchingQuiz(quizContent) {
+        // Shuffle the definitions for the drag-drop challenge
+        const shuffledDefinitions = [...quizContent.pairs]
+            .map(pair => ({ id: Math.random(), ...pair }))
+            .sort(() => Math.random() - 0.5);
+
+        return `
+            <h2>Interactive Matching Quiz</h2>
+            <p class="quiz-instructions">Drag the definitions to match their corresponding terms.</p>
+            
+            <div class="matching-quiz">
+                <div class="terms-column">
+                    ${quizContent.pairs.map((pair, index) => `
+                        <div class="term-container">
+                            <div class="term">${pair.term}</div>
+                            <div class="definition-slot" data-term="${pair.term}" data-index="${index}">
+                                Drop definition here
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="definitions-pool">
+                    ${shuffledDefinitions.map(pair => `
+                        <div class="definition" draggable="true" data-definition="${pair.definition}">
+                            ${pair.definition}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="quiz-controls">
+                <button class="check-answers-btn">Check Answers</button>
+                <button class="reset-quiz-btn">Reset Quiz</button>
+            </div>
+        `;
+    }
+
+    createSortingQuiz(quizContent) {
+        // Shuffle the events for the drag-drop challenge
+        const shuffledEvents = [...quizContent.events]
+            .sort(() => Math.random() - 0.5);
+
+        return `
+            <h2>Interactive Chronological Sorting Quiz</h2>
+            <p class="quiz-instructions">Drag and arrange the events in chronological order.</p>
+            
+            <div class="sorting-quiz">
+                <div class="events-container">
+                    ${shuffledEvents.map(event => `
+                        <div class="event" draggable="true" data-order="${event.order}">
+                            ${event.text}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="quiz-controls">
+                <button class="check-answers-btn">Check Order</button>
+                <button class="reset-quiz-btn">Reset Quiz</button>
+            </div>
+        `;
+    }
+
+    createCategorizationQuiz(quizContent) {
+        // Shuffle the items for the drag-drop challenge
+        const shuffledItems = [...quizContent.items]
+            .sort(() => Math.random() - 0.5);
+
+        return `
+            <h2>Interactive Categorization Quiz</h2>
+            <p class="quiz-instructions">Drag each item to its correct category.</p>
+            
+            <div class="categorization-quiz">
+                <div class="categories-container">
+                    ${quizContent.categories.map(category => `
+                        <div class="category-column">
+                            <h3 class="category-title">${category}</h3>
+                            <div class="category-items" data-category="${category}">
+                                Drop items here
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="items-pool">
+                    ${shuffledItems.map(item => `
+                        <div class="item" draggable="true" data-category="${item.category}">
+                            ${item.text}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="quiz-controls">
+                <button class="check-answers-btn">Check Categories</button>
+                <button class="reset-quiz-btn">Reset Quiz</button>
+            </div>
+        `;
+    }
+
+    initializeDragAndDrop(quizType) {
+        const draggables = document.querySelectorAll('[draggable="true"]');
+        let draggedElement = null;
+
+        // Common drag event listeners
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', (e) => {
+                draggedElement = e.target;
+                e.target.classList.add('dragging');
+            });
+
+            draggable.addEventListener('dragend', (e) => {
+                e.target.classList.remove('dragging');
+                draggedElement = null;
+            });
+        });
+
+        switch (quizType) {
+            case 'matching':
+                this.initializeMatchingDragDrop();
+                break;
+            case 'sorting':
+                this.initializeSortingDragDrop();
+                break;
+            case 'categorization':
+                this.initializeCategorizationDragDrop();
+                break;
+        }
+
+        // Initialize quiz controls
+        this.initializeQuizControls(quizType);
+    }
+
+    initializeMatchingDragDrop() {
+        const slots = document.querySelectorAll('.definition-slot');
+        
+        slots.forEach(slot => {
+            slot.addEventListener('dragover', e => {
+                e.preventDefault();
+                slot.classList.add('drag-over');
+            });
+
+            slot.addEventListener('dragleave', () => {
+                slot.classList.remove('drag-over');
+            });
+
+            slot.addEventListener('drop', e => {
+                e.preventDefault();
+                const definition = document.querySelector('.dragging');
+                if (!definition) return;
+
+                // Remove from previous slot if exists
+                const previousSlot = document.querySelector(`.definition-slot .definition`);
+                if (previousSlot) {
+                    previousSlot.parentElement.innerHTML = 'Drop definition here';
+                }
+
+                slot.innerHTML = '';
+                slot.appendChild(definition);
+                slot.classList.remove('drag-over');
+            });
+        });
+    }
+
+    initializeSortingDragDrop() {
+        const container = document.querySelector('.events-container');
+        
+        container.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = this.getDragAfterElement(container, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (afterElement) {
+                container.insertBefore(draggable, afterElement);
+            } else {
+                container.appendChild(draggable);
+            }
+        });
+    }
+
+    initializeCategorizationDragDrop() {
+        const categoryContainers = document.querySelectorAll('.category-items');
+        
+        categoryContainers.forEach(container => {
+            container.addEventListener('dragover', e => {
+                e.preventDefault();
+                container.classList.add('drag-over');
+            });
+
+            container.addEventListener('dragleave', () => {
+                container.classList.remove('drag-over');
+            });
+
+            container.addEventListener('drop', e => {
+                e.preventDefault();
+                const item = document.querySelector('.dragging');
+                if (!item) return;
+                
+                container.appendChild(item);
+                container.classList.remove('drag-over');
+                if (container.innerHTML === 'Drop items here') {
+                    container.innerHTML = '';
+                }
+            });
+        });
+    }
+
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.event:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    initializeQuizControls(quizType) {
+        const checkButton = document.querySelector('.check-answers-btn');
+        const resetButton = document.querySelector('.reset-quiz-btn');
+
+        checkButton.addEventListener('click', () => this.checkAnswers(quizType));
+        resetButton.addEventListener('click', () => this.resetQuiz(quizType));
+    }
+
+    checkAnswers(quizType) {
+        let isCorrect = false;
+        let feedback = '';
+
+        switch (quizType) {
+            case 'matching':
+                isCorrect = this.checkMatchingAnswers();
+                feedback = isCorrect ? 'All matches are correct!' : 'Some matches are incorrect. Try again!';
+                break;
+            case 'sorting':
+                isCorrect = this.checkSortingAnswers();
+                feedback = isCorrect ? 'Perfect order!' : 'The order is not correct. Try again!';
+                break;
+            case 'categorization':
+                isCorrect = this.checkCategorizationAnswers();
+                feedback = isCorrect ? 'All items are correctly categorized!' : 'Some items are in the wrong category. Try again!';
+                break;
+        }
+
+        // Show feedback
+        this.showQuizFeedback(feedback, isCorrect);
+    }
+
+    checkMatchingAnswers() {
+        const slots = document.querySelectorAll('.definition-slot');
+        let allCorrect = true;
+
+        slots.forEach(slot => {
+            const term = slot.dataset.term;
+            const definition = slot.querySelector('.definition');
+            
+            if (!definition) {
+                allCorrect = false;
+                return;
+            }
+
+            const isCorrect = definition.dataset.definition === term;
+            slot.classList.remove('correct', 'incorrect');
+            slot.classList.add(isCorrect ? 'correct' : 'incorrect');
+            
+            if (!isCorrect) allCorrect = false;
+        });
+
+        return allCorrect;
+    }
+
+    checkSortingAnswers() {
+        const events = document.querySelectorAll('.event');
+        let allCorrect = true;
+        let previousOrder = 0;
+
+        events.forEach((event, index) => {
+            const currentOrder = parseInt(event.dataset.order);
+            event.classList.remove('correct', 'incorrect');
+            
+            if (currentOrder <= previousOrder) {
+                allCorrect = false;
+                event.classList.add('incorrect');
+            } else {
+                event.classList.add('correct');
+            }
+            
+            previousOrder = currentOrder;
+        });
+
+        return allCorrect;
+    }
+
+    checkCategorizationAnswers() {
+        const categoryContainers = document.querySelectorAll('.category-items');
+        let allCorrect = true;
+
+        categoryContainers.forEach(container => {
+            const correctCategory = container.dataset.category;
+            const items = container.querySelectorAll('.item');
+            
+            items.forEach(item => {
+                const isCorrect = item.dataset.category === correctCategory;
+                item.classList.remove('correct', 'incorrect');
+                item.classList.add(isCorrect ? 'correct' : 'incorrect');
+                
+                if (!isCorrect) allCorrect = false;
+            });
+        });
+
+        return allCorrect;
+    }
+
+    showQuizFeedback(message, isCorrect) {
+        // Remove existing feedback
+        const existingFeedback = document.querySelector('.quiz-feedback');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+
+        // Create feedback element
+        const feedback = document.createElement('div');
+        feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+        feedback.innerHTML = `
+            <i class="bi ${isCorrect ? 'bi-check-circle-fill' : 'bi-x-circle-fill'}"></i>
+            <span>${message}</span>
+        `;
+
+        // Add to quiz section
+        const quizControls = document.querySelector('.quiz-controls');
+        quizControls.insertAdjacentElement('beforebegin', feedback);
+
+        // Remove feedback after 3 seconds
+        setTimeout(() => {
+            feedback.classList.add('fade-out');
+            setTimeout(() => feedback.remove(), 300);
+        }, 3000);
+    }
+
+    resetQuiz(quizType) {
+        switch (quizType) {
+            case 'matching':
+                this.resetMatchingQuiz();
+                break;
+            case 'sorting':
+                this.resetSortingQuiz();
+                break;
+            case 'categorization':
+                this.resetCategorizationQuiz();
+                break;
+        }
+
+        // Remove any feedback
+        const feedback = document.querySelector('.quiz-feedback');
+        if (feedback) feedback.remove();
+
+        // Remove correct/incorrect classes
+        document.querySelectorAll('.correct, .incorrect').forEach(el => {
+            el.classList.remove('correct', 'incorrect');
+        });
+    }
+
+    resetMatchingQuiz() {
+        const slots = document.querySelectorAll('.definition-slot');
+        const pool = document.querySelector('.definitions-pool');
+        
+        // Move all definitions back to pool
+        slots.forEach(slot => {
+            const definition = slot.querySelector('.definition');
+            if (definition) {
+                pool.appendChild(definition);
+                slot.innerHTML = 'Drop definition here';
+            }
+        });
+    }
+
+    resetSortingQuiz() {
+        const container = document.querySelector('.events-container');
+        const events = [...container.querySelectorAll('.event')];
+        
+        // Shuffle events
+        events.sort(() => Math.random() - 0.5).forEach(event => {
+            container.appendChild(event);
+        });
+    }
+
+    resetCategorizationQuiz() {
+        const pool = document.querySelector('.items-pool');
+        const items = document.querySelectorAll('.item');
+        
+        // Move all items back to pool
+        items.forEach(item => {
+            pool.appendChild(item);
+        });
+
+        // Reset category containers
+        document.querySelectorAll('.category-items').forEach(container => {
+            if (!container.querySelector('.item')) {
+                container.innerHTML = 'Drop items here';
+            }
+        });
+    }
+
+    async handleFlashcards() {
+        try {
+            // Show loading state
+            const loader = document.createElement('div');
+            loader.className = 'summary-loader';
+            loader.innerHTML = `
+                <div class="loader-spinner"></div>
+                <p>Generating flashcards...</p>
+                <small>This may take a moment</small>
+            `;
+            document.body.appendChild(loader);
+
+            // Get the transcription and title
+            const transcription = document.getElementById('transcriptionText').textContent;
+            const lectureTitle = document.getElementById('lectureTitle').textContent;
+
+            // Request flashcards from server
+            const response = await fetch('/api/generate-flashcards', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    transcription,
+                    lectureTitle
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to generate flashcards');
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to generate flashcards');
+            }
+
+            // Create and show the flashcards section
+            this.createFlashcardsSection(data.flashcards);
+
+        } catch (error) {
+            console.error('Flashcards generation error:', error);
+            alert('Failed to generate flashcards: ' + error.message);
+        } finally {
+            const loader = document.querySelector('.summary-loader');
+            if (loader) loader.remove();
+        }
+    }
+
+    createFlashcardsSection(flashcards) {
+        // Remove existing flashcards section if it exists
+        const existingSection = document.querySelector('.flashcards-section');
+        if (existingSection) {
+            existingSection.remove();
+        }
+
+        // Create flashcards section
+        const section = document.createElement('section');
+        section.className = 'flashcards-section';
+        
+        // Get unique categories
+        const categories = [...new Set(flashcards.map(card => card.category))];
+        
+        section.innerHTML = `
+            <h2>Study Flashcards</h2>
+            <div class="flashcards-controls">
+                <div class="category-filters">
+                    <button class="category-btn active" data-category="all">All</button>
+                    ${categories.map(category => `
+                        <button class="category-btn" data-category="${category}">${category}</button>
+                    `).join('')}
+                </div>
+                <div class="study-controls">
+                    <button class="prev-card" disabled>
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <span class="card-counter">1/${flashcards.length}</span>
+                    <button class="next-card">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <button class="shuffle-cards">
+                        <i class="bi bi-shuffle"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flashcards-container">
+                ${flashcards.map((card, index) => `
+                    <div class="flashcard ${index === 0 ? 'active' : ''}" data-category="${card.category}">
+                        <div class="flashcard-inner">
+                            <div class="flashcard-front">
+                                <span class="card-category">${card.category}</span>
+                                <div class="card-content">${card.front}</div>
+                                <div class="flip-hint">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    Click to flip
+                                </div>
+                            </div>
+                            <div class="flashcard-back">
+                                <span class="card-category">${card.category}</span>
+                                <div class="card-content">${card.back}</div>
+                                <div class="flip-hint">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    Click to flip
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        // Add to content grid
+        const contentGrid = document.querySelector('.content-grid');
+        contentGrid.appendChild(section);
+
+        // Initialize flashcards functionality
+        this.initializeFlashcards();
+    }
+
+    initializeFlashcards() {
+        const flashcardsContainer = document.querySelector('.flashcards-container');
+        const cards = document.querySelectorAll('.flashcard');
+        const prevButton = document.querySelector('.prev-card');
+        const nextButton = document.querySelector('.next-card');
+        const shuffleButton = document.querySelector('.shuffle-cards');
+        const categoryButtons = document.querySelectorAll('.category-btn');
+        const counter = document.querySelector('.card-counter');
+        
+        let currentIndex = 0;
+        let visibleCards = [...cards];
+
+        // Initialize card flipping
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                card.classList.toggle('flipped');
+            });
+        });
+
+        // Category filtering
+        categoryButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active button
+                categoryButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                const category = button.dataset.category;
+                
+                // Filter cards
+                if (category === 'all') {
+                    visibleCards = [...cards];
+                } else {
+                    visibleCards = [...cards].filter(card => card.dataset.category === category);
+                }
+
+                // Reset to first card of filtered set
+                currentIndex = 0;
+                updateCardVisibility();
+                updateCounter();
+                updateNavigationButtons();
+            });
+        });
+
+        // Navigation
+        prevButton.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCardVisibility();
+                updateCounter();
+                updateNavigationButtons();
+            }
+        });
+
+        nextButton.addEventListener('click', () => {
+            if (currentIndex < visibleCards.length - 1) {
+                currentIndex++;
+                updateCardVisibility();
+                updateCounter();
+                updateNavigationButtons();
+            }
+        });
+
+        // Shuffle functionality
+        shuffleButton.addEventListener('click', () => {
+            // Remove flipped state from all cards
+            cards.forEach(card => card.classList.remove('flipped'));
+            
+            // Shuffle the visible cards
+            visibleCards = visibleCards.sort(() => Math.random() - 0.5);
+            currentIndex = 0;
+            updateCardVisibility();
+            updateCounter();
+            updateNavigationButtons();
+
+            // Add animation class
+            shuffleButton.classList.add('rotating');
+            setTimeout(() => shuffleButton.classList.remove('rotating'), 500);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const activeCard = document.querySelector('.flashcard.active');
+            if (!activeCard) return;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    if (currentIndex > 0) {
+                        currentIndex--;
+                        updateCardVisibility();
+                        updateCounter();
+                        updateNavigationButtons();
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (currentIndex < visibleCards.length - 1) {
+                        currentIndex++;
+                        updateCardVisibility();
+                        updateCounter();
+                        updateNavigationButtons();
+                    }
+                    break;
+                case ' ': // Spacebar
+                    activeCard.classList.toggle('flipped');
+                    break;
+            }
+        });
+
+        function updateCardVisibility() {
+            // Remove active and flipped state from all cards
+            cards.forEach(card => {
+                card.classList.remove('active', 'flipped');
+            });
+
+            // Show current card
+            if (visibleCards[currentIndex]) {
+                visibleCards[currentIndex].classList.add('active');
+            }
+        }
+
+        function updateCounter() {
+            counter.textContent = `${currentIndex + 1}/${visibleCards.length}`;
+        }
+
+        function updateNavigationButtons() {
+            prevButton.disabled = currentIndex === 0;
+            nextButton.disabled = currentIndex === visibleCards.length - 1;
+        }
+
+        // Add swipe support for mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        flashcardsContainer.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        flashcardsContainer.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) < swipeThreshold) return;
+
+            if (diff > 0 && currentIndex < visibleCards.length - 1) {
+                // Swipe left
+                currentIndex++;
+            } else if (diff < 0 && currentIndex > 0) {
+                // Swipe right
+                currentIndex--;
+            }
+
+            updateCardVisibility();
+            updateCounter();
+            updateNavigationButtons();
+        }
     }
 }
 

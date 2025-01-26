@@ -511,4 +511,119 @@ body {
         padding: 1.5rem;
         margin: 1rem;
     }
+}
+
+/* Search and Filter Styles */
+.search-filter-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.8rem 1rem;
+    border-radius: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.search-box:focus-within {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.search-box i {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.1rem;
+}
+
+.search-box input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    outline: none;
+}
+
+.search-box input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.filter-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.sort-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.8rem 2.5rem 0.8rem 1rem;
+    border-radius: 0.8rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+}
+
+.sort-select:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.sort-select option {
+    background: var(--card-bg);
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .search-filter-container {
+        flex-direction: column;
+    }
+    
+    .search-box {
+        width: 100%;
+    }
+    
+    .filter-controls {
+        width: 100%;
+    }
+    
+    .sort-select {
+        width: 100%;
+    }
+}
+
+/* Add this to your existing CSS */
+.no-results {
+    text-align: center;
+    padding: 3rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    grid-column: 1 / -1;
+}
+
+.no-results i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+}
+
+.no-results p {
+    margin: 0;
+    font-size: 1.1rem;
 } 

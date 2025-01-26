@@ -35,6 +35,21 @@
         <!-- Main Content -->
         <main class="main-content">
             <h2 class="welcome-text">Welcome back, Teacher!</h2>
+            <div class="search-filter-container">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="courseSearch" placeholder="Search courses...">
+                </div>
+                <div class="filter-controls">
+                    <select id="sortCourses" class="sort-select">
+                        <option value="name-asc">Course Name (A-Z)</option>
+                        <option value="name-desc">Course Name (Z-A)</option>
+                        <option value="date-new">Date Added (Newest)</option>
+                        <option value="date-old">Date Added (Oldest)</option>
+                        <option value="students">Number of Students</option>
+                    </select>
+                </div>
+            </div>
             <h3 class="section-title">Your classes</h3>
             
             <div class="courses-grid">
