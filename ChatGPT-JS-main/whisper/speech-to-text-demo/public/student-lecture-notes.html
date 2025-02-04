@@ -51,19 +51,19 @@
 
             <div class="content-grid">
                 <!-- Audio Player Section -->
-                <section class="audio-section">
+                <section id="audio-section" class="audio-section" style="display: none;">
                     <h2>Lecture Recording</h2>
                     <audio id="lectureAudio" controls></audio>
                 </section>
 
                 <!-- Transcription Section -->
-                <section class="transcription-section">
+                <section id="transcription-section" class="transcription-section">
                     <h2>Lecture Transcription</h2>
                     <div id="transcriptionText" class="transcription-content definable"></div>
                 </section>
 
                 <!-- Notes Section -->
-                <section class="notes-section">
+                <section id="notes-section" class="notes-section">
                     <h2>My Notes</h2>
                     <div class="notes-editor">
                         <textarea id="notesEditor" placeholder="Type your notes here..."></textarea>
@@ -72,7 +72,7 @@
                 </section>
 
                 <!-- Enhanced Summary Section -->
-                <section class="summary-section" style="display: none;" data-definitions-enabled="true">
+                <section id="summary-section" class="summary-section" style="display: none;" data-definitions-enabled="true">
                     <h2>Lecture Summary</h2>
                     <div class="summary-content">
                         <h3 class="summary-title"></h3>
@@ -118,6 +118,41 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- Visual Learning Section -->
+                <section id="visual-learning-section" class="visual-learning-section" style="display: none;">
+                    <h2>Visual Learning</h2>
+                    <div class="visual-content">
+                        <!-- Visual learning content here -->
+                    </div>
+                </section>
+
+                <!-- Interactive Learning Section -->
+                <section id="kinesthetic-section" class="kinesthetic-section" style="display: none;">
+                    <h2>Interactive Learning</h2>
+                    <div class="interactive-content">
+                        <!-- Interactive learning content here -->
+                    </div>
+                </section>
+
+                <!-- Flashcards Section -->
+                <section id="flashcards-section" class="flashcards-section" style="display: none;">
+                    <h2>Flashcards</h2>
+                    <div class="flashcards-content">
+                        <!-- Flashcards content here -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Quick Jump Menu -->
+            <div class="quick-jump">
+                <button class="quick-jump-btn" onclick="toggleQuickJump()">
+                    <i class="bi bi-list"></i>
+                    Quick Jump
+                </button>
+                <div class="quick-jump-menu">
+                    <!-- Quick Jump menu content will be dynamically populated -->
+                </div>
             </div>
         </main>
 
@@ -207,5 +242,156 @@
 
     <script src="/js/definitions.js"></script>
     <script src="/js/student-lecture-notes.js"></script>
+    <script>
+        // Simple function to toggle quick jump menu
+        function toggleQuickJump() {
+            const menu = document.querySelector('.quick-jump-menu');
+            menu.classList.toggle('show');
+        }
+
+        // Enhanced scroll function
+        function scrollToSection(sectionId) {
+            console.log('Attempting to scroll to:', sectionId);
+            // Try different ways to find the section
+            const section = document.querySelector(`section#${sectionId}, section.${sectionId}`);
+            
+            if (section) {
+                console.log('Found section:', sectionId, 'Current display:', section.style.display);
+                
+                // Show the section if it's hidden
+                if (section.style.display === 'none') {
+                    const checkboxId = {
+                        'audio-section': 'audio',
+                        'summary-section': 'summarization',
+                        'flashcards-section': 'flashcards',
+                        'visual-learning-section': 'visual',
+                        'kinesthetic-section': 'kinesthetic'
+                    }[sectionId];
+
+                    console.log('Looking for checkbox:', checkboxId);
+                    const checkbox = document.getElementById(checkboxId);
+                    if (checkbox) {
+                        console.log('Found checkbox, setting checked');
+                        checkbox.checked = true;
+                        section.style.display = 'block';
+                    }
+                }
+
+                // Force a reflow to ensure the section is visible
+                void section.offsetHeight;
+
+                // Scroll to the section
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                // Close the menu
+                document.querySelector('.quick-jump-menu').classList.remove('show');
+            } else {
+                console.error('Section not found:', sectionId);
+                // Log all available sections for debugging
+                const allSections = document.querySelectorAll('section');
+                console.log('Available sections:', Array.from(allSections).map(s => ({
+                    id: s.id,
+                    className: s.className,
+                    display: s.style.display
+                })));
+            }
+        }
+
+        // Update the quick jump menu items
+        function updateQuickJumpMenu() {
+            const menu = document.querySelector('.quick-jump-menu');
+            menu.innerHTML = '';
+
+            // Always show these sections
+            const alwaysVisibleSections = [
+                { id: 'transcription-section', name: 'Lecture Transcription', icon: 'bi-text-paragraph' },
+                { id: 'notes-section', name: 'My Notes', icon: 'bi-journal-text' }
+            ];
+
+            // Optional sections controlled by preferences
+            const optionalSections = [
+                { id: 'audio-section', name: 'Audio Player', icon: 'bi-mic', checkboxId: 'audio' },
+                { id: 'summary-section', name: 'Summary', icon: 'bi-card-text', checkboxId: 'summarization' },
+                { id: 'visual-learning-section', name: 'Visual Learning', icon: 'bi-image', checkboxId: 'visual' },
+                { id: 'kinesthetic-section', name: 'Interactive Learning', icon: 'bi-puzzle', checkboxId: 'kinesthetic' },
+                { id: 'flashcards-section', name: 'Flashcards', icon: 'bi-card-list', checkboxId: 'flashcards' }
+            ];
+
+            // Add always visible sections
+            alwaysVisibleSections.forEach(section => {
+                const sectionElement = document.querySelector(`section#${section.id}`);
+                if (sectionElement) {
+                    const item = document.createElement('div');
+                    item.className = 'quick-jump-item';
+                    item.innerHTML = `<i class="bi ${section.icon}"></i>${section.name}`;
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        scrollToSection(section.id);
+                    });
+                    menu.appendChild(item);
+                }
+            });
+
+            // Add optional sections if their checkbox is checked
+            optionalSections.forEach(section => {
+                const checkbox = document.getElementById(section.checkboxId);
+                const sectionElement = document.querySelector(`section#${section.id}`);
+                if (checkbox && checkbox.checked && sectionElement) {
+                    const item = document.createElement('div');
+                    item.className = 'quick-jump-item';
+                    item.innerHTML = `<i class="bi ${section.icon}"></i>${section.name}`;
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        scrollToSection(section.id);
+                    });
+                    menu.appendChild(item);
+                }
+            });
+        }
+
+        // Handle preferences
+        document.addEventListener('DOMContentLoaded', function() {
+            const savePreferences = document.getElementById('savePreferences');
+            
+            savePreferences.addEventListener('click', function() {
+                // Update section visibility
+                const preferences = {
+                    'audio': 'audio-section',
+                    'summarization': 'summary-section',
+                    'flashcards': 'flashcards-section',
+                    'visual': 'visual-learning-section',
+                    'kinesthetic': 'kinesthetic-section'
+                };
+
+                Object.entries(preferences).forEach(([prefId, sectionId]) => {
+                    const isChecked = document.getElementById(prefId).checked;
+                    const section = document.getElementById(sectionId);
+                    if (section) {
+                        section.style.display = isChecked ? 'block' : 'none';
+                        console.log(`Setting ${sectionId} display to:`, isChecked ? 'block' : 'none');
+                    } else {
+                        console.error(`Section not found: ${sectionId}`);
+                    }
+                });
+
+                updateQuickJumpMenu();
+                document.getElementById('modifySidebar').classList.remove('show');
+            });
+
+            // Initial menu update
+            updateQuickJumpMenu();
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const quickJump = document.querySelector('.quick-jump');
+            const menu = document.querySelector('.quick-jump-menu');
+            if (!quickJump.contains(event.target) && menu.classList.contains('show')) {
+                menu.classList.remove('show');
+            }
+        });
+    </script>
 </body>
 </html> 

@@ -597,80 +597,74 @@ class StudentLectureNotes {
             existingSection.remove();
         }
 
-        // Create new visual learning section
+        // Create new visual learning section with enhanced visual focus
         const visualSection = document.createElement('section');
         visualSection.className = 'visual-learning-section';
         
         visualSection.innerHTML = `
             <h2>Visual Learning</h2>
-            <div class="key-terms-section">
-                <h4><i class="bi bi-eye"></i> Key Visual Terms</h4>
-                <div class="visual-terms-grid">
-                    ${keyTerms.map((term, index) => `
-                        <div class="visual-term-container">
-                            <div class="term-image-container">
-                                <h5>${term}</h5>
-                                <img 
-                                    src="${imageCache.get(term) || 'placeholder.jpg'}" 
-                                    class="term-image" 
-                                    alt="${term}"
-                                    onload="this.style.display='block'"
-                                />
-                                ${!imageCache.get(term) ? `
-                                    <div class="image-loading">Image not available</div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
             <div class="visual-transcript-section">
-                <h4><i class="bi bi-eye-fill"></i> Visual Transcript</h4>
                 <div class="visual-transcript-content">
-                    <div class="transcript-text">Loading transcript...</div>
+                    <div class="transcript-text"></div>
                 </div>
             </div>
         `;
 
         contentGrid.appendChild(visualSection);
-        
-        const handler = new DefinitionsHandler();
-        handler.initializeSection(visualSection);
     }
 
     async processVisualTranscript(cleanedTranscript, keyTerms, imageCache) {
-        const textContainer = document.querySelector('.visual-transcript-content .transcript-text');
+        const textContainer = document.querySelector('.visual-transcript-content');
         if (!textContainer) return;
 
         try {
-            // Track which terms we've shown images for
             const shownTerms = new Set();
-            
-            // Split transcript into paragraphs
             const paragraphs = cleanedTranscript.split('\n\n');
             
-            // Process each paragraph
-            const processedContent = paragraphs.map(paragraph => {
-                // Check if this paragraph contains any key terms we haven't shown yet
+            // Create navigation elements
+            const progressIndicator = document.createElement('div');
+            progressIndicator.className = 'progress-indicator';
+            progressIndicator.innerHTML = paragraphs.map((_, i) => 
+                `<div class="progress-dot ${i === 0 ? 'active' : ''}"></div>`
+            ).join('');
+
+            const navControls = document.createElement('div');
+            navControls.className = 'visual-nav-controls';
+            navControls.innerHTML = `
+                <button class="nav-button prev-btn" disabled>
+                    <i class="bi bi-chevron-left"></i> Previous
+                </button>
+                <span class="progress-text">1/${paragraphs.length}</span>
+                <button class="nav-button next-btn">
+                    Next <i class="bi bi-chevron-right"></i>
+                </button>
+            `;
+
+            // Create swipeable container
+            const blocksWrapper = document.createElement('div');
+            blocksWrapper.className = 'visual-blocks-wrapper';
+            
+            // Process content
+            const processedContent = paragraphs.map((paragraph, index) => {
                 for (const term of keyTerms) {
                     if (!shownTerms.has(term) && imageCache.has(term)) {
                         const termRegex = new RegExp(`(${term})`, 'i');
                         if (termRegex.test(paragraph)) {
                             shownTerms.add(term);
                             
-                            // Split paragraph at the term
                             const parts = paragraph.split(termRegex);
                             return `
-                                <div class="transcript-block with-image">
-                                    <div class="text-content">
-                                        ${parts[0]}
-                                        <span class="key-term">${term}</span>
-                                        ${parts.slice(2).join('')}
-                                    </div>
-                                    <div class="term-image-sidebar">
-                                        <div class="image-wrapper">
-                                            <img src="${imageCache.get(term)}" alt="${term}" />
-                                            <div class="image-caption">${term}</div>
+                                <div class="visual-block ${index === 0 ? 'active' : ''}">
+                                    <div class="visual-content-wrapper">
+                                        <div class="text-content">
+                                            ${parts[0]}
+                                            <span class="highlighted-term">${term}</span>
+                                            ${parts.slice(2).join('')}
+                                        </div>
+                                        <div class="image-content">
+                                            <div class="image-wrapper">
+                                                <img src="${imageCache.get(term)}" alt="${term}" />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -679,39 +673,111 @@ class StudentLectureNotes {
                     }
                 }
                 
-                // For paragraphs without new terms, still maintain consistent formatting
-                let processedParagraph = paragraph;
-                keyTerms.forEach(term => {
-                    const regex = new RegExp(`(${term})`, 'gi');
-                    processedParagraph = processedParagraph.replace(
-                        regex,
-                        '<span class="key-term">$1</span>'
-                    );
-                });
-                
                 return `
-                    <div class="transcript-block">
-                        <div class="text-content">
-                            ${processedParagraph}
+                    <div class="visual-block ${index === 0 ? 'active' : ''}">
+                        <div class="visual-content-wrapper">
+                            <div class="text-content">
+                                ${paragraph}
+                            </div>
                         </div>
                     </div>
                 `;
+            }).join('');
+
+            blocksWrapper.innerHTML = processedContent;
+
+            // Add swipe hint
+            const swipeHint = document.createElement('div');
+            swipeHint.className = 'swipe-hint show';
+            swipeHint.innerHTML = `
+                <i class="bi bi-arrow-left-right"></i>
+                Swipe to navigate
+            `;
+
+            // Add progress bar
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress-bar';
+            progressBar.innerHTML = '<div class="progress-fill"></div>';
+
+            // Combine all elements
+            textContainer.innerHTML = '';
+            textContainer.appendChild(progressBar);
+            textContainer.appendChild(progressIndicator);
+            textContainer.appendChild(blocksWrapper);
+            textContainer.appendChild(navControls);
+            textContainer.appendChild(swipeHint);
+
+            // Initialize navigation
+            let currentSlide = 0;
+            const slides = blocksWrapper.querySelectorAll('.visual-block');
+            const dots = progressIndicator.querySelectorAll('.progress-dot');
+            const prevBtn = navControls.querySelector('.prev-btn');
+            const nextBtn = navControls.querySelector('.next-btn');
+            const progressText = navControls.querySelector('.progress-text');
+
+            // Update the progress bar
+            const updateProgressBar = (index, total) => {
+                const progressFill = document.querySelector('.progress-fill');
+                const progress = ((index + 1) / total) * 100;
+                progressFill.style.width = `${progress}%`;
+            };
+
+            // Add click handlers to progress dots
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    goToSlide(index);
+                });
             });
 
-            textContainer.innerHTML = `
-                <div class="visual-transcript-container">
-                    <div class="transcript-intro">
-                        <h3>Enhanced Visual Transcript</h3>
-                        <p>Key terms are highlighted and accompanied by relevant images on first appearance.</p>
-                    </div>
-                    <div class="transcript-blocks">
-                        ${processedContent.filter(content => content).join('')}
-                    </div>
-                </div>
-            `;
+            // Update the navigation event listeners
+            const setupNavigation = () => {
+                prevBtn.addEventListener('click', () => {
+                    if (currentSlide > 0) {
+                        goToSlide(currentSlide - 1);
+                    }
+                });
+
+                nextBtn.addEventListener('click', () => {
+                    if (currentSlide < slides.length - 1) {
+                        goToSlide(currentSlide + 1);
+                    }
+                });
+            };
+
+            // Update the goToSlide function
+            const goToSlide = (index) => {
+                currentSlide = index;
+                blocksWrapper.style.transform = `translateX(-${index * 100}%)`;
+                
+                // Update active states
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                    dots[i].classList.toggle('active', i === index);
+                });
+
+                // Update progress bar
+                const progressFill = document.querySelector('.progress-fill');
+                if (progressFill) {
+                    const progress = ((index + 1) / slides.length) * 100;
+                    progressFill.style.width = `${progress}%`;
+                }
+
+                // Update buttons
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === slides.length - 1;
+            };
+
+            // Call setupNavigation after initializing the elements
+            setupNavigation();
+
+            // Hide swipe hint after 3 seconds
+            setTimeout(() => {
+                swipeHint.classList.remove('show');
+            }, 3000);
+
         } catch (error) {
             console.error('Error processing visual transcript:', error);
-            textContainer.innerHTML = '<div class="error-message">Failed to process content.</div>';
+            textContainer.innerHTML = '<div class="error-message">Failed to process visual content.</div>';
         }
     }
 

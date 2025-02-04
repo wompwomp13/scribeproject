@@ -1,10 +1,13 @@
 :root {
-    --sidebar-bg: #4a4a4a;
-    --card-bg: #4a4a4a;
-    --primary-color: #e85d56;
+    --sidebar-bg: #f6f6f6; /* Light Gray - Soft and Neutral */
+    --card-bg: #ffffff; /* White - Clean and Readable */
+    --primary-color: #ff6f61; /* Coral Red - Energetic but not harsh */
+    --accent-color: #ffb400; /* Warm Yellow - Adds a lively touch */
     --sidebar-width: 280px;
     --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
 }
+
+
 
 body {
     margin: 0;
