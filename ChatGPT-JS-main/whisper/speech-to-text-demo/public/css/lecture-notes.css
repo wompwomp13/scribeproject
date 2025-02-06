@@ -1,6 +1,6 @@
 /* Base styles */
 body {
-    background-color: #8a8882;
+    background-color: #5a9c7d;
     margin: 0;
     font-family: 'Inter', sans-serif;
 }
@@ -34,8 +34,8 @@ body {
         --text-primary: #333333; /* Light gray text */
         --text-secondary: #b3b3b3; /* Medium gray text */
         --hover-color: #454545; /* Slightly lighter gray for hover */
-        --border-color: #bbb7b1; /* Medium dark gray */
-        --section-bg: #bbb7b1; /* Section background */
+        --border-color: #ece8e1; /* Medium dark gray */
+        --section-bg: #ece8e1; /* Section background */
         --card-bg-alt: #404040; /* Alternative dark card background */
         --vintage-shadow: rgba(0, 0, 0, 0.2);
     }
@@ -49,7 +49,7 @@ body {
 .visual-learning-section,
 .kinesthetic-section,
 .flashcards-section {
-    background: var(--section-bg) !important;
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     box-shadow: 2px 2px 4px var(--vintage-shadow);
 }
@@ -60,8 +60,10 @@ body {
 .application-card,
 .connection-box,
 .term-image-container,
-.definition-paper {
-    background: var(--card-bg) !important;
+.definition-paper,
+.flashcard-front,
+.flashcard-back {
+    background: #FFFFFF !important;
     border: 1px solid var(--border-color);
     box-shadow: 1px 1px 3px var(--vintage-shadow);
 }
@@ -140,7 +142,7 @@ input, textarea {
 
 /* Update sidebar to be sticky */
 .sidebar {
-    background: #8a8882 !important;
+    background: #5a9c7d !important;
     box-shadow: none;
     border: none;
     border-radius: 0;
@@ -162,9 +164,9 @@ input, textarea {
 /* Update flashcard backgrounds */
 .flashcard-front,
 .flashcard-back {
-    background: var(--card-bg) !important;
+    background: #ffffff !important;
     border: 1px solid var(--border-color);
-    box-shadow: 2px 2px 6px var(--vintage-shadow);
+    box-shadow: 1px 1px 3px var(--vintage-shadow);
 }
 
 /* Update scrollbar for vintage look */
@@ -245,20 +247,31 @@ input, textarea {
 /* Update flashcard backgrounds */
 .flashcard-front,
 .flashcard-back {
-    background: var(--card-bg) !important;
+    background: #ffffff !important;
     border: 1px solid var(--border-color);
 }
 
 /* Update category buttons */
 .category-btn {
-    background: var(--section-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
+    background: #c17c59 !important;
+    color: #ffffff !important;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    box-shadow: none !important;
 }
 
 .category-btn:hover {
-    background: var(--hover-color);
-    border-color: var(--primary-color);
+    opacity: 0.9;
+    background: #c17c59 !important;
+    border: none;
+}
+
+.category-btn.active {
+    background: #a66547 !important;
+    color: #ffffff !important;
 }
 
 /* Update quiz elements */
@@ -268,8 +281,16 @@ input, textarea {
 }
 
 .definition-slot {
-    background: var(--card-bg) !important;
-    border: 2px dashed var(--border-color);
+    background: #ffffff !important; /* Ensure white background */
+    border: 1px solid var(--border-color); /* Ensure border is visible */
+    color: #000000 !important; /* Text color black */
+    padding: 1rem;
+    border-radius: 0.8rem;
+    flex: 2;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
 }
 
 /* Update scrollbar colors */
@@ -303,7 +324,7 @@ input, textarea {
 /* Update study guide elements */
 .key-highlights,
 .misconceptions {
-    background: var(--section-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
 }
 
@@ -973,7 +994,7 @@ input:checked:hover + .toggle-slider {
 /* Summary Section Styles */
 .summary-section {
     grid-column: 1 / -1;
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border-radius: 1.2rem;
     padding: 2rem;
     margin-top: 2rem;
@@ -987,13 +1008,13 @@ input:checked:hover + .toggle-slider {
 
 .summary-title {
     font-size: 1.8rem;
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1.5rem;
     font-weight: 600;
 }
 
 .summary-overview {
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     border-radius: 1rem;
     padding: 1.5rem;
@@ -1001,7 +1022,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .summary-overview h4 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1rem;
     font-size: 1.3rem;
 }
@@ -1013,7 +1034,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .overview-box p {
-    color: white;
+    color: #000000 !important;
     margin: 0;
     padding: 0.8rem;
     background: rgba(255, 255, 255, 0.05);
@@ -1025,7 +1046,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .key-concepts h4 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1.5rem;
     font-size: 1.3rem;
 }
@@ -1038,7 +1059,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .concept-card {
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     padding: 1.5rem;
     border-radius: 1rem;
@@ -1055,18 +1076,18 @@ input:checked:hover + .toggle-slider {
 }
 
 .concept-header h5 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin: 0;
     font-size: 1.1rem;
 }
 
 .concept-header i {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     font-size: 1.2rem;
 }
 
 .concept-card p {
-    color: white;
+    color: #000000 !important;
     margin: 0;
     flex: 1;
     word-wrap: break-word;
@@ -1087,13 +1108,13 @@ input:checked:hover + .toggle-slider {
 }
 
 .key-points h4 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1.5rem;
     font-size: 1.3rem;
 }
 
 .key-point {
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     padding: 1.5rem;
     border-radius: 1rem;
@@ -1108,19 +1129,19 @@ input:checked:hover + .toggle-slider {
 }
 
 .point-header h5 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin: 0;
     font-size: 1.2rem;
 }
 
 .point-header i {
-    color: var(--primary-color);
+    color: #c17c59 !important;
 }
 
 .point-content ul {
     margin: 0;
     padding-left: 1.5rem;
-    color: white;
+    color: #000000 !important;
 }
 
 .point-content li {
@@ -1136,13 +1157,13 @@ input:checked:hover + .toggle-slider {
 }
 
 .supporting-details h6 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1rem;
     font-size: 1rem;
 }
 
 .details-list li {
-    color: rgba(255, 255, 255, 0.9);
+    color: #000000 !important;
 }
 
 .practical-applications {
@@ -1150,13 +1171,13 @@ input:checked:hover + .toggle-slider {
 }
 
 .practical-applications h4 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1.5rem;
     font-size: 1.3rem;
 }
 
 .application-card {
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     padding: 1.5rem;
     border-radius: 1rem;
@@ -1171,17 +1192,17 @@ input:checked:hover + .toggle-slider {
 }
 
 .application-header h5 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin: 0;
     font-size: 1.1rem;
 }
 
 .application-header i {
-    color: var(--primary-color);
+    color: #c17c59 !important;
 }
 
 .application-card p {
-    color: white;
+    color: #000000 !important;
     margin: 0;
     word-wrap: break-word;
 }
@@ -1191,7 +1212,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .challenges-section h4 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1.5rem;
     font-size: 1.3rem;
 }
@@ -1203,14 +1224,14 @@ input:checked:hover + .toggle-slider {
 }
 
 .connection-box {
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     padding: 1.5rem;
     border-radius: 1rem;
 }
 
 .connection-box h5 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1rem;
     font-size: 1.1rem;
     display: flex;
@@ -1221,7 +1242,7 @@ input:checked:hover + .toggle-slider {
 .connection-box ul {
     margin: 0;
     padding-left: 1.5rem;
-    color: white;
+    color: #000000 !important;
 }
 
 .connection-box li {
@@ -1231,14 +1252,14 @@ input:checked:hover + .toggle-slider {
 
 .study-guide {
     margin: 2rem 0;
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     border-radius: 1rem;
     padding: 1.5rem;
 }
 
 .study-guide h4 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1.5rem;
     font-size: 1.3rem;
 }
@@ -1250,12 +1271,12 @@ input:checked:hover + .toggle-slider {
 }
 
 .key-highlights, .misconceptions {
-    background: var(--section-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
 }
 
 .key-highlights h5, .misconceptions h5 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1rem;
     font-size: 1.1rem;
     display: flex;
@@ -1266,7 +1287,7 @@ input:checked:hover + .toggle-slider {
 .key-highlights ul, .misconceptions ul {
     margin: 0;
     padding-left: 1.5rem;
-    color: white;
+    color: #000000 !important;
 }
 
 .key-highlights li, .misconceptions li {
@@ -1786,7 +1807,7 @@ input:checked:hover + .toggle-slider {
 
 /* Update the summary section styles */
 .summary-section {
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border-radius: 1.2rem;
     padding: 2rem;
     margin-top: 2rem;
@@ -1794,7 +1815,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .concept-card {
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     padding: 1.5rem;
     border-radius: 1rem;
@@ -1808,7 +1829,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .application-card {
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     padding: 1.5rem;
     border-radius: 1rem;
@@ -1998,7 +2019,7 @@ input:checked:hover + .toggle-slider {
 /* Visual Learning Section Styles */
 .visual-learning-section {
     grid-column: 1 / -1;
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     padding: 2.5rem;
     border-radius: 1.2rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -2047,28 +2068,24 @@ input:checked:hover + .toggle-slider {
 }
 
 .nav-button {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
+    background: #5a9c7d !important;
+    color: #ffffff !important;
+    border: none !important;
     padding: 0.8rem 1.5rem;
-    border-radius: 2rem;
+    border-radius: 0.5rem;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.3s ease;
+    transition: opacity 0.2s ease;
     font-weight: 500;
 }
 
 .nav-button:hover {
-    background: var(--primary-color);
-    transform: translateY(-2px);
+    opacity: 0.9;
 }
 
 .nav-button:disabled {
-    opacity: 0.5;
+    background: #cccccc !important;
     cursor: not-allowed;
-    transform: none;
+    opacity: 0.7;
 }
 
 .nav-button i {
@@ -2089,18 +2106,21 @@ input:checked:hover + .toggle-slider {
     padding: 1rem;
 }
 
+/* Remove the sliding transition */
 .visual-blocks-wrapper {
     display: flex;
-    transition: transform 0.5s ease;
     width: 100%;
+    transition: none; /* Remove the transform transition */
 }
 
+/* Update the visual block transition */
 .visual-block {
     flex: 0 0 100%;
     margin-bottom: 0;
+    display: none; /* Hide all blocks by default */
     opacity: 0;
-    transform: scale(0.95);
-    transition: all 0.5s ease;
+    transform: scale(0.98);
+    transition: opacity 0.3s ease, transform 0.3s ease;
     background: linear-gradient(
         135deg,
         rgba(255, 255, 255, 0.03) 0%,
@@ -2126,6 +2146,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .visual-block.active {
+    display: flex; /* Show only active block */
     opacity: 1;
     transform: scale(1);
 }
@@ -2194,7 +2215,7 @@ input:checked:hover + .toggle-slider {
 
 .kinesthetic-section {
     grid-column: 1 / -1;
-    background: var(--card-bg);
+    background: #ece8e1 !important;
     border: 1px solid var(--border-color);
     border-radius: 1.2rem;
     padding: 2rem;
@@ -2202,7 +2223,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .kinesthetic-section h2 {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1rem;
 }
 
@@ -2233,8 +2254,8 @@ input:checked:hover + .toggle-slider {
 }
 
 .term {
-    background: var(--hover-color);
-    color: var(--primary-color);
+    background: #ece8e1 !important;
+    color: #c17c59 !important;
     padding: 1rem;
     border-radius: 0.8rem;
     font-weight: 500;
@@ -2242,9 +2263,9 @@ input:checked:hover + .toggle-slider {
 }
 
 .definition-slot {
-    background: var(--card-bg);
-    border: 2px dashed var(--border-color);
-    color: var(--text-secondary);
+    background: #ffffff !important; /* Ensure white background */
+    border: 1px solid var(--border-color); /* Ensure border is visible */
+    color: #000000 !important; /* Text color black */
     padding: 1rem;
     border-radius: 0.8rem;
     flex: 2;
@@ -2266,10 +2287,10 @@ input:checked:hover + .toggle-slider {
 }
 
 .definition {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 1rem;
-    border-radius: 0.8rem;
-    color: white;
+    background: #d3d3d3 !important; /* Set to a shade of gray */
+    padding: 1rem; /* Ensure padding for spacing */
+    border-radius: 0.8rem; /* Border-radius for aesthetics */
+    color: #000000 !important; /* Text color black */
     cursor: move;
     transition: all 0.2s ease;
 }
@@ -2321,13 +2342,13 @@ input:checked:hover + .toggle-slider {
 }
 
 .category-column {
-    background: rgba(255, 255, 255, 0.03);
+    background: #ffffff !important;
     border-radius: 1rem;
     padding: 1.5rem;
 }
 
 .category-title {
-    color: var(--primary-color);
+    color: #c17c59 !important;
     margin-bottom: 1rem;
     font-size: 1.2rem;
 }
@@ -2350,11 +2371,20 @@ input:checked:hover + .toggle-slider {
 }
 
 .item {
-    background: rgba(255, 255, 255, 0.08);
+    background: #ffffff !important;
     padding: 1rem;
     border-radius: 0.8rem;
-    color: white;
+    color: black;
     cursor: move;
+    transition: all 0.2s ease;
+}
+
+.item.correct {
+    border: 2px solid rgba(46, 213, 115, 1); /* Solid green border */
+}
+
+.item.incorrect {
+    border: 2px solid rgba(255, 71, 87, 1); /* Solid red border */
 }
 
 /* Quiz Controls */
@@ -2365,28 +2395,29 @@ input:checked:hover + .toggle-slider {
 }
 
 .check-answers-btn,
-.reset-quiz-btn {
+.reset-quiz-btn,
+.explanation-btn {
     padding: 0.8rem 1.5rem;
     border-radius: 0.8rem;
     border: none;
     font-weight: 500;
+    background: var(--primary-color);
+    color: white;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.check-answers-btn {
-    background: var(--primary-color);
-    color: white;
-}
-
-.reset-quiz-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-}
-
 .check-answers-btn:hover,
-.reset-quiz-btn:hover {
+.reset-quiz-btn:hover,
+.explanation-btn:hover:not(:disabled) {
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.explanation-btn:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 /* Quiz Feedback Styles */
@@ -2444,7 +2475,7 @@ input:checked:hover + .toggle-slider {
 /* Improved Flashcards Section - Light Theme */
 .flashcards-section {
     grid-column: 1 / -1;
-    background: var(--card-bg);
+    background: #FFFFFF !important;
     border: 1px solid var(--border-color);
     border-radius: 1.2rem;
     padding: 2.5rem;
@@ -2464,7 +2495,7 @@ input:checked:hover + .toggle-slider {
 
 /* Controls Design */
 .flashcards-controls {
-    background: #ffffff;
+    background: #ece8e1 !important;
     border-radius: 1rem;
     padding: 1.5rem;
     margin: 1.5rem 0;
@@ -2518,14 +2549,14 @@ input:checked:hover + .toggle-slider {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* Flashcard Design */
+/* Flashcard Design - Update to ensure white background */
 .flashcard-front,
 .flashcard-back {
     position: absolute;
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    background: var(--card-bg);
+    background: #ffffff !important; /* Changed to white */
     border: 1px solid var(--border-color);
     border-radius: 1.5rem;
     padding: 3rem;
@@ -2533,21 +2564,34 @@ input:checked:hover + .toggle-slider {
     flex-direction: column;
 }
 
+/* Card category label styling */
 .card-category {
     position: absolute;
     top: 1.5rem;
     left: 1.5rem;
-    background: var(--card-bg-alt) !important;
+    background: #ece8e1 !important;
     padding: 0.6rem 1.2rem;
     border-radius: 2rem;
     font-weight: 600;
     letter-spacing: 0.5px;
-    color: var(--primary-color);
+    color: #c17c59;
     font-size: 0.9rem;
-    border: 2px solid var(--border-color);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+/* Flip hint styling */
+.flip-hint {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ece8e1 !important;
+    padding: 0.8rem 1.5rem;
+    border-radius: 2rem;
+    font-weight: 500;
+    color: #000000;
+}
+
+/* Card content area */
 .card-content {
     flex: 1;
     display: flex;
@@ -2558,27 +2602,14 @@ input:checked:hover + .toggle-slider {
     font-weight: 600;
     padding: 2rem;
     color: #2d3436;
-}
-
-.flip-hint {
-    position: absolute;
-    bottom: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #f8f9fa;
-    padding: 0.8rem 1.5rem;
-    border-radius: 2rem;
-    font-weight: 500;
-    color: #495057;
-    border: 1px solid #e9ecef;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    background: #ffffff !important; /* Ensure content area is also white */
 }
 
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
     :root {
         --sidebar-bg: #8a8882; /* Warmer dark brown */
-        --card-bg: #e3dcd9; /* Lighter warm dark background */
+        --card-bg: #FFFFFF; /* Lighter warm dark background */
         --text-primary: #f9f3ef; /* Warm white text */
         --text-secondary: #d4c3b9; /* Warm light gray */
         --hover-color: #574439; /* Lighter warm hover */
@@ -2631,15 +2662,15 @@ input:checked:hover + .toggle-slider {
     height: 100%;
     opacity: 0;
     pointer-events: none;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    transform: translateX(50px);
-    filter: blur(5px);
+    transition: all 0.4s ease;
+    transform: scale(0.95);
+    filter: blur(2px);
 }
 
 .flashcard.active {
     opacity: 1;
     pointer-events: all;
-    transform: translateX(0);
+    transform: scale(1);
     filter: blur(0);
 }
 
@@ -3108,17 +3139,18 @@ html {
 /* Key concepts styling */
 .key-concept {
     font-weight: 600;
-    color: var(--primary-color);
+    color: #c17c59 !important;
     padding: 0.2rem 0.4rem;
     border-radius: 0.3rem;
-    background: rgba(232, 93, 86, 0.1);
+    background: rgba(193, 124, 89, 0.1) !important;
     display: inline-block;
     margin: 0 0.2rem;
     transition: all 0.2s ease;
+    border: 1px solid rgba(193, 124, 89, 0.2) !important;
 }
 
 .key-concept:hover {
-    background: rgba(232, 93, 86, 0.2);
+    background: rgba(193, 124, 89, 0.2) !important;
     transform: translateY(-1px);
 }
 
@@ -3136,7 +3168,7 @@ html {
 
 .text-content li::before {
     content: '•';
-    color: var(--primary-color);
+    color: #c17c59 !important;
     position: absolute;
     left: -1rem;
     font-weight: bold;
@@ -3245,5 +3277,611 @@ html {
     font-size: 1.5rem; /* Larger font for text-only blocks */
     padding: 3rem;
     max-width: 100%;
+}
+
+/* Update summary section specific colors */
+.summary-title,
+.summary-overview h4,
+.key-concepts h4,
+.key-points h4,
+.practical-applications h4,
+.challenges-section h4,
+.study-guide h4 {
+    color: #c17c59 !important;
+}
+
+.summary-overview p strong,
+.concept-header h5,
+.point-header h5,
+.application-header h5,
+.connection-box h5,
+.key-highlights h5,
+.misconceptions h5 {
+    color: #c17c59 !important;
+}
+
+/* Visual learning section specific colors */
+.visual-block {
+    background: #ece8e1 !important;
+}
+
+.visual-content-wrapper {
+    color: #000000 !important;
+}
+
+/* Update the text container to white background */
+.visual-block .text-content {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 1px 1px 3px var(--vintage-shadow);
+}
+
+/* Update navigation buttons */
+.nav-button {
+    background: #5a9c7d !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 0.8rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    font-weight: 500;
+}
+
+.nav-button:hover {
+    opacity: 0.9;
+}
+
+.nav-button:disabled {
+    background: #cccccc !important;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Interactive section specific colors */
+.kinesthetic-section .category-column {
+    background: #ece8e1 !important;
+}
+
+.kinesthetic-section .category-title {
+    color: #c17c59 !important;
+}
+
+.kinesthetic-section .category-items {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+}
+
+.kinesthetic-section .items-pool {
+    background: #ece8e1 !important;
+}
+
+/* Flashcard section specific colors */
+.flashcards-controls {
+    background: #ece8e1 !important;
+}
+
+.card-counter {
+    background: #ece8e1 !important;
+    color: #000000 !important;
+}
+
+.flip-hint {
+    background: #ece8e1 !important;
+    color: #000000 !important;
+}
+
+/* Quiz feedback colors */
+.quiz-feedback {
+    background: #ece8e1 !important;
+}
+
+.quiz-feedback.correct {
+    color: #2ed573 !important;
+}
+
+.quiz-feedback.incorrect {
+    color: #ff4757 !important;
+}
+
+/* Remove hover effects for summary section */
+.concept-card:hover,
+.key-point:hover,
+.application-card:hover,
+.connection-box:hover {
+    background: var(--card-bg) !important; /* Keep the same background */
+    box-shadow: 1px 1px 3px var(--vintage-shadow); /* Keep the same shadow */
+}
+
+/* Remove the challenges section styles */
+.challenges-section {
+    display: none !important;
+}
+
+/* Update background colors and remove hover effects for summary sections */
+.overview-box,
+.supporting-details,
+.concept-card,
+.key-point,
+.application-card,
+.connection-box {
+    background: #ece8e1 !important;
+    border: 1px solid var(--border-color);
+    box-shadow: 1px 1px 3px var(--vintage-shadow);
+    transition: none; /* Remove transition effects */
+}
+
+/* Remove all hover effects */
+.overview-box:hover,
+.supporting-details:hover,
+.concept-card:hover,
+.key-point:hover,
+.application-card:hover,
+.connection-box:hover {
+    background: #ece8e1 !important;
+    transform: none !important;
+    box-shadow: 1px 1px 3px var(--vintage-shadow) !important;
+}
+
+/* Update specific section backgrounds */
+.key-concepts .concept-card,
+.key-points .key-point,
+.practical-applications .application-card {
+    background: #ece8e1 !important;
+    margin-bottom: 1rem;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+/* Supporting details background */
+.supporting-details {
+    background: #ece8e1 !important;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border-radius: 0.5rem;
+}
+
+/* Overview box background */
+.overview-box {
+    background: #ece8e1 !important;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+/* Remove the key concepts specific styles */
+.key-concepts,
+.concept-card,
+.concept-card:hover {
+    display: none !important;
+}
+
+/* Update inner cards to white background while keeping headers with ece8e1 */
+.overview-box,
+.supporting-details,
+.key-point,
+.application-card {
+    background: #ffffff !important;
+    border: 1px solid var(--border-color);
+    box-shadow: 1px 1px 3px var(--vintage-shadow);
+    transition: none;
+}
+
+/* Keep section headers and outer containers with ece8e1 */
+.summary-overview,
+.key-points,
+.practical-applications,
+.study-guide {
+    background: #ece8e1 !important;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Remove hover effects and keep white background */
+.overview-box:hover,
+.supporting-details:hover,
+.key-point:hover,
+.application-card:hover {
+    background: #ffffff !important;
+    transform: none !important;
+    box-shadow: 1px 1px 3px var(--vintage-shadow) !important;
+}
+
+/* Update specific inner content backgrounds to white */
+.key-points .key-point,
+.practical-applications .application-card {
+    background: #ffffff !important;
+    margin-bottom: 1rem;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+/* Supporting details background to white */
+.supporting-details {
+    background: #ffffff !important;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border-radius: 0.5rem;
+}
+
+/* Overview box background to white */
+.overview-box {
+    background: #ffffff !important;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+/* Update study guide inner elements to white background */
+.study-sections .key-highlights,
+.study-sections .misconceptions {
+    background: #ffffff !important;
+    border: 1px solid var(--border-color);
+    box-shadow: 1px 1px 3px var(--vintage-shadow);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Remove hover effects for study guide elements */
+.study-sections .key-highlights:hover,
+.study-sections .misconceptions:hover {
+    background: #ffffff !important;
+    transform: none !important;
+    box-shadow: 1px 1px 3px var(--vintage-shadow) !important;
+}
+
+/* Flashcard Design */
+.flashcard-front,
+.flashcard-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    background: #ffffff !important;
+    border: 1px solid var(--border-color);
+    border-radius: 1.5rem;
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 1px 1px 3px var(--vintage-shadow);
+}
+
+.flashcard-back {
+    transform: rotateX(180deg);
+}
+
+.card-category {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    background: #ece8e1 !important;
+    padding: 0.6rem 1.2rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #c17c59;
+    font-size: 0.9rem;
+}
+
+.flip-hint {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ece8e1 !important;
+    padding: 0.8rem 1.5rem;
+    border-radius: 2rem;
+    font-weight: 500;
+    color: #000000;
+}
+
+.card-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    line-height: 1.6;
+    font-weight: 600;
+    padding: 2rem;
+    color: #2d3436;
+    background: #ffffff !important;
+}
+
+/* Flashcards Container and Positioning */
+.flashcards-container {
+    height: 450px;
+    perspective: 1500px;
+    margin-top: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.flashcard {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s ease;
+    transform: scale(0.95);
+    filter: blur(2px);
+}
+
+.flashcard.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: scale(1);
+    filter: blur(0);
+}
+
+.flashcard-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.flashcard.flipped .flashcard-inner {
+    transform: rotateX(180deg);
+}
+
+.item.correct {
+    background: rgba(46, 213, 115, 0.3); /* More noticeable green background */
+    border-color: rgba(46, 213, 115, 0.7); /* More prominent green border */
+}
+
+.item.incorrect {
+    background: rgba(255, 71, 87, 0.3); /* More noticeable red background */
+    border-color: rgba(255, 71, 87, 0.7); /* More prominent red border */
+}
+
+.explanation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.explanation-dialog {
+    background: var(--background-color);
+    border-radius: 1rem;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.explanation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.explanation-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+
+.close-explanation-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: opacity 0.2s;
+}
+
+.close-explanation-btn:hover {
+    opacity: 0.7;
+}
+
+.explanation-content {
+    padding: 1.5rem;
+}
+
+.category-explanation {
+    margin-bottom: 2rem;
+}
+
+.category-explanation h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.explained-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.8rem;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.item-text {
+    font-weight: 500;
+    margin-bottom: 0.8rem;
+    color: var(--text-color);
+}
+
+.item-explanation {
+    color: var(--text-color-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .explanation-dialog {
+        max-width: 95%;
+        margin: 1rem;
+    }
+    
+    .explanation-header h3 {
+        font-size: 1.2rem;
+    }
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.explanation-btn-small {
+    background: none;
+    border: none;
+    padding: 4px;
+    margin-left: 8px;
+    cursor: not-allowed;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.explanation-btn-small i {
+    font-size: 1.4rem; /* Increased from default size */
+    transition: all 0.3s ease;
+}
+
+.explanation-btn-small:disabled {
+    opacity: 0.4;
+}
+
+.explanation-btn-small:not(:disabled) {
+    opacity: 1;
+    cursor: pointer;
+}
+
+.explanation-btn-small:not(:disabled):hover {
+    transform: scale(1.1);
+}
+
+.explanation-btn-small:not(:disabled) .bi-lightbulb {
+    color: var(--accent-color);
+    text-shadow: 0 0 10px rgba(255, 180, 0, 0.4);
+}
+
+/* Add tooltip for disabled state */
+.explanation-btn-small:disabled:hover::after {
+    content: attr(title);
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.category-explanation-tooltip {
+    display: none;
+    background: var(--background-color);
+    border-radius: 0.8rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.category-explanation-tooltip.active {
+    display: block;
+    animation: slideDown 0.3s ease-out;
+}
+
+.tooltip-content {
+    position: relative;
+    padding-right: 2rem;
+}
+
+.tooltip-content h4 {
+    color: var(--primary-color);
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tooltip-content h4 .bi-lightbulb {
+    color: #FFD700;
+}
+
+.explanation-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.explanation-item {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--primary-color);
+}
+
+.item-text {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color);
+}
+
+.item-reason {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
+    line-height: 1.4;
+}
+
+.close-tooltip-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    padding: 0.3rem;
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+}
+
+.close-tooltip-btn:hover {
+    opacity: 0.7;
+    transform: scale(1.1);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
   

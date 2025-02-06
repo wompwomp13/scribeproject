@@ -315,28 +315,6 @@ class StudentLectureNotes {
         document.getElementById('context').textContent = summary.overview?.context || '';
         document.getElementById('significance').textContent = summary.overview?.significance || '';
 
-        // Update key concepts
-        if (summary.conceptualFramework?.keyTerms) {
-            document.getElementById('conceptTerms').innerHTML = `
-                <div class="concepts-grid">
-                    ${summary.conceptualFramework.keyTerms.map(term => `
-                        <div class="concept-card definable">
-                            <div class="concept-header">
-                                <i class="bi bi-lightbulb"></i>
-                                <h5>${term.term || ''}</h5>
-                            </div>
-                            <p>${term.definition || ''}</p>
-                            ${term.context ? `
-                                <div class="concept-context">
-                                    <small><strong>Context:</strong> ${term.context}</small>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
         // Update key points
         if (summary.keyTopics) {
             document.getElementById('keyPoints').innerHTML = `
@@ -379,34 +357,6 @@ class StudentLectureNotes {
                         <p class="definable">${app.explanation || ''}</p>
                     </div>
                 `).join('')}
-            `;
-        }
-
-        // Update challenges and future directions
-        if (summary.connections) {
-            document.getElementById('challenges').innerHTML = `
-                <div class="connections-grid">
-                    ${summary.connections.interdisciplinary?.length ? `
-                        <div class="connection-box">
-                            <h5><i class="bi bi-exclamation-triangle"></i> Current Challenges</h5>
-                            <ul>
-                                ${summary.connections.interdisciplinary.map(challenge => 
-                                    `<li class="definable">${challenge}</li>`
-                                ).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                    ${summary.connections.futureTopics?.length ? `
-                        <div class="connection-box">
-                            <h5><i class="bi bi-arrow-up-right-circle"></i> Future Outlook</h5>
-                            <ul>
-                                ${summary.connections.futureTopics.map(topic => 
-                                    `<li class="definable">${topic}</li>`
-                                ).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                </div>
             `;
         }
 
@@ -952,6 +902,12 @@ class StudentLectureNotes {
 
         // Initialize drag and drop
         this.initializeDragAndDrop(quizType);
+
+        // Store quiz content for explanations
+        this.quizContent = quizContent;
+
+        // Ensure explanation buttons are always enabled
+        this.ensureExplanationButtonsEnabled();
     }
 
     createMatchingQuiz(quizContent) {
@@ -1031,10 +987,16 @@ class StudentLectureNotes {
                 <div class="categories-container">
                     ${quizContent.categories.map(category => `
                         <div class="category-column">
-                            <h3 class="category-title">${category}</h3>
+                            <div class="category-header">
+                                <h3 class="category-title">${category}</h3>
+                                <button class="explanation-btn-small" data-category="${category}" onclick="studentLectureNotes.toggleCategoryExplanation('${category}')">
+                                    <i class="bi bi-lightbulb"></i>
+                                </button>
+                            </div>
                             <div class="category-items" data-category="${category}">
                                 Drop items here
                             </div>
+                            <div class="category-explanation-tooltip" data-category="${category}"></div>
                         </div>
                     `).join('')}
                 </div>
@@ -1053,6 +1015,28 @@ class StudentLectureNotes {
                 <button class="reset-quiz-btn">Reset Quiz</button>
             </div>
         `;
+    }
+
+    checkCategorizationAnswers() {
+        const categoryContainers = document.querySelectorAll('.category-items');
+        let allCorrect = true;
+
+        categoryContainers.forEach(container => {
+            const correctCategory = container.dataset.category;
+            const items = container.querySelectorAll('.item');
+            
+            items.forEach(item => {
+                const isCorrect = item.dataset.category === correctCategory;
+                item.classList.remove('correct', 'incorrect');
+                item.classList.add(isCorrect ? 'correct' : 'incorrect');
+                
+                if (!isCorrect) {
+                    allCorrect = false;
+                }
+            });
+        });
+
+        return allCorrect;
     }
 
     initializeDragAndDrop(quizType) {
@@ -1108,7 +1092,7 @@ class StudentLectureNotes {
 
                 // Remove from previous slot if exists
                 const previousSlot = document.querySelector(`.definition-slot .definition`);
-                if (previousSlot) {
+                if (previousSlot && previousSlot.parentElement) {
                     previousSlot.parentElement.innerHTML = 'Drop definition here';
                 }
 
@@ -1152,11 +1136,11 @@ class StudentLectureNotes {
                 const item = document.querySelector('.dragging');
                 if (!item) return;
                 
-                container.appendChild(item);
-                container.classList.remove('drag-over');
                 if (container.innerHTML === 'Drop items here') {
                     container.innerHTML = '';
                 }
+                container.appendChild(item);
+                container.classList.remove('drag-over');
             });
         });
     }
@@ -1178,9 +1162,16 @@ class StudentLectureNotes {
     initializeQuizControls(quizType) {
         const checkButton = document.querySelector('.check-answers-btn');
         const resetButton = document.querySelector('.reset-quiz-btn');
+        const explanationButton = document.querySelector('.explanation-btn');
 
-        checkButton.addEventListener('click', () => this.checkAnswers(quizType));
-        resetButton.addEventListener('click', () => this.resetQuiz(quizType));
+        if (checkButton) {
+            checkButton.addEventListener('click', () => this.checkAnswers(quizType));
+        }
+
+        if (resetButton) {
+            resetButton.addEventListener('click', () => this.resetQuiz(quizType));
+        }
+
     }
 
     checkAnswers(quizType) {
@@ -1199,6 +1190,26 @@ class StudentLectureNotes {
             case 'categorization':
                 isCorrect = this.checkCategorizationAnswers();
                 feedback = isCorrect ? 'All items are correctly categorized!' : 'Some items are in the wrong category. Try again!';
+                
+                // Check each category separately
+                const categoryContainers = document.querySelectorAll('.category-items');
+                categoryContainers.forEach(container => {
+                    const category = container.dataset.category;
+                    const items = container.querySelectorAll('.item');
+                    let categoryCorrect = true;
+                    
+                    items.forEach(item => {
+                        if (item.dataset.category !== category) {
+                            categoryCorrect = false;
+                        }
+                    });
+
+                    // Find and update the explanation button for this category
+                    const explanationButton = document.querySelector(`.explanation-btn-small[data-category="${category}"]`);
+                    if (explanationButton) {
+                        explanationButton.title = 'Click to see why these items belong here';
+                    }
+                });
                 break;
         }
 
@@ -1246,26 +1257,6 @@ class StudentLectureNotes {
             }
             
             previousOrder = currentOrder;
-        });
-
-        return allCorrect;
-    }
-
-    checkCategorizationAnswers() {
-        const categoryContainers = document.querySelectorAll('.category-items');
-        let allCorrect = true;
-
-        categoryContainers.forEach(container => {
-            const correctCategory = container.dataset.category;
-            const items = container.querySelectorAll('.item');
-            
-            items.forEach(item => {
-                const isCorrect = item.dataset.category === correctCategory;
-                item.classList.remove('correct', 'incorrect');
-                item.classList.add(isCorrect ? 'correct' : 'incorrect');
-                
-                if (!isCorrect) allCorrect = false;
-            });
         });
 
         return allCorrect;
@@ -1359,6 +1350,9 @@ class StudentLectureNotes {
                 container.innerHTML = 'Drop items here';
             }
         });
+
+        // Ensure explanation buttons are always enabled
+        this.ensureExplanationButtonsEnabled();
     }
 
     async handleFlashcards() {
@@ -1639,6 +1633,59 @@ class StudentLectureNotes {
             updateNavigationButtons();
         }
     }
+
+    toggleCategoryExplanation(category) {
+        const tooltip = document.querySelector(`.category-explanation-tooltip[data-category="${category}"]`);
+        const allTooltips = document.querySelectorAll('.category-explanation-tooltip');
+        
+        // Close other open tooltips
+        allTooltips.forEach(t => {
+            if (t !== tooltip && t.classList.contains('active')) {
+                t.classList.remove('active');
+            }
+        });
+
+        // Toggle current tooltip
+        if (!tooltip.classList.contains('active')) {
+            // Generate explanation content
+            const categoryItems = this.quizContent.items.filter(item => item.category === category);
+            tooltip.innerHTML = `
+                <div class="tooltip-content">
+                    <h4>Why these items belong to "${category}":</h4>
+                    <div class="explanation-items">
+                        ${categoryItems.map(item => `
+                            <div class="explanation-item">
+                                <p class="item-text"><strong>${item.text}</strong></p>
+                                <p class="item-reason">${item.explanation || `This item demonstrates key characteristics of the ${category} category.`}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="close-tooltip-btn">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `;
+
+            // Add close button handler
+            tooltip.querySelector('.close-tooltip-btn').onclick = () => {
+                tooltip.classList.remove('active');
+            };
+
+            tooltip.classList.add('active');
+        } else {
+            tooltip.classList.remove('active');
+        }
+    }
+
+    // Ensure explanation buttons are always enabled
+    ensureExplanationButtonsEnabled() {
+        document.querySelectorAll('.explanation-btn-small').forEach(button => {
+            button.disabled = false;
+            const category = button.dataset.category;
+            button.onclick = () => this.toggleCategoryExplanation(category);
+            button.title = 'Click this button for an explanation of the items in this category.';
+        });
+    }
 }
 
 // Initialize when page loads
@@ -1650,4 +1697,26 @@ document.addEventListener('DOMContentLoaded', () => {
 window.toggleNoteSidebar = function() {
     const sidebar = document.getElementById('notesSidebar');
     sidebar.classList.toggle('active');
-}; 
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const explanationButton = document.querySelector('.explanation-btn');
+    const checkAnswersButton = document.querySelector('.check-answers-btn');
+
+    if (explanationButton && checkAnswersButton) {
+        explanationButton.disabled = true;
+
+        checkAnswersButton.addEventListener('click', () => {
+            const isCorrect = this.checkCategorizationAnswers();
+            if (isCorrect) {
+                explanationButton.disabled = false;
+                explanationButton.addEventListener('click', async () => {
+                    const explanations = await this.fetchExplanations();
+                    this.displayExplanations(explanations);
+                });
+            } else {
+                explanationButton.disabled = true;
+            }
+        });
+    }
+}.bind(this)); 
