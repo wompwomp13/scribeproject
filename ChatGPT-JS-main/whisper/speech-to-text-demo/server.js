@@ -1123,14 +1123,16 @@ DO NOT:
 - Remove any key information
 - Change technical terminology
 - Alter the lecture's structure
+- Add any introductory phrases or explanations
+- Include phrases like "here's the transcript" or "here's the cleaned version"
 
-Transcript: ${transcription}
+IMPORTANT: Return ONLY the cleaned transcript text. Do not add any introductory text, explanations, or conclusions.
 
-Return the cleaned transcript with the same level of detail as the original.`;
+Transcript: ${transcription}`;
 
         const cleanupCompletion = await groq.chat.completions.create({
             messages: [
-                { role: "system", content: "You are a transcript editor that maintains content accuracy while improving readability." },
+                { role: "system", content: "You are a transcript editor that returns ONLY the cleaned transcript without any additional text or explanations." },
                 { role: "user", content: cleanupPrompt }
             ],
             model: "mixtral-8x7b-32768",
