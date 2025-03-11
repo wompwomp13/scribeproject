@@ -24,8 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Redirect to index.html
-        window.location.href = 'index.html';
+        // Store the selected course ID in localStorage for the recording page
+        localStorage.setItem('selectedCourseId', selectedClass);
+        
+        // Redirect to index.html with the selected course
+        window.location.href = `index.html?courseId=${encodeURIComponent(selectedClass)}`;
     };
 
     // Event listeners
@@ -43,7 +46,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load courses only once through the CourseManager
     async function initializeCourses() {
         try {
-            const response = await fetch('/api/courses?instructor=current');
+            const userEmail = localStorage.getItem('currentUserEmail');
+            if (!userEmail) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Get the current user's information first
+            const userResponse = await fetch(`/api/auth/current-user?userEmail=${encodeURIComponent(userEmail)}`);
+            const userData = await userResponse.json();
+            
+            if (!userData.success) {
+                throw new Error('Failed to get current user');
+            }
+
+            // Fetch only courses assigned to this teacher
+            const response = await fetch(`/api/users/${userData.user._id}/courses`);
             const data = await response.json();
             
             if (data.success) {
@@ -61,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 courseManager.updateCourses(coursesWithRecordings);
 
                 // Update recording sidebar dropdown
+                classSelect.innerHTML = '<option value="">Select a class</option>';
                 coursesWithRecordings.forEach(course => {
                     const option = document.createElement('option');
                     option.value = course._id;
@@ -70,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error loading courses:', error);
+            if (error.message === 'Failed to get current user') {
+                window.location.href = '/login.html';
+            }
         }
     }
 

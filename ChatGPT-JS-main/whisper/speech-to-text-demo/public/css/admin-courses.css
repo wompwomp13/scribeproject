@@ -261,4 +261,34 @@
 .btn-primary:hover {
     background: var(--primary-color);
     opacity: 0.9;
+}
+
+/* Simple Notification System */
+.notification-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background: #333;
+    color: white;
+    border-radius: 8px;
+    font-size: 1rem;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.notification-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification-toast.success {
+    background: #28a745;
+}
+
+.notification-toast.error {
+    background: #dc3545;
 } 

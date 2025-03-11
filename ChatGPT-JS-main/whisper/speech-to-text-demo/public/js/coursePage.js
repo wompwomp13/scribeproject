@@ -132,7 +132,11 @@ class TeacherClass {
     }
 
     startRecording() {
-        window.location.href = '/index.html';
+        // Store the current course ID in localStorage
+        localStorage.setItem('selectedCourseId', this.courseId);
+        
+        // Redirect to index.html with the course ID as a query parameter
+        window.location.href = `/index.html?courseId=${encodeURIComponent(this.courseId)}`;
     }
 }
 

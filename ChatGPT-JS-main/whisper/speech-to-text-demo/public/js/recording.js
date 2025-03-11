@@ -1,7 +1,8 @@
 class RecordingStudio {
-    constructor() {
+    constructor(preSelectedCourse = null) {
         console.log('Initializing RecordingStudio...');
         updateDebug('Starting initialization...');
+        this.preSelectedCourse = preSelectedCourse;
         this.initializeElements();
         this.loadCourses();
     }
@@ -15,76 +16,86 @@ class RecordingStudio {
         }
         console.log('Course select element found');
         updateDebug('Found course select element');
+
+        // If we have a pre-selected course, just set its value
+        if (this.preSelectedCourse) {
+            this.courseSelect.value = this.preSelectedCourse;
+            updateDebug('Pre-selected course set: ' + this.preSelectedCourse);
+            
+            // Enable recording controls immediately
+            const recordButton = document.getElementById('recordButton');
+            if (recordButton) {
+                recordButton.disabled = false;
+            }
+        }
     }
 
     async loadCourses() {
         try {
             updateDebug('Fetching courses...');
-            console.log('Fetching courses from API...');
             
-            const response = await fetch('/api/courses');
-            console.log('Response received:', response.status);
-            updateDebug(`API Response: ${response.status}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            // Get the current user's email from localStorage
+            const userEmail = localStorage.getItem('currentUserEmail');
+            if (!userEmail) {
+                window.location.href = '/login.html';
+                return;
             }
+
+            // First get the current user's information
+            const userResponse = await fetch(`/api/auth/current-user?userEmail=${encodeURIComponent(userEmail)}`);
+            const userData = await userResponse.json();
             
+            if (!userData.success) {
+                throw new Error('Failed to get current user');
+            }
+
+            // Fetch only courses assigned to this teacher
+            const response = await fetch(`/api/users/${userData.user._id}/courses`);
             const data = await response.json();
-            console.log('Course data received:', data);
-            updateDebug(`Found ${data.courses ? data.courses.length : 0} courses`);
             
             if (!data.success) {
                 throw new Error('Failed to fetch courses');
             }
 
-            this.populateCourseSelect(data.courses);
+            console.log('Course data received:', data);
+            updateDebug(`Found ${data.courses ? data.courses.length : 0} courses`);
+
+            // Always populate dropdown with all available courses
+            this.courseSelect.innerHTML = '<option value="">Choose a course...</option>';
+            data.courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course._id;
+                option.textContent = course.name;
+                this.courseSelect.appendChild(option);
+            });
+
+            // If we have a pre-selected course, select it in the dropdown
+            if (this.preSelectedCourse) {
+                const selectedCourse = data.courses.find(course => course._id === this.preSelectedCourse);
+                if (selectedCourse) {
+                    this.courseSelect.value = this.preSelectedCourse;
+                    updateDebug(`Pre-selected course: ${selectedCourse.name}`);
+                    
+                    // Enable recording controls since we have a course selected
+                    const recordButton = document.getElementById('recordButton');
+                    if (recordButton) {
+                        recordButton.disabled = false;
+                    }
+                }
+            }
+
+            // Add change event listener to handle course selection
+            this.courseSelect.addEventListener('change', () => {
+                const recordButton = document.getElementById('recordButton');
+                if (recordButton) {
+                    recordButton.disabled = !this.courseSelect.value;
+                }
+                updateDebug(`Course changed to: ${this.courseSelect.options[this.courseSelect.selectedIndex].text}`);
+            });
+
         } catch (error) {
             console.error('Error loading courses:', error);
             updateDebug(`Error: ${error.message}`);
-            this.handleCourseLoadError();
-        }
-    }
-
-    populateCourseSelect(courses) {
-        if (!Array.isArray(courses)) {
-            console.error('Courses data is not an array:', courses);
-            updateDebug('Error: Invalid course data');
-            this.handleCourseLoadError();
-            return;
-        }
-
-        try {
-            this.courseSelect.innerHTML = '';
-            
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Choose a course...';
-            this.courseSelect.appendChild(defaultOption);
-            
-            const sortedCourses = courses.sort((a, b) => 
-                (a.code || '').localeCompare(b.code || '')
-            );
-
-            let addedCourses = 0;
-            sortedCourses.forEach(course => {
-                if (course._id && (course.code || course.name)) {
-                    const option = document.createElement('option');
-                    option.value = course._id;
-                    option.textContent = course.code ? 
-                        `${course.code} - ${course.name}` : 
-                        course.name;
-                    this.courseSelect.appendChild(option);
-                    addedCourses++;
-                    console.log('Added course:', option.textContent);
-                }
-            });
-
-            updateDebug(`Loaded ${addedCourses} courses successfully`);
-            console.log(`Added ${addedCourses} courses to select`);
-        } catch (error) {
-            console.error('Error populating select:', error);
-            updateDebug(`Error populating select: ${error.message}`);
             this.handleCourseLoadError();
         }
     }

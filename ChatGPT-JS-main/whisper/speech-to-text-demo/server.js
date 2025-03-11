@@ -695,19 +695,60 @@ app.post('/api/users', async (req, res) => {
 // Update user
 app.put('/api/users/:id', async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        ).select('-password');
+        const { name, email, role, courses, status } = req.body;
         
+        // Find the user
+        const user = await User.findById(req.params.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
-        
-        res.json({ success: true, user });
+
+        // Update basic info
+        user.name = name;
+        user.email = email;
+        user.role = role;
+        if (status) user.status = status;
+
+        // Handle course assignments
+        if (courses) {
+            // Get current courses
+            const currentCourses = new Set(user.courses.map(c => c.toString()));
+            const newCourses = new Set(courses);
+
+            // Find courses to remove and add
+            const coursesToRemove = [...currentCourses].filter(c => !newCourses.has(c));
+            const coursesToAdd = [...newCourses].filter(c => !currentCourses.has(c));
+
+            // Update user's courses
+            user.courses = courses;
+
+            // If user is a teacher, update the courses' instructor field
+            if (role === 'teacher') {
+                // Remove instructor from courses they're no longer assigned to
+                for (const courseId of coursesToRemove) {
+                    await Course.findByIdAndUpdate(courseId, {
+                        $unset: { instructor: "" }
+                    });
+                }
+
+                // Add instructor to new courses
+                for (const courseId of coursesToAdd) {
+                    await Course.findByIdAndUpdate(courseId, {
+                        instructor: user._id
+                    });
+                }
+            }
+        }
+
+        await user.save();
+
+        res.json({
+            success: true,
+            user: await User.findById(user._id).populate('courses')
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error updating user:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -781,19 +822,43 @@ app.post('/api/courses', async (req, res) => {
 // Update course
 app.put('/api/courses/:id', async (req, res) => {
     try {
-        const course = await Course.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        ).populate('instructor', 'name email');
-        
+        const course = await Course.findById(req.params.id);
         if (!course) {
-            return res.status(404).json({ error: 'Course not found' });
+            return res.status(404).json({ success: false, message: 'Course not found' });
         }
-        
-        res.json({ success: true, course });
+
+        // If updating instructor
+        if (req.body.instructor) {
+            const instructor = await User.findById(req.body.instructor);
+            if (!instructor) {
+                return res.status(404).json({ success: false, message: 'Instructor not found' });
+            }
+
+            if (instructor.role !== 'teacher') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Only teachers can be assigned as instructors'
+                });
+            }
+
+            // Add this course to instructor's courses if not already present
+            if (!instructor.courses.includes(course._id)) {
+                instructor.courses.push(course._id);
+                await instructor.save();
+            }
+        }
+
+        // Update course
+        Object.assign(course, req.body);
+        await course.save();
+
+        res.json({
+            success: true,
+            course: await Course.findById(course._id).populate('instructor', 'name email')
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error updating course:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -813,11 +878,12 @@ app.delete('/api/courses/:id', async (req, res) => {
         // Delete all recordings associated with this course
         await Recording.deleteMany({ class: course._id });
 
-        // Delete the course
-        await course.remove();
+        // Delete the course using findByIdAndDelete instead of remove()
+        await Course.findByIdAndDelete(course._id);
         
         res.json({ success: true });
     } catch (error) {
+        console.error('Error deleting course:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -1415,6 +1481,224 @@ Lecture Content: ${transcription}`;
             success: false,
             error: 'Failed to generate flashcards',
             details: error.message
+        });
+    }
+});
+
+// Add these routes before your existing routes
+
+// Register new user
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { name, email, schoolId, role, password } = req.body;
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ 
+            $or: [{ email }, { schoolId }] 
+        });
+
+        if (existingUser) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'User with this email or school ID already exists' 
+            });
+        }
+
+        // Create new user
+        const user = await User.create({
+            name,
+            email,
+            schoolId,
+            role,
+            password,
+            status: 'pending',
+            isVerified: false
+        });
+
+        res.json({
+            success: true,
+            message: 'Registration successful',
+            user: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                status: user.status
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
+    }
+});
+
+// Login endpoint
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid credentials' 
+            });
+        }
+
+        // Check password
+        if (user.password !== password) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid credentials' 
+            });
+        }
+
+        res.json({
+            success: true,
+            user: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isVerified: user.isVerified,
+                status: user.status
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
+    }
+});
+
+// Add user verification endpoint
+app.post('/api/users/:userId/verify', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Update user verification status
+        user.isVerified = true;
+        user.status = 'active';
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'User verified successfully',
+            user: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                status: user.status,
+                isVerified: user.isVerified
+            }
+        });
+    } catch (error) {
+        console.error('Verification error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Get current user endpoint
+app.get('/api/auth/current-user', async (req, res) => {
+    try {
+        // In a real app, you would get this from the session
+        // For now, we'll get it from a cookie or query param
+        const userEmail = req.cookies?.userEmail || req.query.userEmail;
+        
+        if (!userEmail) {
+            return res.status(401).json({
+                success: false,
+                message: 'No user logged in'
+            });
+        }
+
+        const user = await User.findOne({ email: userEmail });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                status: user.status
+            }
+        });
+    } catch (error) {
+        console.error('Error getting current user:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Update the get user's courses endpoint to include more details
+app.get('/api/users/:id/courses', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id)
+            .populate({
+                path: 'courses',
+                populate: {
+                    path: 'instructor',
+                    select: 'name email'
+                }
+            });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // For each course, get the count of students and recordings
+        const coursesWithCounts = await Promise.all(user.courses.map(async course => {
+            const studentsCount = await User.countDocuments({
+                role: 'student',
+                courses: course._id
+            });
+
+            const recordingsCount = await Recording.countDocuments({
+                class: course._id
+            });
+
+            return {
+                ...course.toObject(),
+                studentCount: studentsCount,
+                recordingsCount: recordingsCount
+            };
+        }));
+
+        res.json({
+            success: true,
+            courses: coursesWithCounts
+        });
+    } catch (error) {
+        console.error('Error fetching user courses:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 }); 

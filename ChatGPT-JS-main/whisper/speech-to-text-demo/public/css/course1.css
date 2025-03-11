@@ -1,7 +1,7 @@
 :root {
-    --sidebar-bg: #f6f6f6; /* Light Gray - Soft and Neutral */
-    --card-bg: #ffffff; /* White - Clean and Readable */
-    --primary-color: #ff6f61; /* Coral Red - Energetic but not harsh */
+    --sidebar-bg: #85b09a; /* Light Gray - Soft and Neutral */
+    --card-bg: #e0ebe6; /* White - Clean and Readable */
+    --primary-color: #7e9ebf; /* Coral Red - Energetic but not harsh */
     --accent-color: #ffb400; /* Warm Yellow - Adds a lively touch */
     --sidebar-width: 280px;
     --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
@@ -12,7 +12,7 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: #4a4a4a;
+    background-color: #85b09a;
     font-family: var(--font-primary);
 }
 
@@ -86,7 +86,7 @@ body {
 }
 
 .course-code {
-    color: rgba(255, 255, 255, 0.7);
+    color: #494949;
     font-size: 1rem;
     margin: 0;
     margin-bottom: 0.5rem;
@@ -114,7 +114,7 @@ body {
     padding: 0.6rem 1.2rem;
     border-radius: 2rem;
     font-size: 0.95rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: #494949;
 }
 
 .course-meta i {
@@ -163,7 +163,7 @@ body {
 .lecture-count {
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.9rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: #494949;
     padding: 0.5rem 1rem;
     border-radius: 20px;
 }
@@ -184,14 +184,14 @@ body {
 }
 
 .lecture-info h3 {
-    color: white;
+    color: #494949;
     margin: 0 0 0.5rem 0;
     font-size: 1.2rem;
     font-weight: 500;
 }
 
 .lecture-date {
-    color: rgba(255, 255, 255, 0.9);
+    color: #494949;
     font-size: 0.9rem;
     display: flex;
     align-items: center;
@@ -339,7 +339,7 @@ body {
 }
 
 .lecture-info h3 {
-    color: white;
+    color: #494949;
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0 0 0.75rem 0;

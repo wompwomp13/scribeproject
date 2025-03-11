@@ -15,6 +15,19 @@ class CourseManager {
     setupEventListeners() {
         // Initialize Bootstrap modal
         this.courseModal = new bootstrap.Modal(document.getElementById('courseModal'));
+        
+        // Handle modal hidden event
+        document.getElementById('courseModal').addEventListener('hidden.bs.modal', () => {
+            // Clear form when modal is closed
+            document.getElementById('courseForm').reset();
+            // Remove any temporary instructor options
+            const instructorSelect = document.getElementById('courseInstructor');
+            Array.from(instructorSelect.options).forEach(option => {
+                if (option.dataset.temporary) {
+                    option.remove();
+                }
+            });
+        });
     }
 
     async loadCourses() {
@@ -173,6 +186,7 @@ class CourseManager {
                 const tempOption = document.createElement('option');
                 tempOption.value = instructorId;
                 tempOption.textContent = course.instructor.name || 'Unknown Instructor';
+                tempOption.dataset.temporary = 'true';
                 instructorSelect.appendChild(tempOption);
                 instructorSelect.value = instructorId;
             }
@@ -180,6 +194,22 @@ class CourseManager {
 
         document.querySelector('#courseModal .modal-title').textContent = 'Edit Course';
         this.courseModal.show();
+    }
+
+    showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.className = 'notification-toast ' + type;
+        
+        // Force a reflow to restart the animation
+        notification.offsetHeight;
+        
+        notification.classList.add('show');
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
     }
 
     async handleSaveCourse() {
@@ -212,19 +242,21 @@ class CourseManager {
                 body: JSON.stringify(courseData)
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
             const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            }
             
             if (data.success) {
                 // Close modal first
                 this.courseModal.hide();
                 // Then reload courses
                 await this.loadCourses();
-                // Clear the form
-                form.reset();
+                // Show success notification
+                this.showNotification(
+                    `Course ${this.currentCourseId ? 'updated' : 'created'} successfully!`
+                );
                 // Dispatch event for dashboard update
                 window.dispatchEvent(new CustomEvent('courseChanged', {
                     detail: { 
@@ -237,37 +269,54 @@ class CourseManager {
             }
         } catch (error) {
             console.error('Error saving course:', error);
-            alert('Failed to save course: ' + error.message);
+            this.showNotification(error.message, 'error');
         }
     }
 
     async handleDeleteCourse(courseId) {
-        if (confirm('Are you sure you want to delete this course?')) {
+        if (!confirm('Are you sure you want to delete this course?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/courses/${courseId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+
+            let data;
             try {
-                const response = await fetch(`/api/courses/${courseId}`, {
-                    method: 'DELETE'
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    await this.loadCourses();
-                    // Dispatch event for dashboard update
-                    window.dispatchEvent(new CustomEvent('courseChanged', {
-                        detail: { 
-                            action: 'delete',
-                            courseId: courseId
-                        }
-                    }));
-                }
-            } catch (error) {
-                console.error('Error deleting course:', error);
-                alert('Failed to delete course: ' + error.message);
+                data = await response.json();
+            } catch (e) {
+                throw new Error('Failed to parse server response');
             }
+            
+            if (!response.ok) {
+                throw new Error(data.error || `Server error (${response.status})`);
+            }
+            
+            // Reload courses first to ensure UI is updated
+            await this.loadCourses();
+            
+            // Show success notification
+            this.showNotification('Course deleted successfully!');
+            
+            // Dispatch event for dashboard update
+            window.dispatchEvent(new CustomEvent('courseChanged', {
+                detail: { 
+                    action: 'delete',
+                    courseId: courseId
+                }
+            }));
+        } catch (error) {
+            console.error('Error deleting course:', error);
+            this.showNotification(
+                `Failed to delete course: ${error.message}`,
+                'error'
+            );
         }
     }
 }

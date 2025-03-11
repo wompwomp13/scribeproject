@@ -12,12 +12,21 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        default: '123456' // Default password for new users
+        required: true
+    },
+    schoolId: {
+        type: String,
+        required: true,
+        unique: true
     },
     role: {
         type: String,
         enum: ['admin', 'teacher', 'student'],
         required: true
+    },
+    isVerified: {
+        type: Boolean,
+        default: false
     },
     courses: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -25,8 +34,8 @@ const userSchema = new mongoose.Schema({
     }],
     status: {
         type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
+        enum: ['pending', 'active', 'inactive'],
+        default: 'pending'
     },
     createdAt: {
         type: Date,

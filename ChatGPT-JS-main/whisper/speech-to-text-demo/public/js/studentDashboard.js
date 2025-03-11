@@ -16,7 +16,22 @@ class CourseManager {
 
     async loadCourses() {
         try {
-            const response = await fetch('/api/courses');
+            const userEmail = localStorage.getItem('currentUserEmail');
+            if (!userEmail) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Get the current user's information first
+            const userResponse = await fetch(`/api/auth/current-user?userEmail=${encodeURIComponent(userEmail)}`);
+            const userData = await userResponse.json();
+            
+            if (!userData.success) {
+                throw new Error('Failed to get current user');
+            }
+
+            // Fetch only courses assigned to this student
+            const response = await fetch(`/api/users/${userData.user._id}/courses`);
             const data = await response.json();
             
             if (data.success) {
@@ -35,6 +50,17 @@ class CourseManager {
             }
         } catch (error) {
             console.error('Error loading courses:', error);
+            if (error.message === 'Failed to get current user') {
+                window.location.href = '/login.html';
+            } else {
+                // Show error message to user
+                this.coursesGrid.innerHTML = `
+                    <div class="no-results">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <p>Failed to load courses. Please try again later.</p>
+                    </div>
+                `;
+            }
         }
     }
 

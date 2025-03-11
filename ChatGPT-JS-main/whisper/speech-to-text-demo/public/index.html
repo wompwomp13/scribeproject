@@ -328,7 +328,17 @@
         // Initialize RecordingStudio after DOM loads
         document.addEventListener('DOMContentLoaded', () => {
             updateDebug('Initializing...');
-            window.recordingStudio = new RecordingStudio();
+            
+            // Get pre-selected course from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const preSelectedCourse = urlParams.get('courseId');
+            
+            // Initialize recording studio with pre-selected course
+            window.recordingStudio = new RecordingStudio(preSelectedCourse);
+            
+            if (preSelectedCourse) {
+                updateDebug('Course pre-selected: ' + preSelectedCourse);
+            }
         });
     </script>
 </body>
