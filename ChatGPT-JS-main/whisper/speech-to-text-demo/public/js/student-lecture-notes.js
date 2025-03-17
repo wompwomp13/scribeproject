@@ -1413,17 +1413,19 @@ class StudentLectureNotes {
         const section = document.createElement('section');
         section.className = 'flashcards-section';
         
-        // Get unique categories
-        const categories = [...new Set(flashcards.map(card => card.category))];
-        
         section.innerHTML = `
             <h2>Study Flashcards</h2>
             <div class="flashcards-controls">
-                <div class="category-filters">
-                    <button class="category-btn active" data-category="all">All</button>
-                    ${categories.map(category => `
-                        <button class="category-btn" data-category="${category}">${category}</button>
-                    `).join('')}
+                <div class="mode-selector">
+                    <button class="mode-btn active" data-mode="read">Read Mode</button>
+                    <button class="mode-btn" data-mode="practice">Practice Mode</button>
+                    <div class="practice-progress">
+                        <i class="bi bi-stack"></i>
+                        <span class="progress-count"></span>
+                    </div>
+                </div>
+                <div class="mode-instructions">
+                    Read Mode: Flip through cards freely | Practice Mode: Test your knowledge
                 </div>
                 <div class="study-controls">
                     <button class="prev-card" disabled>
@@ -1444,24 +1446,47 @@ class StudentLectureNotes {
                     <div class="flashcard ${index === 0 ? 'active' : ''}" data-category="${card.category}">
                         <div class="flashcard-inner">
                             <div class="flashcard-front">
-                                <span class="card-category">${card.category}</span>
                                 <div class="card-content">${card.front}</div>
                                 <div class="flip-hint">
                                     <i class="bi bi-arrow-repeat"></i>
-                                    Click to flip
+                                    Click to reveal answer
                                 </div>
                             </div>
                             <div class="flashcard-back">
-                                <span class="card-category">${card.category}</span>
                                 <div class="card-content">${card.back}</div>
-                                <div class="flip-hint">
+                                <div class="practice-controls" style="display: none;">
+                                    <div class="practice-feedback"></div>
+                                    <div class="practice-buttons">
+                                        <button class="remember-btn">
+                                            <i class="bi bi-check-lg"></i>
+                                            Got It Right
+                                        </button>
+                                        <button class="forgot-btn">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                            Review Later
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flip-hint read-mode">
                                     <i class="bi bi-arrow-repeat"></i>
-                                    Click to flip
+                                    Click to flip back
                                 </div>
                             </div>
                         </div>
                     </div>
                 `).join('')}
+                
+                <div class="completion-message" style="display: none;">
+                    <div class="completion-content">
+                        <i class="bi bi-trophy"></i>
+                        <h3>Great Job!</h3>
+                        <p>You've completed all the flashcards in this session.</p>
+                        <div class="completion-buttons">
+                            <button class="restart-practice">Practice Again</button>
+                            <button class="switch-to-read">Switch to Read Mode</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -1479,159 +1504,260 @@ class StudentLectureNotes {
         const prevButton = document.querySelector('.prev-card');
         const nextButton = document.querySelector('.next-card');
         const shuffleButton = document.querySelector('.shuffle-cards');
-        const categoryButtons = document.querySelectorAll('.category-btn');
+        const studyControls = document.querySelector('.study-controls');
+        const modeButtons = document.querySelectorAll('.mode-btn');
         const counter = document.querySelector('.card-counter');
+        const completionMessage = document.querySelector('.completion-message');
         
         let currentIndex = 0;
         let visibleCards = [...cards];
+        let forgottenCards = [];
+        let currentMode = 'read';
+        let rememberedCards = new Set();
 
         // Initialize card flipping
         cards.forEach(card => {
             card.addEventListener('click', () => {
-                card.classList.toggle('flipped');
-            });
-        });
-
-        // Category filtering
-        categoryButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                // Update active button
-                categoryButtons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-
-                const category = button.dataset.category;
-                
-                // Filter cards
-                if (category === 'all') {
-                    visibleCards = [...cards];
-                } else {
-                    visibleCards = [...cards].filter(card => card.dataset.category === category);
+                if (currentMode === 'read' || !card.classList.contains('flipped')) {
+                    card.classList.toggle('flipped');
                 }
+            });
 
-                // Reset to first card of filtered set
-                currentIndex = 0;
-                updateCardVisibility();
-                updateCounter();
-                updateNavigationButtons();
+            const rememberBtn = card.querySelector('.remember-btn');
+            const forgotBtn = card.querySelector('.forgot-btn');
+
+            if (rememberBtn) {
+                rememberBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleRemembered(card);
+                });
+            }
+
+            if (forgotBtn) {
+                forgotBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleForgotten(card);
+                });
+            }
+        });
+
+        // Mode switching
+        modeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const newMode = button.dataset.mode;
+                if (newMode === currentMode) return;
+
+                modeButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentMode = newMode;
+                
+                resetPracticeSession();
+                studyControls.style.display = currentMode === 'read' ? 'flex' : 'none';
             });
         });
 
-        // Navigation
+        // Navigation (only for read mode)
         prevButton.addEventListener('click', () => {
-            if (currentIndex > 0) {
+            if (currentMode === 'read' && currentIndex > 0) {
                 currentIndex--;
                 updateCardVisibility();
                 updateCounter();
-                updateNavigationButtons();
             }
         });
 
         nextButton.addEventListener('click', () => {
-            if (currentIndex < visibleCards.length - 1) {
+            if (currentMode === 'read' && currentIndex < visibleCards.length - 1) {
                 currentIndex++;
                 updateCardVisibility();
                 updateCounter();
-                updateNavigationButtons();
             }
         });
 
-        // Shuffle functionality
+        // Shuffle functionality (only for read mode)
         shuffleButton.addEventListener('click', () => {
-            // Remove flipped state from all cards
-            cards.forEach(card => card.classList.remove('flipped'));
-            
-            // Shuffle the visible cards
-            visibleCards = visibleCards.sort(() => Math.random() - 0.5);
-            currentIndex = 0;
-            updateCardVisibility();
-            updateCounter();
-            updateNavigationButtons();
+            if (currentMode === 'read') {
+                resetCards();
+                visibleCards = [...cards].sort(() => Math.random() - 0.5);
+                currentIndex = 0;
+                updateCardVisibility();
+                updateCounter();
 
-            // Add animation class
-            shuffleButton.classList.add('rotating');
-            setTimeout(() => shuffleButton.classList.remove('rotating'), 500);
+                shuffleButton.classList.add('rotating');
+                setTimeout(() => shuffleButton.classList.remove('rotating'), 500);
+            }
         });
 
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            const activeCard = document.querySelector('.flashcard.active');
-            if (!activeCard) return;
+        function handleRemembered(card) {
+            if (currentMode !== 'practice') return;
+            
+            const feedback = card.querySelector('.practice-feedback');
+            rememberedCards.add(card);
+            
+            feedback.textContent = "Great job!";
+            feedback.classList.add('show');
 
-            switch (e.key) {
-                case 'ArrowLeft':
-                    if (currentIndex > 0) {
-                        currentIndex--;
-                        updateCardVisibility();
-                        updateCounter();
-                        updateNavigationButtons();
+            setTimeout(() => {
+                if (rememberedCards.size === cards.length) {
+                    // All cards are completed
+                    completionMessage.style.display = 'flex';
+                    completionMessage.classList.add('show');
+                    
+                    // Add event listeners for the buttons
+                    const restartButton = completionMessage.querySelector('.restart-practice');
+                    const switchToReadButton = completionMessage.querySelector('.switch-to-read');
+                    
+                    if (restartButton) {
+                        restartButton.onclick = resetPracticeSession;
                     }
-                    break;
-                case 'ArrowRight':
-                    if (currentIndex < visibleCards.length - 1) {
+                    if (switchToReadButton) {
+                        switchToReadButton.onclick = () => {
+                            const readModeBtn = document.querySelector('.mode-btn[data-mode="read"]');
+                            if (readModeBtn) readModeBtn.click();
+                        };
+                    }
+
+                    // Hide the current card
+                    cards.forEach(c => c.style.display = 'none');
+                } else if (currentIndex < visibleCards.length - 1) {
+                    feedback.textContent = "Moving to next card...";
+                    setTimeout(() => {
                         currentIndex++;
                         updateCardVisibility();
                         updateCounter();
-                        updateNavigationButtons();
-                    }
-                    break;
-                case ' ': // Spacebar
-                    activeCard.classList.toggle('flipped');
-                    break;
+                    }, 500);
+                }
+                updateProgressCount();
+            }, 500);
+        }
+
+        function handleForgotten(card) {
+            if (currentMode !== 'practice') return;
+            
+            const feedback = card.querySelector('.practice-feedback');
+            rememberedCards.delete(card);
+            forgottenCards.push(card);
+            
+            feedback.textContent = "No problem! We'll review this one later.";
+            feedback.classList.add('show');
+
+            setTimeout(() => {
+                if (currentIndex < visibleCards.length - 1) {
+                    currentIndex++;
+                    updateCardVisibility();
+                    updateCounter();
+                } else {
+                    // If we're at the end, continue with forgotten cards
+                    visibleCards = [...forgottenCards];
+                    forgottenCards = [];
+                    visibleCards.sort(() => Math.random() - 0.5);
+                    currentIndex = 0;
+                    updateCardVisibility();
+                    updateCounter();
+                }
+            }, 1000);
+        }
+
+        function resetCards() {
+            cards.forEach(card => {
+                card.classList.remove('flipped');
+                card.style.display = '';
+                const feedback = card.querySelector('.practice-feedback');
+                if (feedback) feedback.classList.remove('show');
+            });
+            forgottenCards = [];
+            rememberedCards.clear();
+            completionMessage.style.display = 'none';
+            completionMessage.classList.remove('show');
+        }
+
+        function resetPracticeSession() {
+            resetCards();
+            visibleCards = [...cards];
+            if (currentMode === 'practice') {
+                visibleCards.sort(() => Math.random() - 0.5);
             }
-        });
+            currentIndex = 0;
+            
+            // Show all cards again and hide completion message
+            cards.forEach(card => card.style.display = '');
+            completionMessage.style.display = 'none';
+            completionMessage.classList.remove('show');
+            
+            updateCardVisibility();
+            updateCounter();
+            updatePracticeMode();
+        }
+
+        function updatePracticeMode() {
+            cards.forEach(card => {
+                const practiceControls = card.querySelector('.practice-controls');
+                const readModeHint = card.querySelector('.flip-hint.read-mode');
+                
+                if (currentMode === 'practice') {
+                    practiceControls.style.display = 'flex';
+                    readModeHint.style.display = 'none';
+                    document.querySelector('.practice-progress').classList.add('show');
+                } else {
+                    practiceControls.style.display = 'none';
+                    readModeHint.style.display = 'block';
+                    document.querySelector('.practice-progress').classList.remove('show');
+                }
+            });
+            updateProgressCount();
+        }
+
+        function updateProgressCount() {
+            const progressCount = document.querySelector('.progress-count');
+            if (progressCount && currentMode === 'practice') {
+                progressCount.textContent = `${rememberedCards.size}/${cards.length} Completed`;
+            }
+        }
 
         function updateCardVisibility() {
-            // Remove active and flipped state from all cards
             cards.forEach(card => {
                 card.classList.remove('active', 'flipped');
+                const feedback = card.querySelector('.practice-feedback');
+                if (feedback) feedback.classList.remove('show');
             });
 
-            // Show current card
             if (visibleCards[currentIndex]) {
                 visibleCards[currentIndex].classList.add('active');
+                updateProgressCount();
             }
         }
 
         function updateCounter() {
             counter.textContent = `${currentIndex + 1}/${visibleCards.length}`;
-        }
-
-        function updateNavigationButtons() {
             prevButton.disabled = currentIndex === 0;
             nextButton.disabled = currentIndex === visibleCards.length - 1;
         }
 
         // Add swipe support for mobile
         let touchStartX = 0;
-        let touchEndX = 0;
-
         flashcardsContainer.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
         });
 
         flashcardsContainer.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        });
-
-        function handleSwipe() {
-            const swipeThreshold = 50;
+            const touchEndX = e.changedTouches[0].screenX;
             const diff = touchStartX - touchEndX;
+            const swipeThreshold = 50;
 
             if (Math.abs(diff) < swipeThreshold) return;
 
             if (diff > 0 && currentIndex < visibleCards.length - 1) {
-                // Swipe left
                 currentIndex++;
             } else if (diff < 0 && currentIndex > 0) {
-                // Swipe right
                 currentIndex--;
             }
 
             updateCardVisibility();
             updateCounter();
-            updateNavigationButtons();
-        }
+        });
+
+        // Initialize practice mode visibility and progress
+        updatePracticeMode();
+        updateProgressCount();
     }
 
     toggleCategoryExplanation(category) {
