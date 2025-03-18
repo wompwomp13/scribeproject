@@ -1,9 +1,22 @@
 class StudentClass {
     constructor() {
         this.courseId = new URLSearchParams(window.location.search).get('id');
+        
+        // Set up dashboard link with user's email
+        this.setupDashboardLink();
+        
         if (this.courseId) {
             this.loadCourseDetails();
             this.loadLectures();
+        }
+    }
+
+    setupDashboardLink() {
+        const dashboardLink = document.querySelector('.dashboard-link');
+        const userEmail = localStorage.getItem('currentUserEmail');
+        
+        if (dashboardLink && userEmail) {
+            dashboardLink.href = `/studentdashboard.html?email=${encodeURIComponent(userEmail)}`;
         }
     }
 

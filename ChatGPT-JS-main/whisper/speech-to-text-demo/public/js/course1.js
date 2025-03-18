@@ -19,6 +19,14 @@ class CoursePage {
                 document.getElementById('modalAudio').pause();
             }
         };
+        
+        // Set up dashboard link with user's email
+        const dashboardLink = document.querySelector('.dashboard-link');
+        const userEmail = localStorage.getItem('currentUserEmail');
+        
+        if (dashboardLink && userEmail) {
+            dashboardLink.href = `/studentdashboard.html?email=${encodeURIComponent(userEmail)}`;
+        }
     }
 
     async loadLectures() {

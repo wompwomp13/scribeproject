@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/course1.css">
     <link rel="stylesheet" href="/css/lecture-notes.css">
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -18,7 +20,7 @@
                 <h1>SCRIBE</h1>
             </div>
             <nav class="nav-menu">
-                <a href="/studentdashboard.html" class="nav-item">
+                <a href="/studentdashboard.html" class="nav-item dashboard-link">
                     <i class="bi bi-house"></i>
                     <span>Dashboard</span>
                 </a>
@@ -65,9 +67,14 @@
                 <!-- Notes Section -->
                 <section id="notes-section" class="notes-section">
                     <h2>My Notes</h2>
-                    <div class="notes-editor">
-                        <textarea id="notesEditor" placeholder="Type your notes here..."></textarea>
-                        <button id="saveNotes" class="save-btn">Save Notes</button>
+                    <div class="notes-container">
+                        <div id="editor">
+                            <p>Start taking your notes here...</p>
+                        </div>
+                        <button id="saveNotes" class="save-btn">
+                            <i class="bi bi-save"></i>
+                            Save Notes
+                        </button>
                     </div>
                 </section>
 

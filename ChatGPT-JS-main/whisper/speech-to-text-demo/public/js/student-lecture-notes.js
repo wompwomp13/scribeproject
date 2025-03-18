@@ -2,6 +2,7 @@ class StudentLectureNotes {
     constructor() {
         this.lectureId = new URLSearchParams(window.location.search).get('id');
         this.courseId = new URLSearchParams(window.location.search).get('courseId');
+        this.quill = null; // Initialize Quill reference
         
         if (!this.lectureId) {
             window.location.href = '/studentdashboard.html';
@@ -11,6 +12,27 @@ class StudentLectureNotes {
         this.setupEventListeners();
         this.loadLectureData();
         this.setupNotesModification();
+        this.initializeQuill();
+    }
+
+    initializeQuill() {
+        // Initialize Quill with custom options
+        this.quill = new Quill('#editor', {
+            theme: 'snow',
+            placeholder: 'Start taking your notes...',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'header': 1 }, { 'header': 2 }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'script': 'sub'}, { 'script': 'super' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['clean']
+                ]
+            }
+        });
     }
 
     setupEventListeners() {
@@ -19,6 +41,13 @@ class StudentLectureNotes {
         // Set up back to course button
         const backButton = document.querySelector('.back-to-course');
         backButton.href = `/scourse.html?id=${this.courseId}`;
+        
+        // Set up dashboard link with user's email
+        const dashboardLink = document.querySelector('.dashboard-link');
+        const userEmail = localStorage.getItem('currentUserEmail');
+        if (dashboardLink && userEmail) {
+            dashboardLink.href = `/studentdashboard.html?email=${encodeURIComponent(userEmail)}`;
+        }
     }
 
     setupNotesModification() {
@@ -177,8 +206,9 @@ class StudentLectureNotes {
             const data = await response.json();
             console.log('Loaded notes:', data);
             
-            if (data.success && data.notes) {
-                document.getElementById('notesEditor').value = data.notes.content;
+            if (data.success && data.notes && this.quill) {
+                // Set Quill content
+                this.quill.setContents(JSON.parse(data.notes.content));
             }
         } catch (error) {
             console.error('Error loading notes:', error);
@@ -186,30 +216,28 @@ class StudentLectureNotes {
     }
 
     async saveNotes() {
+        if (!this.quill) return;
+
         try {
-            const content = document.getElementById('notesEditor').value;
-            
+            const content = this.quill.getContents();
             const response = await fetch(`/api/recordings/${this.lectureId}/notes`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ content })
+                body: JSON.stringify({
+                    content: JSON.stringify(content)
+                })
             });
 
             if (!response.ok) {
                 throw new Error('Failed to save notes');
             }
-            
-            const data = await response.json();
-            if (data.success) {
-                this.showToastNotification('Notes saved successfully!');
-            } else {
-                throw new Error(data.error || 'Failed to save notes');
-            }
+
+            this.showToastNotification('Notes saved successfully!');
         } catch (error) {
             console.error('Error saving notes:', error);
-            alert('Failed to save notes: ' + error.message);
+            this.showToastNotification('Failed to save notes', false);
         }
     }
 

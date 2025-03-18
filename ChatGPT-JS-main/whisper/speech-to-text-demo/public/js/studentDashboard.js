@@ -16,10 +16,19 @@ class CourseManager {
 
     async loadCourses() {
         try {
-            const userEmail = localStorage.getItem('currentUserEmail');
+            // Check for email in URL first, then fall back to localStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            const emailFromUrl = urlParams.get('email');
+            const userEmail = emailFromUrl || localStorage.getItem('currentUserEmail');
+            
             if (!userEmail) {
                 window.location.href = '/login.html';
                 return;
+            }
+
+            // If email came from URL, update localStorage to maintain session
+            if (emailFromUrl) {
+                localStorage.setItem('currentUserEmail', emailFromUrl);
             }
 
             // Get the current user's information first
