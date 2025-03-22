@@ -11,6 +11,11 @@
     <link rel="stylesheet" href="/css/lecture-notes.css">
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+    <!-- Add jsPDF library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Add marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -60,7 +65,7 @@
 
                 <!-- Transcription Section -->
                 <section id="transcription-section" class="transcription-section">
-                    <h2>Lecture Transcription</h2>
+                    <h2>Lecture Transcription <button id="downloadTranscription" class="download-btn"><i class="bi bi-download"></i> Download PDF</button></h2>
                     <div id="transcriptionText" class="transcription-content definable"></div>
                 </section>
 
@@ -80,7 +85,7 @@
 
                 <!-- Enhanced Summary Section -->
                 <section id="summary-section" class="summary-section" style="display: none;" data-definitions-enabled="true">
-                    <h2>Lecture Summary</h2>
+                    <h2>Lecture Summary <button id="downloadSummary" class="download-btn"><i class="bi bi-download"></i> Download PDF</button></h2>
                     <div class="summary-content">
                         <h3 class="summary-title"></h3>
                         
@@ -209,7 +214,7 @@
                         </div>
                         <div class="preference-details">
                             <h4>Visual Learning</h4>
-                            <p>Convert key concepts into diagrams, mind maps, and visual aids</p>
+                            <p>Enhance understanding with relevant images sourced from key lecture concepts</p>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="visual">
                                 <span class="toggle-slider"></span>
@@ -221,8 +226,8 @@
                             <i class="bi bi-hand-index"></i>
                         </div>
                         <div class="preference-details">
-                            <h4>Kinesthetic Learning</h4>
-                            <p>Transform concepts into interactive exercises and hands-on activities</p>
+                            <h4>Quizzes</h4>
+                            <p>Test your understanding and track your progress with interactive questions</p>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="kinesthetic">
                                 <span class="toggle-slider"></span>
@@ -382,6 +387,482 @@
 
             // Initial menu update
             updateQuickJumpMenu();
+            
+            // PDF Download functionality
+            const { jsPDF } = window.jspdf;
+            
+            // Helper function to format date for filenames
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            // Setup download buttons
+            document.getElementById('downloadTranscription').addEventListener('click', function() {
+                downloadSectionAsPDF('transcription-section', 'lecture-transcription');
+            });
+            
+            document.getElementById('downloadSummary').addEventListener('click', function() {
+                downloadSectionAsPDF('summary-section', 'lecture-summary');
+            });
+            
+            // Function to download a section as PDF
+            function downloadSectionAsPDF(sectionId, filename) {
+                const section = document.getElementById(sectionId);
+                const lectureTitle = document.getElementById('lectureTitle').textContent;
+                const lectureDate = document.getElementById('lectureDate').textContent;
+                
+                // Create a loading indicator
+                const loadingIndicator = document.createElement('div');
+                loadingIndicator.className = 'loading-indicator';
+                loadingIndicator.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    <span>Generating PDF...</span>
+                `;
+                document.body.appendChild(loadingIndicator);
+                
+                try {
+                    // Create PDF (A4 format)
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const margin = 15; // 15mm margin
+                    
+                    // Common header for both PDF types
+                    const addHeader = () => {
+                        // Add title
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(16);
+                        pdf.text(lectureTitle, margin, margin + 10);
+                        
+                        // Add date
+                        pdf.setFontSize(12);
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.text(lectureDate, margin, margin + 20);
+                        
+                        // Add a horizontal line
+                        pdf.setDrawColor(200, 200, 200);
+                        pdf.line(margin, margin + 25, pdfWidth - margin, margin + 25);
+                        
+                        return margin + 35; // Return starting y position for content
+                    };
+                    
+                    // Different handling for transcript vs summary
+                    if (sectionId === 'transcription-section') {
+                        // Get the formatted HTML content
+                        const transcriptionElement = document.getElementById('transcriptionText');
+                        
+                        // Add header and get starting y position
+                        let y = addHeader();
+                        
+                        // Add title for transcript section
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(14);
+                        pdf.text('Lecture Transcription', margin, y);
+                        y += 10;
+                        
+                        // Format settings for main content
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.setFontSize(12);
+                        
+                        // Improved HTML formatting extraction
+                        const extractText = (element) => {
+                            let text = '';
+                            Array.from(element.childNodes).forEach(node => {
+                                if (node.nodeType === Node.TEXT_NODE) {
+                                    text += node.textContent;
+                                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                                    // Handle specific HTML elements with better formatting
+                                    switch(node.nodeName) {
+                                        case 'H1':
+                                            text += '\n' + node.textContent.toUpperCase() + '\n';
+                                            break;
+                                        case 'H2':
+                                            text += '\n' + node.textContent + '\n';
+                                            break;
+                                        case 'H3':
+                                        case 'H4':
+                                            text += '\n' + node.textContent + '\n';
+                                            break;
+                                        case 'P':
+                                            text += '\n' + extractText(node);
+                                            break;
+                                        case 'UL':
+                                        case 'OL':
+                                            text += '\n';
+                                            Array.from(node.querySelectorAll('li')).forEach(li => {
+                                                text += '\n• ' + li.textContent.trim();
+                                            });
+                                            text += '\n';
+                                            break;
+                                        case 'LI':
+                                            // Handle direct list items
+                                            text += '\n• ' + node.textContent.trim();
+                                            break;
+                                        case 'STRONG':
+                                        case 'B':
+                                            // Mark text for bold formatting
+                                            text += '[B]' + extractText(node) + '[/B]';
+                                            break;
+                                        case 'EM':
+                                        case 'I':
+                                            // Mark text for italic formatting
+                                            text += '[I]' + extractText(node) + '[/I]';
+                                            break;
+                                        case 'BR':
+                                            text += '\n';
+                                            break;
+                                        case 'BLOCKQUOTE':
+                                            text += '\n\n"' + extractText(node) + '"\n\n';
+                                            break;
+                                        case 'CODE':
+                                            text += '\n```\n' + node.textContent + '\n```\n';
+                                            break;
+                                        case 'PRE':
+                                            text += '\n```\n' + node.textContent + '\n```\n';
+                                            break;
+                                        default:
+                                            text += extractText(node);
+                                    }
+                                }
+                            });
+                            return text;
+                        };
+                        
+                        if (transcriptionElement.innerHTML.includes('<')) {
+                            // Process formatted content
+                            let formattedText = extractText(transcriptionElement).trim();
+                            
+                            // Process styling markers
+                            const processStyledText = (text, pdf, x, y, width) => {
+                                // Split text by formatting markers
+                                const parts = [];
+                                let currentIndex = 0;
+                                let bold = false;
+                                let italic = false;
+                                
+                                // Find formatting markers and split text
+                                while (currentIndex < text.length) {
+                                    const boldStart = text.indexOf('[B]', currentIndex);
+                                    const boldEnd = text.indexOf('[/B]', currentIndex);
+                                    const italicStart = text.indexOf('[I]', currentIndex);
+                                    const italicEnd = text.indexOf('[/I]', currentIndex);
+                                    
+                                    let nextMarker = -1;
+                                    let markerType = '';
+                                    
+                                    if (boldStart !== -1 && (nextMarker === -1 || boldStart < nextMarker)) {
+                                        nextMarker = boldStart;
+                                        markerType = 'boldStart';
+                                    }
+                                    if (boldEnd !== -1 && (nextMarker === -1 || boldEnd < nextMarker)) {
+                                        nextMarker = boldEnd;
+                                        markerType = 'boldEnd';
+                                    }
+                                    if (italicStart !== -1 && (nextMarker === -1 || italicStart < nextMarker)) {
+                                        nextMarker = italicStart;
+                                        markerType = 'italicStart';
+                                    }
+                                    if (italicEnd !== -1 && (nextMarker === -1 || italicEnd < nextMarker)) {
+                                        nextMarker = italicEnd;
+                                        markerType = 'italicEnd';
+                                    }
+                                    
+                                    if (nextMarker === -1) {
+                                        // No more markers, add remaining text
+                                        parts.push({
+                                            text: text.substring(currentIndex),
+                                            bold: bold,
+                                            italic: italic
+                                        });
+                                        break;
+                                    } else {
+                                        // Add text before marker
+                                        if (nextMarker > currentIndex) {
+                                            parts.push({
+                                                text: text.substring(currentIndex, nextMarker),
+                                                bold: bold,
+                                                italic: italic
+                                            });
+                                        }
+                                        
+                                        // Update formatting state
+                                        if (markerType === 'boldStart') {
+                                            bold = true;
+                                            currentIndex = nextMarker + 3; // [B] length
+                                        } else if (markerType === 'boldEnd') {
+                                            bold = false;
+                                            currentIndex = nextMarker + 4; // [/B] length
+                                        } else if (markerType === 'italicStart') {
+                                            italic = true;
+                                            currentIndex = nextMarker + 3; // [I] length
+                                        } else if (markerType === 'italicEnd') {
+                                            italic = false;
+                                            currentIndex = nextMarker + 4; // [/I] length
+                                        }
+                                    }
+                                }
+                                
+                                // Remove empty parts
+                                return parts.filter(part => part.text.length > 0);
+                            };
+                            
+                            // Remove formatting markers for line splitting
+                            const cleanText = formattedText.replace(/\[B\]|\[\/B\]|\[I\]|\[\/I\]/g, '');
+                            
+                            // Split text into lines that fit the page width
+                            const textLines = pdf.splitTextToSize(
+                                cleanText, 
+                                pdfWidth - (2 * margin)
+                            );
+                            
+                            // Add text with pagination
+                            const lineHeight = 6; // Reduced from 7mm for more compact output
+                            for (let i = 0; i < textLines.length; i++) {
+                                // Check for page break
+                                if (y > pdfHeight - margin - lineHeight) {
+                                    pdf.addPage();
+                                    y = margin + 10;
+                                }
+                                
+                                // Check if line is a heading (all caps with at least 3 chars)
+                                const isHeading = textLines[i].match(/^[A-Z0-9\s]{3,}$/);
+                                if (isHeading) {
+                                    pdf.setFont('helvetica', 'bold');
+                                    pdf.setFontSize(14);
+                                } else {
+                                    pdf.setFont('helvetica', 'normal');
+                                    pdf.setFontSize(12);
+                                }
+                                
+                                pdf.text(textLines[i], margin, y);
+                                y += lineHeight;
+                            }
+                        } else {
+                            // Fallback to plain text if no HTML formatting
+                            const transcriptionText = transcriptionElement.textContent.trim();
+                            
+                            // Split text into lines that fit the page width
+                            const textLines = pdf.splitTextToSize(
+                                transcriptionText, 
+                                pdfWidth - (2 * margin)
+                            );
+                            
+                            // Add text with pagination
+                            const lineHeight = 6; // Reduced from 7mm
+                            for (let i = 0; i < textLines.length; i++) {
+                                // If we're going to go beyond the page, add a new one
+                                if (y > pdfHeight - margin - lineHeight) {
+                                    pdf.addPage();
+                                    y = margin + 10;
+                                }
+                                pdf.text(textLines[i], margin, y);
+                                y += lineHeight;
+                            }
+                        }
+                    } else if (sectionId === 'summary-section') {
+                        // Constants for layout
+                        const lineHeight = 6; // Reduced from 7mm
+                        const sectionSpacing = 12; // Reduced from 15
+                        const itemSpacing = 6; // Reduced from 8
+                        const bulletIndent = 5; // Indent for bullet points
+                        
+                        // Add header and get starting y position
+                        let yPosition = addHeader();
+                        
+                        // Extract the summary title if present
+                        const summaryTitle = section.querySelector('.summary-title').textContent.trim();
+                        if (summaryTitle) {
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.setFontSize(14);
+                            pdf.text(summaryTitle, margin, yPosition);
+                            yPosition += 10;
+                        }
+                        
+                        // Function to handle pagination and ensure text doesn't overflow
+                        const ensureSpace = (requiredSpace) => {
+                            if (yPosition + requiredSpace > pdfHeight - margin) {
+                                pdf.addPage();
+                                yPosition = margin + 10;
+                                return true;
+                            }
+                            return false;
+                        };
+                        
+                        // Function to add a section heading
+                        const addSectionHeading = (text) => {
+                            ensureSpace(15);
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.setFontSize(14);
+                            pdf.text(text, margin, yPosition);
+                            yPosition += 10;
+                        };
+                        
+                        // Function to add a subsection heading
+                        const addSubHeading = (text) => {
+                            ensureSpace(12);
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.setFontSize(12);
+                            pdf.text(text, margin, yPosition);
+                            yPosition += 8;
+                        };
+                        
+                        // Function to add a labeled text with proper spacing
+                        const addLabeledText = (label, text) => {
+                            ensureSpace(text.length / 50 * lineHeight + 20);
+                            
+                            // Add the label on its own line
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.setFontSize(12);
+                            pdf.text(`${label}:`, margin, yPosition);
+                            yPosition += 7; // Move down to position content below the label
+                            
+                            // Add the content below the label
+                            pdf.setFont('helvetica', 'normal');
+                            const textLines = pdf.splitTextToSize(text, pdfWidth - (2 * margin));
+                            pdf.text(textLines, margin, yPosition);
+                            
+                            // Update y position for next item
+                            yPosition += (textLines.length * lineHeight) + itemSpacing;
+                        };
+                        
+                        // Function to add a bulleted item
+                        const addBulletedItem = (text) => {
+                            ensureSpace(Math.max((text.length / 40) * lineHeight + 5, 10));
+                            
+                            // Add bullet
+                            pdf.text('•', margin + bulletIndent, yPosition);
+                            
+                            // Add text with indent after bullet
+                            const textLines = pdf.splitTextToSize(text, pdfWidth - margin - 15 - bulletIndent);
+                            pdf.text(textLines, margin + 15, yPosition);
+                            yPosition += (textLines.length * lineHeight) + 4;
+                        };
+                        
+                        // Extract the context and purpose section
+                        addSectionHeading('Context & Purpose');
+                        
+                        // Main Theme
+                        const mainThesis = document.getElementById('mainThesis').textContent.trim();
+                        addLabeledText('Main Theme', mainThesis);
+                        
+                        // Scientific Context
+                        const context = document.getElementById('context').textContent.trim();
+                        addLabeledText('Scientific Context', context);
+                        
+                        // Real-World Significance
+                        const significance = document.getElementById('significance').textContent.trim();
+                        addLabeledText('Real-World Significance', significance);
+                        
+                        yPosition += 5; // Add extra space between sections
+                        
+                        // Main Discussion Points
+                        ensureSpace(15);
+                        addSectionHeading('Main Discussion Points');
+                        
+                        const keyPoints = document.getElementById('keyPoints');
+                        
+                        // Process each key point
+                        const keyPointElements = keyPoints.querySelectorAll('.key-point');
+                        keyPointElements.forEach((keyPoint, index) => {
+                            ensureSpace(15);
+                            
+                            // Get the point heading
+                            const heading = keyPoint.querySelector('.point-header h5').textContent.trim();
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.setFontSize(12);
+                            pdf.text(`${index + 1}. ${heading}`, margin, yPosition);
+                            yPosition += 8;
+                            
+                            // Get the point content
+                            const pointContent = keyPoint.querySelectorAll('.point-content ul li');
+                            pdf.setFont('helvetica', 'normal');
+                            pointContent.forEach(point => {
+                                addBulletedItem(point.textContent.trim());
+                            });
+                            
+                            // Add space between key points
+                            yPosition += itemSpacing;
+                        });
+                        
+                        // Practical Applications section
+                        const applications = document.getElementById('applications');
+                        if (applications.children.length > 0) {
+                            ensureSpace(15);
+                            addSectionHeading('Practical Applications & Real-World Examples');
+                            
+                            // Process each application
+                            const applicationCards = applications.querySelectorAll('.application-card');
+                            applicationCards.forEach((card, index) => {
+                                ensureSpace(15);
+                                
+                                // Get the application scenario
+                                const scenario = card.querySelector('.application-header h5').textContent.trim();
+                                pdf.setFont('helvetica', 'bold');
+                                pdf.setFontSize(12);
+                                pdf.text(`${index + 1}. ${scenario}`, margin, yPosition);
+                                yPosition += 8;
+                                
+                                // Get the explanation
+                                const explanation = card.querySelector('p').textContent.trim();
+                                
+                                ensureSpace(Math.max((explanation.length / 40) * lineHeight + 5, 10));
+                                pdf.setFont('helvetica', 'normal');
+                                const explanationLines = pdf.splitTextToSize(explanation, pdfWidth - margin - 15);
+                                pdf.text(explanationLines, margin + 10, yPosition);
+                                yPosition += (explanationLines.length * lineHeight) + itemSpacing;
+                            });
+                            
+                            yPosition += 5;
+                        }
+                        
+                        // Study Guide section
+                        const studyGuide = document.getElementById('studyGuide');
+                        if (studyGuide.children.length > 0) {
+                            ensureSpace(15);
+                            addSectionHeading('Key Takeaways & Study Guide');
+                            
+                            // Process each key highlight
+                            const keyHighlights = studyGuide.querySelectorAll('.key-highlights li');
+                            if (keyHighlights.length > 0) {
+                                ensureSpace(12);
+                                addSubHeading('Essential Points:');
+                                
+                                pdf.setFont('helvetica', 'normal');
+                                keyHighlights.forEach(highlight => {
+                                    addBulletedItem(highlight.textContent.trim());
+                                });
+                                
+                                yPosition += 8;
+                            }
+                            
+                            // Process misconceptions if any
+                            const misconceptions = studyGuide.querySelectorAll('.misconceptions li');
+                            if (misconceptions.length > 0) {
+                                ensureSpace(12);
+                                addSubHeading('Common Misconceptions:');
+                                
+                                pdf.setFont('helvetica', 'normal');
+                                misconceptions.forEach(misconception => {
+                                    addBulletedItem(misconception.textContent.trim());
+                                });
+                            }
+                        }
+                    }
+                    
+                    // Save the PDF
+                    pdf.save(`${filename}-${formatDate(new Date())}.pdf`);
+
+                } catch (error) {
+                    console.error('Error generating PDF:', error);
+                    alert('Error generating PDF. Please try again.');
+                } finally {
+                    // Always remove loading indicator
+                    document.body.removeChild(loadingIndicator);
+                }
+            }
         });
 
         // Close menu when clicking outside

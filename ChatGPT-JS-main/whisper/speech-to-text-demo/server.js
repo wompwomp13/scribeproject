@@ -295,7 +295,7 @@ Keep your response under 50 words when possible.`
                     content: `Define this term or concept in 2-3 sentences: "${text}"`
                 }
             ],
-            model: "llama3-8b-8192",
+            model: "Llama3-70B-8192",
             temperature: 0.3,
             max_tokens: 100,
         });
@@ -359,17 +359,14 @@ app.post('/api/summarize-lecture', async (req, res) => {
             });
         }
 
-        const groq = new Groq({ 
-            apiKey: process.env.GROQ_API_KEY 
-        });
+        // Create Groq client without redeclaring the variable
+        const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        console.log('Sending request to Groq API for lecture summarization...');
 
-        console.log('Sending request to Groq API...');
+        const systemPrompt = 
+            `You are an expert academic lecturer and note-taking specialist. Create detailed, well-structured summaries that serve as comprehensive study materials.
 
-        const completion = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `You are an expert academic lecturer and note-taking specialist. Create detailed, well-structured summaries that serve as comprehensive study materials. Your summaries should be thorough yet concise, highlighting both main concepts and subtle but important details.
+IMPORTANT: YOUR RESPONSE MUST BE VALID JSON WITHOUT ANY MARKDOWN CODE BLOCKS OR BACKTICKS. DO NOT WRAP THE JSON IN \`\`\`json or \`\`\` TAGS.
 
                     Your response MUST be in valid JSON format with the following structure:
                     {
@@ -417,52 +414,25 @@ app.post('/api/summarize-lecture', async (req, res) => {
                             "keyHighlights": ["Most important takeaways"],
                             "commonMisconceptions": ["Points that students often misunderstand"],
                             "reviewQuestions": ["Questions for self-review"]
-                        },
-                        "formatting": {
-                            "boldTerms": ["Terms to be displayed in bold"],
-                            "highlightedConcepts": ["Concepts to be highlighted"],
-                            "colorCoding": [
-                                {
-                                    "color": "primary",
-                                    "items": ["Main concepts"]
-                                },
-                                {
-                                    "color": "secondary",
-                                    "items": ["Supporting ideas"]
-                                },
-                                {
-                                    "color": "accent",
-                                    "items": ["Examples or applications"]
-                                }
-                            ]
                         }
                     }
 
                     Guidelines:
-                    1. Break down long lectures into logical sections while maintaining narrative flow
+1. Break down long lectures into logical sections
                     2. Include both theoretical concepts and practical applications
                     3. Highlight key terms and their relationships
                     4. Preserve important contextual information
-                    5. Include real-world examples and applications
-                    6. Note connections to other topics or fields
-                    7. Identify potential areas of confusion
-                    8. Suggest review questions for self-study
-                    
-                    For long lectures:
-                    1. Identify major theme changes or topic transitions
-                    2. Maintain chronological flow while grouping related concepts
-                    3. Preserve important examples and case studies
-                    4. Note time markers for key points
-                    5. Track concept evolution throughout the lecture
-                    
-                    IMPORTANT: Return ONLY the JSON object above, with no additional text or formatting. Ensure all JSON is properly escaped and valid.`
-                },
-                {
-                    role: "user",
-                    content: `Create a comprehensive academic summary of this lecture: "${transcription}"`
-                }
+5. Do NOT use any markdown formatting or code blocks
+6. Return ONLY valid JSON without backticks or tags`;
+
+        const userPrompt = `Create a comprehensive academic summary of this lecture: "${transcription}"`;
+
+        const completion = await groqClient.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
             ],
-            model: "llama3-8b-8192",
+            model: "Llama3-70B-8192",
             temperature: 0.3,
             max_tokens: 2000,
         });
@@ -471,24 +441,58 @@ app.post('/api/summarize-lecture', async (req, res) => {
         let summary;
         try {
             const responseText = completion.choices[0]?.message?.content;
+            console.log('Raw response from Groq:', responseText);
+            
             if (!responseText) {
                 throw new Error('Empty response from Groq API');
             }
 
-            // First try to parse the response directly
+            // First, check if the response contains a code block and extract it
+            if (responseText.includes('```')) {
+                // Handle markdown code blocks first
+                const codeBlockMatch = responseText.match(/```(?:json)?([\s\S]*?)```/);
+                if (codeBlockMatch && codeBlockMatch[1]) {
+                    try {
+                        summary = JSON.parse(codeBlockMatch[1].trim());
+                        console.log('Successfully parsed JSON from code block');
+                    } catch (codeBlockError) {
+                        console.error('Code block parse failed:', codeBlockError);
+                        // Continue to other parsing attempts
+                    }
+                }
+            }
+
+            // If code block parsing didn't work, try parsing directly
+            if (!summary) {
             try {
                 summary = JSON.parse(responseText);
+                    console.log('Successfully parsed JSON directly');
             } catch (directParseError) {
                 console.error('Direct parse failed, attempting cleanup:', directParseError);
+                    
+                    // Try to find JSON object in the response
+                    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        try {
+                            summary = JSON.parse(jsonMatch[0]);
+                            console.log('Successfully parsed JSON using regex match');
+                        } catch (matchParseError) {
+                            console.error('Match parse failed:', matchParseError);
                 
                 // Clean up the JSON string before parsing
                 let cleanedText = responseText
-                    .replace(/^\s*```json\s*/, '') // Remove JSON code block markers
-                    .replace(/\s*```\s*$/, '')     // Remove ending code block markers
+                                .replace(/```(?:json)?/g, '') // Remove all code block markers
+                                .replace(/^\s*\{/, '{')       // Ensure clean opening brace
+                                .replace(/\}\s*$/, '}')       // Ensure clean closing brace
                     .trim();
 
-                // Only apply more aggressive cleaning if needed
-                if (!cleanedText.startsWith('{') || !cleanedText.endsWith('}')) {
+                            try {
+                                summary = JSON.parse(cleanedText);
+                                console.log('Successfully parsed JSON after removing code blocks');
+                            } catch (cleanParseError) {
+                                console.error('Clean parse failed, attempting more aggressive cleanup:', cleanParseError);
+                                
+                                // More aggressive cleaning
                     cleanedText = cleanedText
                         .replace(/\n/g, ' ')                 // Remove newlines
                         .replace(/\r/g, '')                  // Remove carriage returns
@@ -502,13 +506,20 @@ app.post('/api/summarize-lecture', async (req, res) => {
                     // Ensure the string starts and ends with curly braces
                     if (!cleanedText.startsWith('{')) cleanedText = '{' + cleanedText;
                     if (!cleanedText.endsWith('}')) cleanedText = cleanedText + '}';
-                }
 
                 try {
                     summary = JSON.parse(cleanedText);
-                } catch (cleanParseError) {
-                    console.error('Clean parse failed:', cleanParseError);
-                    throw cleanParseError; // Let it be caught by the outer catch
+                                    console.log('Successfully parsed JSON after aggressive cleanup');
+                                } catch (aggressiveCleanParseError) {
+                                    console.error('Aggressive clean parse failed:', aggressiveCleanParseError);
+                                    console.error('Raw cleaned text:', cleanedText);
+                                    throw new Error('Failed to parse summary data from model response');
+                                }
+                            }
+                        }
+                    } else {
+                        throw new Error('No JSON object found in response');
+                    }
                 }
             }
             
@@ -517,27 +528,93 @@ app.post('/api/summarize-lecture', async (req, res) => {
                 'title',
                 'overview',
                 'keyTopics',
-                'conceptualFramework',
                 'practicalApplications',
-                'connections',
-                'supplementalInsights',
-                'studyGuide',
-                'formatting'
+                'studyGuide'
             ];
             
+            const missingFields = [];
             for (const field of requiredFields) {
                 if (!summary[field]) {
-                    throw new Error(`Missing required field: ${field}`);
+                    missingFields.push(field);
+                    console.error(`Missing required field in summary: ${field}`);
                 }
+            }
+            
+            if (missingFields.length > 0) {
+                throw new Error(`Summary is missing required fields: ${missingFields.join(', ')}`);
             }
 
             // Ensure arrays are properly initialized
             summary.keyTopics = Array.isArray(summary.keyTopics) ? summary.keyTopics : [];
-            summary.conceptualFramework.keyTerms = Array.isArray(summary.conceptualFramework.keyTerms) ? summary.conceptualFramework.keyTerms : [];
+            
+            if (summary.conceptualFramework) {
+                summary.conceptualFramework.keyTerms = Array.isArray(summary.conceptualFramework.keyTerms) 
+                    ? summary.conceptualFramework.keyTerms 
+                    : [];
+            } else {
+                summary.conceptualFramework = { keyTerms: [] };
+            }
+            
             summary.practicalApplications = Array.isArray(summary.practicalApplications) ? summary.practicalApplications : [];
-            summary.studyGuide.keyHighlights = Array.isArray(summary.studyGuide.keyHighlights) ? summary.studyGuide.keyHighlights : [];
-            summary.studyGuide.commonMisconceptions = Array.isArray(summary.studyGuide.commonMisconceptions) ? summary.studyGuide.commonMisconceptions : [];
-            summary.studyGuide.reviewQuestions = Array.isArray(summary.studyGuide.reviewQuestions) ? summary.studyGuide.reviewQuestions : [];
+            
+            // Ensure studyGuide and its properties are initialized
+            if (!summary.studyGuide) {
+                summary.studyGuide = {};
+            }
+            
+            summary.studyGuide.keyHighlights = Array.isArray(summary.studyGuide.keyHighlights) 
+                ? summary.studyGuide.keyHighlights 
+                : [];
+                
+            summary.studyGuide.commonMisconceptions = Array.isArray(summary.studyGuide.commonMisconceptions) 
+                ? summary.studyGuide.commonMisconceptions 
+                : [];
+                
+            summary.studyGuide.reviewQuestions = Array.isArray(summary.studyGuide.reviewQuestions) 
+                ? summary.studyGuide.reviewQuestions 
+                : [];
+
+            // Create connections if missing
+            if (!summary.connections) {
+                summary.connections = {
+                    interdisciplinary: [],
+                    prerequisites: [],
+                    futureTopics: []
+                };
+            }
+
+            // Create supplementalInsights if missing
+            if (!summary.supplementalInsights) {
+                summary.supplementalInsights = {
+                    historicalContext: "",
+                    currentDevelopments: "",
+                    additionalResources: []
+                };
+            }
+
+            // Generate a title if none exists
+            if (!summary.title || summary.title.trim() === "") {
+                summary.title = "Lecture Summary";
+            }
+
+            // Ensure overview fields exist
+            if (!summary.overview) {
+                summary.overview = {};
+            }
+            
+            if (!summary.overview.mainThesis || summary.overview.mainThesis.trim() === "") {
+                summary.overview.mainThesis = "Main points from the lecture";
+            }
+            
+            if (!summary.overview.context || summary.overview.context.trim() === "") {
+                summary.overview.context = "Context of the discussion";
+            }
+            
+            if (!summary.overview.significance || summary.overview.significance.trim() === "") {
+                summary.overview.significance = "Importance of the topic";
+            }
+
+            console.log('Validated summary structure successfully');
 
         } catch (error) {
             console.error('Error parsing summary:', error);
@@ -585,8 +662,8 @@ app.post('/api/summarize-lecture', async (req, res) => {
                     reviewQuestions: ["Review questions"]
                 },
                 formatting: {
-                    boldTerms: [],
-                    highlightedConcepts: [],
+                    boldTerms: ["Important terms"],
+                    highlightedConcepts: ["Key concepts"],
                     colorCoding: [
                         {
                             color: "primary",
@@ -595,14 +672,21 @@ app.post('/api/summarize-lecture', async (req, res) => {
                     ]
                 }
             };
+            
+            // Add error information for debugging
+            summary.error = {
+                message: error.message,
+                type: "parsing_error"
+            };
         }
 
         res.json({
             success: true,
             summary: summary
         });
+        
     } catch (error) {
-        console.error('Summarization error:', error);
+        console.error('API error in /api/summarize-lecture:', error);
         res.status(500).json({ 
             success: false, 
             error: error.message || 'Failed to generate summary'
@@ -1171,11 +1255,11 @@ app.post('/api/extract-key-terms', async (req, res) => {
             });
         }
 
-        const groq = new Groq({ 
+        const groqClient = new Groq({ 
             apiKey: process.env.GROQ_API_KEY 
         });
 
-        // Update the cleanup prompt to be more specific
+        // First, clean up the transcript
         const cleanupPrompt = `Clean this lecture transcript by:
 1. Fixing grammar and spelling errors
 2. Removing filler words (um, uh, like, you know)
@@ -1196,214 +1280,197 @@ IMPORTANT: Return ONLY the cleaned transcript text. Do not add any introductory 
 
 Transcript: ${transcription}`;
 
-        const cleanupCompletion = await groq.chat.completions.create({
+        const cleanupCompletion = await groqClient.chat.completions.create({
             messages: [
                 { role: "system", content: "You are a transcript editor that returns ONLY the cleaned transcript without any additional text or explanations." },
                 { role: "user", content: cleanupPrompt }
             ],
-            model: "mixtral-8x7b-32768",
+            model: "Llama3-70B-8192",
             temperature: 0.1,
             max_tokens: 2048,
         });
 
         const cleanedTranscript = cleanupCompletion.choices[0]?.message?.content;
 
-        // Extract key terms that appear in the transcript
-        const termsPrompt = `From this lecture transcript, identify exactly 3 key terms that:
-1. Appear word-for-word in the text
-2. Are concrete objects or specific concepts
-3. Can be illustrated with images
-4. Are important to the lecture content
+        // Now, structure the transcript into sections and identify key terms
+        const sectioningPrompt = `Divide this lecture transcript into 5 logical sections. For each section:
+1. Identify a key educational term or concept that:
+   - Is important for understanding the section
+   - Is likely to be new or unfamiliar to students
+   - Can be visually represented (can find relevant images for it)
+   - Is specific enough to be educational (not too common or generic)
+   - Appears explicitly in the text
 
-Transcript:
-${cleanedTranscript}
+2. Extract a concise explanation of that term from the section (1-2 paragraphs maximum)
 
-IMPORTANT: Return ONLY a valid JSON array with exactly 3 terms, like this: ["term1", "term2", "term3"]
-Do not include any explanation or additional text.`;
+IMPORTANT: 
+- Each key term should be visually representable (consider whether images would be available for this term)
+- Avoid very common or generic terms (like "science" or "research")
+- Avoid overly complex or obscure terms that would be difficult to find images for
+- Prioritize terms that have educational value
+- Do not include terms that don't appear directly in the text
 
-        const termsCompletion = await groq.chat.completions.create({
+Format your response as valid JSON with this structure:
+{
+  "sections": [
+    {
+      "term": "The key educational term",
+      "explanation": "Concise explanation of the term from the section",
+      "context": "The surrounding text where the term appears (1-2 paragraphs)"
+    },
+    ...
+  ]
+}
+
+Cleaned Transcript:
+${cleanedTranscript}`;
+
+        const sectioningCompletion = await groqClient.chat.completions.create({
             messages: [
                 { 
                     role: "system", 
-                    content: "You are a JSON generator that returns ONLY a valid JSON array of 3 terms. No other text." 
+                    content: "You are an educational content parser that structures lecture content into sections with key visual learning terms. Return ONLY valid JSON with the structure specified in the prompt." 
                 },
-                { role: "user", content: termsPrompt }
+                { role: "user", content: sectioningPrompt }
             ],
-            model: "mixtral-8x7b-32768",
-            temperature: 0.1,
-            max_tokens: 1024,
+            model: "Llama3-70B-8192",
+            temperature: 0.3,
+            max_tokens: 2048,
         });
 
-        // Clean up the response to ensure valid JSON
-        const response = termsCompletion.choices[0]?.message?.content;
-        const cleanedResponse = response.trim()
-            .replace(/^```json\s*/, '')
-            .replace(/\s*```$/, '')
-            .replace(/^[\s\n]*\[/, '[')
-            .replace(/\][\s\n]*$/, ']');
-
+        // Parse the structured sections with error handling
+        let sectionsData;
         try {
-            const keyTerms = JSON.parse(cleanedResponse);
-            // Verify terms appear in transcript
+            const responseContent = sectioningCompletion.choices[0]?.message?.content || '';
+            
+            // Try to extract JSON from the response (in case it's wrapped in code blocks)
+            let jsonContent = responseContent;
+            
+            // Check if response is wrapped in markdown code blocks
+            if (responseContent.includes('```')) {
+                const match = responseContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (match && match[1]) {
+                    jsonContent = match[1];
+                }
+            }
+            
+            // Parse the JSON
+            sectionsData = JSON.parse(jsonContent);
+            
+            // Validate sections
+            if (!sectionsData.sections || !Array.isArray(sectionsData.sections) || sectionsData.sections.length === 0) {
+                throw new Error('Invalid sections data: missing or empty sections array');
+            }
+            
+            // Extract terms
+            const keyTerms = sectionsData.sections
+                .map(section => section.term)
+                .filter(Boolean)
+                .slice(0, 5);
+                
+            // Validate we have terms
+            if (keyTerms.length === 0) {
+                throw new Error('No valid key terms found in the sections');
+            }
+            
+            // Ensure each term appears in the transcript
             const validTerms = keyTerms.filter(term => {
-                const regex = new RegExp(term, 'i');
+                const regex = new RegExp(term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
                 return regex.test(cleanedTranscript);
             });
-
-            if (validTerms.length !== 3) {
-                throw new Error('Terms not found in transcript');
+            
+            if (validTerms.length === 0) {
+                throw new Error('No valid terms found in the transcript');
             }
-
+            
             res.json({
                 success: true,
                 keyTerms: validTerms,
-                cleanedTranscript
+                cleanedTranscript,
+                sections: sectionsData.sections
             });
+            
         } catch (error) {
-            console.error('Failed to parse response:', cleanedResponse);
-            throw new Error('Invalid response format from AI');
-        }
+            console.error('Error processing sections:', error);
+            console.error('Raw response:', sectioningCompletion.choices[0]?.message?.content);
+            
+            // Fall back to the original method if sectioning fails
+            const termsPrompt = `From this lecture transcript, identify exactly 5 key terms that:
+1. Appear word-for-word in the text
+2. Are concrete objects or specific educational concepts
+3. Can be easily illustrated with images
+4. Are important to understanding the lecture content
+5. Are sophisticated enough to have educational value (not too basic)
 
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to process transcript',
-            details: error.message
-        });
-    }
-});
+Avoid terms that are:
+- Too generic (like "science" or "research")
+- Too complex or obscure to find relevant images for
+- Not visually representable
+- Not directly mentioned in the text
 
-// Add this new endpoint for kinesthetic learning
-app.post('/api/generate-quiz', async (req, res) => {
-    try {
-        const { transcription, lectureTitle } = req.body;
+Output ONLY a JSON array of 5 terms, like this: ["term1", "term2", "term3", "term4", "term5"]
+Do not include any explanation or additional text.
 
-        if (!transcription) {
-            return res.status(400).json({
-                success: false,
-                error: 'No transcription provided'
-            });
-        }
+Transcript:
+${cleanedTranscript}`;
 
-        const groq = new Groq({ 
-            apiKey: process.env.GROQ_API_KEY 
-        });
-
-        // First, determine the best quiz type
-        const quizTypePrompt = `Analyze this lecture and determine the most appropriate quiz type from these options:
-1. Matching: Match key terms to their definitions
-2. Sorting: Arrange events in chronological order
-3. Categorization: Group items into categories
-
-Consider:
-- The lecture content and structure
-- The type of information presented
-- The learning objectives
-
-Lecture Title: ${lectureTitle}
-Transcript: ${transcription}
-
-Return ONLY ONE of these three words: "matching", "sorting", or "categorization"`;
-
-        const quizTypeCompletion = await groq.chat.completions.create({
+            const termsCompletion = await groqClient.chat.completions.create({
             messages: [
                 { 
                     role: "system", 
-                    content: "You are a quiz type analyzer. Return only one word: matching, sorting, or categorization." 
+                        content: "You are a JSON generator that returns ONLY a valid JSON array of 5 terms. No other text." 
                 },
-                { role: "user", content: quizTypePrompt }
+                    { role: "user", content: termsPrompt }
             ],
-            model: "mixtral-8x7b-32768",
-            temperature: 0.1,
-            max_tokens: 50,
-        });
-
-        const quizType = quizTypeCompletion.choices[0]?.message?.content.trim().toLowerCase();
-
-        // Now generate the quiz content based on the type
-        let quizPrompt;
-        switch (quizType) {
-            case 'matching':
-                quizPrompt = `Create a matching quiz based on this lecture. Generate exactly 6 pairs of terms and definitions that are important to the lecture content.
-
-Return the quiz in this JSON format:
-{
-    "type": "matching",
-    "pairs": [
-        {"term": "term1", "definition": "definition1"},
-        {"term": "term2", "definition": "definition2"},
-        // etc...
-    ]
-}
-
-Lecture: ${transcription}`;
-                break;
-
-            case 'sorting':
-                quizPrompt = `Create a chronological sorting quiz based on this lecture. Generate exactly 6 events that should be arranged in order.
-
-Return the quiz in this JSON format:
-{
-    "type": "sorting",
-    "events": [
-        {"text": "event1", "order": 1},
-        {"text": "event2", "order": 2},
-        // etc...
-    ]
-}
-
-Lecture: ${transcription}`;
-                break;
-
-            case 'categorization':
-                quizPrompt = `Create a categorization quiz based on this lecture. Generate 3 categories and 6 items that should be sorted into these categories.
-
-Return the quiz in this JSON format:
-{
-    "type": "categorization",
-    "categories": ["category1", "category2", "category3"],
-    "items": [
-        {"text": "item1", "category": "category1"},
-        {"text": "item2", "category": "category2"},
-        // etc...
-    ]
-}
-
-Lecture: ${transcription}`;
-                break;
-
-            default:
-                throw new Error('Invalid quiz type determined');
-        }
-
-        const quizCompletion = await groq.chat.completions.create({
-            messages: [
-                { 
-                    role: "system", 
-                    content: "You are a quiz generator. Return only valid JSON in the specified format." 
-                },
-                { role: "user", content: quizPrompt }
-            ],
-            model: "mixtral-8x7b-32768",
-            temperature: 0.3,
+                model: "Llama3-70B-8192",
+                temperature: 0.1,
             max_tokens: 1024,
         });
 
-        // Parse and validate the quiz content
-        const quizContent = JSON.parse(quizCompletion.choices[0]?.message?.content);
+            // Clean up the response to ensure valid JSON
+            const response = termsCompletion.choices[0]?.message?.content;
+            const cleanedResponse = response.trim()
+                .replace(/^```json\s*/, '')
+                .replace(/\s*```$/, '')
+                .replace(/^[\s\n]*\[/, '[')
+                .replace(/\][\s\n]*$/, ']');
+
+            try {
+                const keyTerms = JSON.parse(cleanedResponse);
+                // Verify terms appear in transcript
+                const validTerms = keyTerms.filter(term => {
+                    const regex = new RegExp(term, 'i');
+                    return regex.test(cleanedTranscript);
+                }).slice(0, 5);
+
+                if (validTerms.length === 0) {
+                    throw new Error('No valid terms found in the transcript');
+                }
 
         res.json({
             success: true,
-            quizType: quizType,
-            quiz: quizContent
-        });
-
+                    keyTerms: validTerms,
+                    cleanedTranscript,
+                    // Create basic sections as fallback
+                    sections: validTerms.map(term => ({
+                        term: term,
+                        explanation: `This is an important concept related to ${term}.`,
+                        context: cleanedTranscript.substring(
+                            Math.max(0, cleanedTranscript.toLowerCase().indexOf(term.toLowerCase()) - 100),
+                            cleanedTranscript.toLowerCase().indexOf(term.toLowerCase()) + term.length + 200
+                        )
+                    }))
+                });
     } catch (error) {
-        console.error('Quiz generation error:', error);
+                console.error('Failed to parse terms response:', error);
+                throw new Error('Failed to extract key terms from the transcript');
+            }
+        }
+    } catch (error) {
+        console.error('Error in extract-key-terms endpoint:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to generate quiz',
+            error: 'Failed to process transcript',
             details: error.message
         });
     }
@@ -1421,69 +1488,102 @@ app.post('/api/generate-flashcards', async (req, res) => {
             });
         }
 
-        const groq = new Groq({ 
+        const groqClient = new Groq({ 
             apiKey: process.env.GROQ_API_KEY 
         });
 
         // Generate flashcards content
-        const flashcardsPrompt = `Create educational flashcards based on this lecture. Generate 8 flashcards that cover the most important concepts, definitions, and key points.
+        const flashcardsPrompt = `Create a set of educational flashcards based on this lecture transcription.
 
-Each flashcard should have:
-1. A clear, concise question or term on the front
-2. A comprehensive but concise answer or explanation on the back
-3. A category label (e.g., "Definition", "Concept", "Process", "Example")
+        Generate 10-15 flashcards that cover the most important concepts, definitions, and key points from the lecture.
 
-Return the flashcards in this JSON format:
+        Return the flashcards in this JSON format WITHOUT ANY ADDITIONAL TEXT:
 {
     "flashcards": [
         {
-            "front": "question or term",
-            "back": "answer or explanation",
-            "category": "category label"
-        },
-        // ... more flashcards
-    ]
-}
-
-Make sure the flashcards:
-- Cover the most important information
-- Are clear and easy to understand
-- Progress from basic to more complex concepts
-- Include a mix of different types of questions
-
-Lecture Title: ${lectureTitle}
+                    "front": "Term or concept (question)",
+                    "back": "Definition or explanation (answer)",
+                    "category": "Assign a logical category like 'Definition', 'Concept', 'Process', etc."
+                },
+                // More flashcards following the same structure...
+            ]
+        }
+        
+        IMPORTANT GUIDELINES:
+        1. Ensure the front side is concise (question/term)
+        2. The back side should be comprehensive but concise (answer/explanation)
+        3. Assign a meaningful category to each flashcard
+        4. Cover a variety of important topics from the lecture
+        5. Return ONLY valid JSON, nothing else
+        6. DO NOT include any explanatory text before or after the JSON
+        
+        Lecture Title: ${lectureTitle || "Lecture"}
 Lecture Content: ${transcription}`;
 
-        const completion = await groq.chat.completions.create({
+        const completion = await groqClient.chat.completions.create({
             messages: [
                 { 
                     role: "system", 
-                    content: "You are a flashcard generator. Return only valid JSON in the specified format." 
+                    content: "You are an educational content specialist who creates study materials. Return ONLY valid JSON in the specified format with no additional text." 
                 },
                 { role: "user", content: flashcardsPrompt }
             ],
-            model: "mixtral-8x7b-32768",
-            temperature: 0.3,
-            max_tokens: 1024,
+            model: "Llama3-70B-8192",
+            temperature: 0.7,
+            max_tokens: 2048,
         });
 
-        // Parse and validate the flashcards content
-        const flashcardsContent = JSON.parse(completion.choices[0]?.message?.content);
+        let flashcardsData;
+        const responseContent = completion.choices[0]?.message?.content || '';
+        
+        try {
+            // First attempt: direct parsing
+            flashcardsData = JSON.parse(responseContent);
+        } catch (parseError) {
+            console.error('Initial JSON parse error:', parseError);
+            
+            try {
+                // Second attempt: Try to extract JSON if wrapped in backticks
+                const jsonMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (jsonMatch && jsonMatch[1]) {
+                    flashcardsData = JSON.parse(jsonMatch[1]);
+                } else {
+                    // Third attempt: Try to use regex to extract flashcards
+                    const extractedFlashcards = extractFlashcardsFromText(responseContent);
+                    if (extractedFlashcards.length > 0) {
+                        flashcardsData = { flashcards: extractedFlashcards };
+                    } else {
+                        throw new Error('Could not extract valid flashcards from response');
+                    }
+                }
+            } catch (extractError) {
+                console.error('Failed to extract flashcards:', extractError);
+                throw new Error('Failed to generate valid flashcard data');
+            }
+        }
+
+        // Validate flashcards structure
+        if (!flashcardsData.flashcards || !Array.isArray(flashcardsData.flashcards) || flashcardsData.flashcards.length === 0) {
+            throw new Error('Invalid flashcards data structure or empty flashcards array');
+        }
 
         res.json({
             success: true,
-            flashcards: flashcardsContent.flashcards
+            flashcards: flashcardsData.flashcards
         });
 
     } catch (error) {
-        console.error('Flashcard generation error:', error);
+        console.error('API error in /api/generate-flashcards:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to generate flashcards',
-            details: error.message
+            error: error.message || 'Failed to generate flashcards'
         });
     }
 });
+
+function extractFlashcardsFromText(text) {
+    // ... existing function ...
+}
 
 // Add these routes before your existing routes
 
@@ -1699,6 +1799,280 @@ app.get('/api/users/:id/courses', async (req, res) => {
         res.status(500).json({
             success: false,
             error: error.message
+        });
+    }
+});
+
+// Add this new endpoint to format transcripts with markdown
+app.post('/api/format-transcript', async (req, res) => {
+    try {
+        const { transcription } = req.body;
+        if (!transcription) {
+            return res.status(400).json({
+                success: false,
+                error: 'No transcription provided'
+            });
+        }
+
+        // Create Groq client without redeclaring the variable
+        const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+        const formatPrompt = `Format this lecture transcript to improve readability. 
+        
+Guidelines:
+1. Add clear headers for main topics (use # for main headers and ## for subheaders)
+2. Break walls of text into logical paragraphs (short paragraphs preferred)
+3. Keep bullet points if they exist
+4. Do not add or remove any actual content
+5. Do not add key points, summaries, or any additional content
+6. Keep spacing minimal - use only one blank line between paragraphs
+7. Use markdown sparingly - don't make everything bold or italic
+
+Original Transcript:
+${transcription}
+
+IMPORTANT: Return ONLY the formatted transcript text with minimal markdown. Do not add any introductory text, explanations, summaries, or conclusions.`;
+
+        const formatCompletion = await groqClient.chat.completions.create({
+            messages: [
+                { 
+                    role: "system", 
+                    content: "You are a transcript formatter that returns ONLY the formatted version of the transcript using minimal markdown for better readability. Keep the exact content, just improve the formatting by adding headers and organizing into paragraphs. No summaries or key points should be added." 
+                },
+                { role: "user", content: formatPrompt }
+            ],
+            model: "Llama3-70B-8192",
+            temperature: 0.3,
+            max_tokens: 2048,
+        });
+
+        // Extract the formatted transcript, handling any possible markdown code blocks
+        let formattedTranscript = formatCompletion.choices[0]?.message?.content;
+        
+        // Check if the response is wrapped in a code block and extract it if so
+        if (formattedTranscript && formattedTranscript.includes('```')) {
+            const codeBlockMatch = formattedTranscript.match(/```(?:markdown)?\s*([\s\S]*?)\s*```/);
+            if (codeBlockMatch && codeBlockMatch[1]) {
+                formattedTranscript = codeBlockMatch[1];
+            }
+        }
+
+        res.json({
+            success: true,
+            formattedTranscript
+        });
+
+    } catch (error) {
+        console.error('Transcript formatting error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to format transcript',
+            details: error.message
+        });
+    }
+});
+
+// Add this new endpoint to get raw transcript from MongoDB
+app.get('/api/recordings/:id/raw-transcript', async (req, res) => {
+    try {
+        const recording = await Recording.findById(req.params.id);
+        
+        if (!recording) {
+            return res.status(404).json({
+                success: false,
+                error: 'Recording not found'
+            });
+        }
+
+        // Return the raw transcript without any processing
+        res.json({
+            success: true,
+            rawTranscript: recording.transcription.text
+        });
+    } catch (error) {
+        console.error('Error fetching raw transcript:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch raw transcript',
+            details: error.message
+        });
+    }
+});
+
+// Add this new endpoint for image search (to replace direct Serper API calls in the client)
+app.post('/api/search-image', async (req, res) => {
+    try {
+        const { query } = req.body;
+        
+        if (!query) {
+            return res.status(400).json({
+                success: false,
+                error: 'No search query provided'
+            });
+        }
+        
+        // Set up Serper API headers
+        const headers = new Headers();
+        headers.append("X-API-KEY", process.env.SERPER_API_KEY || "8ef3d1c3d162936e1361df119ae1fa56c75db388");
+        headers.append("Content-Type", "application/json");
+        
+        const requestOptions = {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({
+                "q": query,
+                "gl": "us",
+                "hl": "en"
+            })
+        };
+        
+        // Make request to Serper API
+        const response = await fetch("https://google.serper.dev/images", requestOptions);
+        
+        if (!response.ok) {
+            throw new Error(`Serper API error! status: ${response.status}`);
+        }
+        
+        const responseData = await response.json();
+        
+        // Check if the response contains images
+        if (responseData?.images?.length > 0) {
+            const image = responseData.images[0];
+            const imageUrl = image.imageUrl || image.image || image.link || image.thumbnail;
+            
+            res.json({
+                success: true,
+                imageUrl: imageUrl
+            });
+        } else {
+            res.json({
+                success: false,
+                error: 'No images found for the query'
+            });
+        }
+    } catch (error) {
+        console.error('Image search error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to search for images',
+            details: error.message
+        });
+    }
+});
+
+// Add quiz generation endpoint
+app.post('/api/generate-quiz', async (req, res) => {
+    try {
+        const { transcription, lectureTitle } = req.body;
+
+        if (!transcription) {
+            return res.status(400).json({
+                success: false,
+                error: 'No transcription provided'
+            });
+        }
+
+        const groqClient = new Groq({ 
+            apiKey: process.env.GROQ_API_KEY 
+        });
+
+        // Generate quiz content
+        const quizPrompt = `Create an educational quiz based on this lecture transcription. Generate TWO different quiz types:
+
+1. A Drag-and-Drop Categorization Quiz:
+   - Provide 3-4 categories
+   - Create 8-10 items that need to be sorted into the correct categories
+   - Each item should clearly belong to one specific category
+
+2. A Multiple-Choice Quiz:
+   - Create 5-8 multiple-choice questions
+   - Each question should have four answer choices (A, B, C, D)
+   - Clearly indicate which answer is correct
+
+Return the quiz in this JSON format WITHOUT ANY ADDITIONAL TEXT:
+{
+    "categorization": {
+        "categories": ["category1", "category2", "category3"],
+        "items": [
+            { "text": "item1", "category": "category1" },
+            { "text": "item2", "category": "category2" },
+            // 8-10 items total
+        ]
+    },
+    "multipleChoice": {
+        "questions": [
+            {
+                "question": "Question text?",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correctAnswer": 0,  // Index of correct answer (0-3)
+                "explanation": "Explanation of why this answer is correct and the educational context."
+            },
+            // 5-8 questions total
+        ]
+    }
+}
+
+IMPORTANT:
+- Both quiz types should test understanding of the most important concepts from the lecture
+- Return ONLY valid JSON, nothing else
+- DO NOT include any explanatory text before or after the JSON
+- DO NOT wrap the JSON in markdown code blocks or backticks
+- The response must be parseable directly with JSON.parse()
+
+Lecture Title: ${lectureTitle || "Lecture"}
+Lecture Content: ${transcription}`;
+
+        const completion = await groqClient.chat.completions.create({
+            messages: [
+                { 
+                    role: "system", 
+                    content: "You are an educational content specialist who creates interactive quizzes based on lecture materials. Return ONLY valid JSON in the specified format with no additional text." 
+                },
+                { role: "user", content: quizPrompt }
+            ],
+            model: "Llama3-70B-8192",
+            temperature: 0.7,
+            max_tokens: 2048,
+        });
+
+        let quizData;
+        const responseContent = completion.choices[0]?.message?.content || '';
+        
+        try {
+            // First attempt: direct parsing
+            quizData = JSON.parse(responseContent);
+        } catch (parseError) {
+            console.error('Initial JSON parse error:', parseError);
+            
+            try {
+                // Second attempt: Try to extract JSON if wrapped in backticks
+                const jsonMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (jsonMatch && jsonMatch[1]) {
+                    quizData = JSON.parse(jsonMatch[1]);
+                } else {
+                    throw new Error('Could not extract valid JSON from response');
+                }
+            } catch (extractError) {
+                console.error('Failed to extract JSON:', extractError);
+                throw new Error('Failed to generate valid quiz data');
+            }
+        }
+
+        // Validate quiz structure
+        if (!quizData.categorization || !quizData.multipleChoice) {
+            throw new Error('Invalid quiz data structure');
+        }
+
+        res.json({
+            success: true,
+            quiz: quizData
+        });
+        
+    } catch (error) {
+        console.error('API error in /api/generate-quiz:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message || 'Failed to generate quiz'
         });
     }
 }); 
