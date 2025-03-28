@@ -238,7 +238,6 @@ input, textarea {
 /* Update modal backgrounds */
 .modal-content,
 .definition-modal {
-    background: var(--card-bg) !important;
     border: 1px solid var(--border-color);
     box-shadow: 0 4px 12px var(--vintage-shadow);
 }
@@ -627,7 +626,7 @@ h2 {
 }
 
 .definition-paper {
-    background: var(--card-bg);
+    background: #e0ebe6;
     padding: 1.8rem;
     border-radius: 1.2rem;
     color: white;
@@ -652,7 +651,7 @@ h2 {
 
 .definition-header h3 {
     margin: 0;
-    color: var(--primary-color);
+    color: #85b09a;
     font-family: var(--font-primary);
     font-weight: 600;
     font-size: 1.4rem;
@@ -669,15 +668,15 @@ h2 {
     left: 0;
     width: 2rem;
     height: 2px;
-    background: var(--primary-color);
+    background: #e0ebe6;
     border-radius: 1px;
 }
 
 .definition-body {
-    color: rgba(255, 255, 255, 0.9);
+    color: #494949;
     font-size: 1.05rem;
     line-height: 1.6;
-    background: rgba(255, 255, 255, 0.05);
+    background: white;
     padding: 1.2rem;
     border-radius: 0.8rem;
     position: relative;
@@ -690,7 +689,7 @@ h2 {
     display: block;
     font-size: 0.8rem;
     text-transform: uppercase;
-    color: var(--primary-color);
+    color: #85b09a;
     margin-bottom: 0.5rem;
     letter-spacing: 0.05em;
     opacity: 0.8;
@@ -730,11 +729,7 @@ h2 {
     left: 0;
     right: 0;
     height: 80px;
-    background: linear-gradient(
-        135deg,
-        rgba(232, 93, 86, 0.1) 0%,
-        transparent 100%
-    );
+    background: #e0ebe6;
     pointer-events: none;
 }
 
@@ -790,7 +785,7 @@ h2 {
 /* Context Menu Styles */
 .context-menu {
     position: fixed;
-    background: var(--card-bg);
+    background: #7e9ebf;
     border-radius: 0.5rem;
     padding: 0.5rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
@@ -3497,7 +3492,7 @@ html {
 
 /* Quiz feedback colors */
 .quiz-feedback {
-    background: #ece8e1 !important;
+    background: white !important;
 }
 
 .quiz-feedback.correct {
@@ -4441,7 +4436,7 @@ html {
 
 /* Quiz feedback colors */
 .quiz-feedback {
-    background: #ece8e1 !important;
+    background: white !important;
 }
 
 .quiz-feedback.correct {
@@ -5385,7 +5380,7 @@ html {
 
 /* Quiz feedback colors */
 .quiz-feedback {
-    background: #ece8e1 !important;
+    background: white !important;
 }
 
 .quiz-feedback.correct {
@@ -6158,11 +6153,18 @@ html {
     border-radius: 0.5rem;
     overflow: hidden;
 }
-
+.editor-container {
+    height: 300px; 
+    width: 800px;
+    overflow-y: auto; /* Enable vertical scrolling */
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+}
 /* Quill Editor Custom Styles */
 .ql-toolbar.ql-snow {
     border: none !important;
-    background: rgba(255, 255, 255, 0.2);
+    background: white;
     border-top-left-radius: 0.5rem;
     border-top-right-radius: 0.5rem;
 }
@@ -6171,6 +6173,7 @@ html {
     border: none !important;
     font-family: inherit;
     height: calc(100% - 42px);
+    overflow-y: auto;
 }
 
 .ql-editor {
@@ -6179,6 +6182,7 @@ html {
     font-size: 1rem;
     line-height: 1.6;
     height: 100%;
+    background-color: white;
 }
 
 .ql-editor.ql-blank::before {
@@ -6562,8 +6566,8 @@ html {
 }
 
 .visual-slide {
-    display: none;
-}
+        display: none;
+    }
 
 .visual-slide-content {
     display: flex;
@@ -6901,7 +6905,7 @@ html {
 
 /* Multiple Choice Quiz Styles */
 .multiple-choice-quiz {
-    padding: 1rem;
+        padding: 1rem;
     background-color: var(--color-card-bg);
     border-radius: 8px;
 }
@@ -6918,7 +6922,7 @@ html {
 }
 
 .question p {
-    font-size: 1rem;
+        font-size: 1rem;
     margin-bottom: 1rem;
     line-height: 1.5;
 }
@@ -6969,7 +6973,7 @@ html {
     background-color: var(--color-bg-secondary);
     border: none;
     border-radius: 8px;
-    padding: 0.6rem 1.2rem;
+        padding: 0.6rem 1.2rem;
     cursor: pointer;
     transition: background-color 0.2s;
 }
@@ -6991,8 +6995,8 @@ html {
 .explanation-area {
     margin-top: 1rem;
     padding: 1rem;
-    background: var(--container-bg);
-    border-left: 4px solid var(--accent-color);
+    background: white;
+    border-left: 4px solid #7e9ebf;
     border-radius: 0.5rem;
     margin-bottom: 1.5rem;
     animation: fadeIn 0.3s ease;

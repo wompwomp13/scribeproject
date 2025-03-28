@@ -9,7 +9,7 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: #4a4a4a;
+    background-color: #85b09a;
     font-family: var(--font-primary);
 }
 
@@ -183,13 +183,13 @@ body {
 }
 
 .search-box:focus-within {
-    background: #f6f6f6;
+    background: #e0ebe6;
     border-color: black;
     box-shadow: 0 0 0 2px #494949;
 }
 
 .search-box i {
-    color: rgba(255, 255, 255, 0.6);
+    color: black;
     font-size: 1.1rem;
 }
 
@@ -204,7 +204,7 @@ body {
 }
 
 .search-box input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: black;
 }
 
 .filter-controls {
