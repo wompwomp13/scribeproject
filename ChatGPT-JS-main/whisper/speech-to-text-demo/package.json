@@ -4,8 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "build": "echo \"Static site build step complete\""
+    "start": "node server.js"
   },
   "author": "",
   "license": "ISC",
@@ -20,8 +19,5 @@
     "request": "^2.88.2"
   },
   "keywords": [],
-  "description": "",
-  "engines": {
-    "node": ">=16.0.0"
-  }
+  "description": ""
 }
