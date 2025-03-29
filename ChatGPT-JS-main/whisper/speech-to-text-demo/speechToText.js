@@ -1,6 +1,6 @@
 const fs = require('fs');
 const request = require('request');
-const OPENAI_API_KEY = require('./config.json')['OpenAIApiKey'];
+const apiKey = process.env.OPENAI_API_KEY;
 
 async function text2SpeechGPT(file) {
     return new Promise((resolve, reject) => {
@@ -13,7 +13,7 @@ async function text2SpeechGPT(file) {
             method: "POST",
             url: "https://api.openai.com/v1/audio/translations",
             headers: {
-                "Authorization": "Bearer " + OPENAI_API_KEY,
+                "Authorization": "Bearer " + apiKey,
                 "Content-Type": "multipart/form-data"
             },
             formData: {
