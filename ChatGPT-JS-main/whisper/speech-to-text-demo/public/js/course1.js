@@ -99,7 +99,21 @@ class CoursePage {
 
     showLecture(lecture) {
         document.getElementById('modalTitle').textContent = lecture.title;
-        document.getElementById('modalAudio').src = `/uploads/${lecture.audioFile.filename}`;
+        
+        // Determine the audio URL based on storage type
+        let audioUrl;
+        if (lecture.audioFile.isDropbox) {
+            // If it's a Dropbox URL, use the path directly
+            audioUrl = lecture.audioFile.path;
+        } else if (lecture.audioFile.url) {
+            // If a URL is provided in the response, use it
+            audioUrl = lecture.audioFile.url;
+        } else {
+            // Fall back to the old method
+            audioUrl = `/uploads/${lecture.audioFile.filename}`;
+        }
+        
+        document.getElementById('modalAudio').src = audioUrl;
         document.getElementById('modalTranscript').textContent = lecture.transcription.text;
         this.modal.style.display = 'block';
     }

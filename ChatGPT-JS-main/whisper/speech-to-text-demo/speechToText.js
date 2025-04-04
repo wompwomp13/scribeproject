@@ -1,15 +1,37 @@
 const fs = require('fs');
 const request = require('request');
-const apiKey = process.env.OPENAI_API_KEY;
+const path = require('path');
 
-async function text2SpeechGPT(file) {
+// Load API key from config.json
+const configPath = path.join(__dirname, 'config.json');
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const apiKey = config.OpenAIApiKey || process.env.OPENAI_API_KEY; // Fallback to env var if needed
+
+/**
+ * Converts audio to text using OpenAI's Whisper API
+ * @param {Object} options - Options object
+ * @param {string} [options.path] - File path (legacy support)
+ * @param {Buffer} [options.buffer] - Audio data as buffer
+ * @param {string} options.filename - Original filename for content-type detection
+ * @returns {Promise<Object>} - Translation response
+ */
+async function text2SpeechGPT(options) {
     return new Promise((resolve, reject) => {
-        if (!file || !file.path) {
-            reject(new Error('Invalid file'));
+        if (!options) {
+            reject(new Error('Invalid options'));
             return;
         }
 
-        const options = {
+        // Check if we have a buffer or need to use a file path
+        const hasBuffer = options.buffer && Buffer.isBuffer(options.buffer);
+        const hasPath = options.path && fs.existsSync(options.path);
+        
+        if (!hasBuffer && !hasPath) {
+            reject(new Error('No valid audio data provided'));
+            return;
+        }
+        
+        const requestOptions = {
             method: "POST",
             url: "https://api.openai.com/v1/audio/translations",
             headers: {
@@ -17,12 +39,28 @@ async function text2SpeechGPT(file) {
                 "Content-Type": "multipart/form-data"
             },
             formData: {
-                "file": fs.createReadStream(file.path),
                 "model": "whisper-1"
             }
         };
         
-        request(options, function (err, res, body) {
+        // Set file data either from buffer or file path
+        if (hasBuffer) {
+            // Use buffer directly with filename for content-type detection
+            requestOptions.formData.file = {
+                value: options.buffer,
+                options: {
+                    filename: options.filename,
+                    contentType: 'audio/mpeg' // Adjust if needed based on your audio format
+                }
+            };
+            console.log("Using buffer data for transcription");
+        } else {
+            // Fallback to file path for backward compatibility
+            requestOptions.formData.file = fs.createReadStream(options.path);
+            console.log("Using file path for transcription:", options.path);
+        }
+        
+        request(requestOptions, function (err, res, body) {
             if (err) {
                 console.error("API Error:", err);
                 reject(err);

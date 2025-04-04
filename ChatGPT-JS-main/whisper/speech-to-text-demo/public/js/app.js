@@ -34,13 +34,18 @@ const recordingIndicator = document.getElementById('recordingIndicator');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const loadingText = document.getElementById('loadingText');
 const statusText = document.getElementById('statusText');
-let recordingChunks = [];
+let transcriptionChunks = [];        // Only for transcription, not audio storage
 let currentChunkNumber = 0;
 let transcriptionParts = [];
 let isProcessingComplete = false;
-const CHUNK_DURATION = 120; // 2 minutes in seconds
+const CHUNK_DURATION = 120; // 2 minutes in seconds for transcription chunks
 let originalTranscription = '';
 let isTranscriptionEdited = false;
+
+// Main recorder for the entire lecture (continuous recording)
+let mainRecorder = null;
+let mainRecordingBlob = null;
+let currentChunkRecorder = null;    // For tracking the current transcription chunk
 
 // Function to update progress steps
 function updateProgress(step, status) {
@@ -127,8 +132,9 @@ function startRecording() {
     // Clear previous transcription
     transcriptionText.value = '';
     transcriptionParts = [];
-    recordingChunks = [];
+    transcriptionChunks = [];
     currentChunkNumber = 0;
+    mainRecordingBlob = null;
     
     // Start timer
     startTimer();
@@ -140,7 +146,11 @@ function startRecording() {
         gumStream = stream;
         input = audioContext.createMediaStreamSource(stream);
 
-        startNewChunk();
+        // Start the main recorder for the entire lecture
+        startMainRecorder();
+        
+        // Also start the first transcription chunk
+        startTranscriptionChunk();
 
     }).catch(function(err) {
         recordButton.disabled = false;
@@ -153,50 +163,87 @@ function startRecording() {
     });
 }
 
-// Function to start recording a new chunk
-function startNewChunk() {
-    currentChunkNumber++;
-    isProcessingComplete = false;
-
-    recorder = new WebAudioRecorder(input, {
+// Function to start the main recorder (records the entire lecture as one file)
+function startMainRecorder() {
+    mainRecorder = new WebAudioRecorder(input, {
         workerDir: "js/",
         encoding: 'mp3',
         numChannels: 2,
         onEncoderLoading: function(recorder, encoding) {
-            console.log("Loading "+encoding+" encoder...");
+            console.log("Loading "+encoding+" encoder for main recording...");
         },
         onEncoderLoaded: function(recorder, encoding) {
-            console.log(encoding+" encoder loaded");
+            console.log(encoding+" encoder loaded for main recording");
         }
     });
 
-    recorder.onComplete = function(recorder, blob) { 
-        console.log("Chunk encoding complete");
-        processChunk(blob);
+    mainRecorder.onComplete = function(recorder, blob) { 
+        console.log("Main recording encoding complete");
+        mainRecordingBlob = blob;
+        
+        // Don't automatically upload the full recording
+        // It will only be uploaded when the user clicks the save button
+        isProcessingComplete = true;
+        setLoading(false);
+        saveButton.disabled = false;
     }
 
-    recorder.setOptions({
+    mainRecorder.setOptions({
+        encodeAfterRecord: encodeAfterRecord,
+        mp3: {bitRate: 160}
+    });
+
+    mainRecorder.startRecording();
+    isRecording = true;
+}
+
+// Function to start recording a transcription chunk (for real-time transcription)
+function startTranscriptionChunk() {
+    currentChunkNumber++;
+    isProcessingComplete = false;
+
+    let chunkRecorder = new WebAudioRecorder(input, {
+        workerDir: "js/",
+        encoding: 'mp3',
+        numChannels: 2,
+        onEncoderLoading: function(recorder, encoding) {
+            console.log("Loading "+encoding+" encoder for chunk...");
+        },
+        onEncoderLoaded: function(recorder, encoding) {
+            console.log(encoding+" encoder loaded for chunk");
+        }
+    });
+
+    chunkRecorder.onComplete = function(recorder, blob) { 
+        console.log("Chunk encoding complete");
+        processTranscriptionChunk(blob);
+    }
+
+    chunkRecorder.setOptions({
         timeLimit: CHUNK_DURATION,
         encodeAfterRecord: encodeAfterRecord,
         mp3: {bitRate: 160}
     });
 
-    recorder.startRecording();
-    isRecording = true;
+    chunkRecorder.startRecording();
+    
+    // Store reference to the current chunk recorder
+    // This is accessed in stopRecording to process partial chunks
+    currentChunkRecorder = chunkRecorder;
 
-    // Set timeout to automatically process chunk after 2 minutes
+    // Set timeout to automatically finish this chunk and start the next one
     setTimeout(() => {
         if (isRecording) {
-            recorder.finishRecording();
-            startNewChunk();
+            chunkRecorder.finishRecording();
+            startTranscriptionChunk();
         }
     }, CHUNK_DURATION * 1000);
 }
 
-// Function to process each chunk
-async function processChunk(blob) {
+// Function to process each transcription chunk
+async function processTranscriptionChunk(blob) {
     try {
-        recordingChunks.push(blob);
+        transcriptionChunks.push(blob);
         
         // Show loading only for final chunk
         if (!isRecording) {
@@ -232,13 +279,6 @@ async function processChunk(blob) {
         
         // Scroll to bottom of textarea to show latest text
         transcriptionText.scrollTop = transcriptionText.scrollHeight;
-
-        // If this was the final chunk, enable save button
-        if (!isRecording) {
-            isProcessingComplete = true;
-            setLoading(false);
-            saveButton.disabled = false;
-        }
         
     } catch (error) {
         console.error('Error processing chunk:', error);
@@ -272,16 +312,24 @@ function stopRecording() {
     // Stop timer
     stopTimer();
     
-    if (recorder && recorder.isRecording()) {
-        setLoading(true, 'Processing final recording...');
-        recorder.finishRecording();
-    }
+    // First set isRecording to false to prevent new chunks from starting
     isRecording = false;
+    
+    // Stop the main recorder
+    if (mainRecorder && mainRecorder.isRecording()) {
+        setLoading(true, 'Processing final recording...');
+        mainRecorder.finishRecording();
+    }
+    
+    // Also stop the current chunk recorder to process the partial chunk
+    if (currentChunkRecorder && currentChunkRecorder.isRecording()) {
+        console.log("Finishing partial chunk recording");
+        currentChunkRecorder.finishRecording();
+    }
 
     gumStream.getAudioTracks()[0].stop();
     
-    // Save button will be enabled after final chunk is processed
-    saveButton.disabled = true;
+    // Save button will be enabled when mainRecorder.onComplete fires
 }
 
 // Add this to handle page unload
@@ -314,7 +362,7 @@ saveButton.addEventListener('click', async () => {
     }
 
     try {
-        if (recordingChunks.length === 0) {
+        if (!mainRecordingBlob) {
             throw new Error('No recording available');
         }
 
@@ -330,11 +378,8 @@ saveButton.addEventListener('click', async () => {
         const lectureTitle = document.getElementById('lectureTitle').value || 'Untitled Lecture';
         const editedTranscription = transcriptionText.value;
 
-        // Create a single blob from all chunks
-        const combinedBlob = new Blob(recordingChunks, { type: 'audio/mp3' });
-
         let fd = new FormData();
-        fd.append('data', combinedBlob);
+        fd.append('data', mainRecordingBlob);  // Use the main recording blob (entire lecture)
         fd.append('title', lectureTitle);
         fd.append('transcription', editedTranscription);
         fd.append('courseId', courseId);
@@ -355,11 +400,12 @@ saveButton.addEventListener('click', async () => {
         
         if (data.success) {
             // Clear all recording data
-            recordingChunks = [];
+            transcriptionChunks = [];
             transcriptionParts = [];
             currentChunkNumber = 0;
             isProcessingComplete = false;
             isTranscriptionEdited = false;
+            mainRecordingBlob = null;
             
             // Disable editing
             transcriptionText.disabled = true;

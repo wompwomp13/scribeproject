@@ -77,6 +77,16 @@ function createLectureElement(recording) {
         year: 'numeric'
     });
 
+    // Create a sanitized copy of the recording object for the button data attribute
+    const recordingData = {
+        _id: recording._id,
+        title: recording.title,
+        date: recording.date,
+        transcript: recording.transcript,
+        audioUrl: recording.audioUrl,
+        audioFile: recording.audioFile
+    };
+
     const lecture = document.createElement('div');
     lecture.className = 'lecture-item';
     lecture.innerHTML = `
@@ -85,7 +95,7 @@ function createLectureElement(recording) {
             <p class="lecture-date">${formattedDate}</p>
         </div>
         <div class="lecture-actions">
-            <button class="play-btn" data-recording='${JSON.stringify(recording)}'>
+            <button class="play-btn" data-recording='${JSON.stringify(recordingData)}'>
                 <i class="bi bi-play-circle"></i>
                 Play
             </button>
@@ -107,7 +117,21 @@ function setupModal() {
         button.addEventListener('click', () => {
             const recording = JSON.parse(button.dataset.recording);
             modalTitle.textContent = recording.title || 'Untitled Lecture';
-            modalAudio.src = recording.audioUrl;
+            
+            // Determine the audio URL based on storage type
+            let audioUrl;
+            if (recording.audioFile && recording.audioFile.isDropbox) {
+                audioUrl = recording.audioFile.url;
+            } else if (recording.audioUrl) {
+                audioUrl = recording.audioUrl;
+            } else if (recording.audioFile && recording.audioFile.filename) {
+                audioUrl = `/uploads/${recording.audioFile.filename}`;
+            } else {
+                audioUrl = '';
+                console.error('No audio URL available for this recording');
+            }
+            
+            modalAudio.src = audioUrl;
             modalTranscript.textContent = recording.transcript || 'No transcript available';
             modal.style.display = 'block';
         });

@@ -19,6 +19,10 @@ const RecordingSchema = new mongoose.Schema({
     audioFile: {
         filename: String,
         path: String,
+        isDropbox: {
+            type: Boolean,
+            default: false
+        },
         gridFSId: mongoose.Schema.Types.ObjectId
     },
     transcription: {

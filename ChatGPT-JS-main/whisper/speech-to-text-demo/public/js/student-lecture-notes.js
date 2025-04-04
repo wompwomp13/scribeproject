@@ -146,25 +146,70 @@ class StudentLectureNotes {
                 });
         }
         
-        // Update audio player with error handling
+        // Update audio player with enhanced error handling
         const audio = document.getElementById('lectureAudio');
-        if (lecture.audioFile && lecture.audioFile.filename) {
+        if (lecture.audioFile) {
             try {
-                const audioUrl = `/uploads/${lecture.audioFile.filename}`;
-                console.log('Setting audio URL:', audioUrl);
+                // Debug logging for audioFile object
+                console.log('Audio file object details:', JSON.stringify(lecture.audioFile, null, 2));
+                
+                // AUDIO URL SELECTION LOGIC
+                let audioUrl = null;
+                
+                // Priority 1: If it's a Dropbox URL and we have a path, use that directly
+                if (lecture.audioFile.isDropbox === true && lecture.audioFile.path) {
+                    console.log('Using Dropbox path directly:', lecture.audioFile.path);
+                    audioUrl = lecture.audioFile.path;
+                } 
+                // Priority 2: If there's a URL provided by the server, use that
+                else if (lecture.audioFile.url) {
+                    console.log('Using server-provided URL:', lecture.audioFile.url);
+                    audioUrl = lecture.audioFile.url;
+                }
+                // Priority 3: Fall back to local file path if nothing else works
+                else if (lecture.audioFile.filename) {
+                    console.log('Falling back to local file path:', lecture.audioFile.filename);
+                    audioUrl = `/uploads/${lecture.audioFile.filename}`;
+                }
+                
+                if (!audioUrl) {
+                    throw new Error('No valid audio URL could be determined');
+                }
+                
+                console.log('Final audio URL set to:', audioUrl);
                 audio.src = audioUrl;
                 
+                // Add detailed error logging
                 audio.onerror = (e) => {
                     console.error('Error loading audio:', e);
+                    console.error('Audio error code:', audio.error ? audio.error.code : 'unknown');
+                    console.error('Audio error message:', audio.error ? audio.error.message : 'unknown');
+                    console.error('Audio src that failed:', audio.src);
+                    
+                    // Display error message below audio player
+                    const audioSection = document.querySelector('.audio-section');
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'alert alert-danger mt-2';
+                    errorMsg.innerHTML = `<strong>Error:</strong> Could not load audio file. <br>
+                        Please contact your teacher or try again later.`;
+                    audioSection.appendChild(errorMsg);
                 };
+                
                 audio.onloadeddata = () => {
-                    console.log('Audio loaded successfully');
+                    console.log('Audio loaded successfully from:', audio.src);
                 };
             } catch (error) {
                 console.error('Error setting audio source:', error);
             }
         } else {
             console.error('No audio file found in lecture data');
+            
+            // Display missing audio message
+            const audioSection = document.querySelector('.audio-section');
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'alert alert-warning mt-2';
+            errorMsg.textContent = 'No audio recording is available for this lecture.';
+            audioSection.appendChild(errorMsg);
         }
         
         // Update transcription

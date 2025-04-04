@@ -9,6 +9,7 @@ const Groq = require('groq-sdk');
 require('dotenv').config();
 const User = require('./models/User');
 const Course = require('./models/Course');
+const { uploadFile } = require('./utils/dropbox'); // Add Dropbox utility
 
 // Create uploads directory if it doesn't exist
 const fs = require('fs');
@@ -23,8 +24,9 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Configure multer for file upload
-const storage = multer.diskStorage({
+// Configure multer with two storage options
+// 1. Disk storage for local development
+const diskStorage = multer.diskStorage({
     destination: function (req, file, cb) {
         // Create uploads directory if it doesn't exist
         const uploadsDir = path.join(__dirname, 'uploads');
@@ -39,10 +41,21 @@ const storage = multer.diskStorage({
     }
 });
 
+// 2. Memory storage for Dropbox integration
+const memoryStorage = multer.memoryStorage();
+
+// Use memory storage if DROPBOX_ENABLED is true, otherwise use disk storage
+const isDropboxEnabled = process.env.DROPBOX_ENABLED === 'true' && process.env.DROPBOX_ACCESS_TOKEN && process.env.DROPBOX_ACCESS_TOKEN.length > 10;
+console.log(`Dropbox integration is ${isDropboxEnabled ? 'ENABLED' : 'DISABLED'}`);
+console.log(`DROPBOX_ENABLED=${process.env.DROPBOX_ENABLED}`);
+console.log(`DROPBOX_ACCESS_TOKEN exists: ${Boolean(process.env.DROPBOX_ACCESS_TOKEN)}`);
+
+const storage = isDropboxEnabled ? memoryStorage : diskStorage;
+
 const upload = multer({ 
     storage: storage,
     limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
+        fileSize: 250 * 1024 * 1024, // 250MB limit for long lectures
         files: 1 // Only allow 1 file per request
     },
     fileFilter: (req, file, cb) => {
@@ -81,25 +94,122 @@ app.post('/upload', upload.single('data'), async (req, res) => {
             throw new Error('No file uploaded');
         }
 
-        // Get courseId from request body
+        // Get courseId and title from request body
         const courseId = req.body.courseId;
+        const lectureTitle = req.body.title || 'Untitled Lecture';
+        
+        let audioFileUrl;
+        let audioFilePath;
+        let audioFileName;
+        let apiResponse;
 
-        // Transcribe audio
-        const apiResponse = await text2SpeechGPT({
-            filename: req.file.filename,
-            path: req.file.path
-        });
+        // Preview mode is for chunked transcription during recording
+        const isPreviewMode = req.query.preview === 'true';
+        console.log(`Upload request: preview mode = ${isPreviewMode ? 'ON' : 'OFF'}`);
 
-        // If preview mode, just return the transcription
-        if (req.query.preview === 'true') {
-            fs.unlink(req.file.path, (err) => {
-                if (err) console.error('Error deleting preview file:', err);
-            });
+        // PREVIEW MODE: Just transcribe and return without saving to database
+        if (isPreviewMode) {
+            console.log('Processing preview chunk for transcription only');
             
+            // Use buffer directly for transcription if available
+            if (req.file.buffer) {
+                console.log('Using memory buffer directly for transcription');
+                // Pass the buffer directly to the transcription function
+                apiResponse = await text2SpeechGPT({
+                    buffer: req.file.buffer,
+                    filename: 'preview.mp3'
+                });
+            } else {
+                // For disk storage, use the existing file path
+                console.log('Using file path for transcription:', req.file.path);
+                apiResponse = await text2SpeechGPT({
+                    path: req.file.path,
+                    filename: req.file.filename
+                });
+                
+                // Clean up the temp file if we're using disk storage
+                fs.unlink(req.file.path, (err) => {
+                    if (err) console.error('Error deleting preview file:', err);
+                });
+            }
+            
+            // Return just the transcription
             return res.json({
                 success: true,
                 text: apiResponse.text
             });
+        }
+        
+        // FINAL UPLOAD: Store the complete lecture recording
+        console.log('Processing final upload for complete lecture');
+        
+        // Format the lecture title to be used as a filename
+        const formattedTitle = lectureTitle
+            .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace non-alphanumeric chars with underscore
+            .replace(/_+/g, '_')            // Collapse multiple underscores
+            .replace(/^_|_$/g, '')          // Remove leading/trailing underscores
+            .toLowerCase();
+            
+        // Add timestamp to ensure uniqueness
+        const timestamp = Date.now();
+        
+        // Check if we're using Dropbox or local storage
+        if (isDropboxEnabled && req.file.buffer) {
+            console.log('Using Dropbox storage for complete lecture audio file');
+            
+            // Determine the folder path
+            const folderPath = courseId ? `courses/${courseId}` : 'general';
+            
+            // Create filename with title only for Dropbox (no timestamp)
+            audioFileName = `${formattedTitle}.mp3`;
+            console.log(`Using filename: ${audioFileName}`);
+            
+            // Upload the complete audio file to Dropbox
+            audioFileUrl = await uploadFile(req.file.buffer, audioFileName, folderPath);
+            audioFilePath = audioFileUrl; // Store the URL as the path
+            
+            console.log('File uploaded to Dropbox:', audioFileUrl);
+            
+            // Check if a transcription was provided in the request
+            if (req.body.transcription) {
+                console.log('Using provided transcription instead of generating a new one');
+                apiResponse = { text: req.body.transcription };
+            } else {
+                // Transcribe audio without saving temporary file
+                console.log('Generating transcription for the complete audio using buffer');
+                apiResponse = await text2SpeechGPT({
+                    buffer: req.file.buffer,
+                    filename: audioFileName
+                });
+            }
+            
+        } else {
+            console.log('Using local storage for complete lecture audio file');
+            
+            // Rename the file to include the lecture title for local storage
+            const originalPath = req.file.path;
+            audioFileName = `${formattedTitle}-${timestamp}.mp3`;
+            const newPath = path.join(path.dirname(originalPath), audioFileName);
+            
+            // Rename the file
+            fs.renameSync(originalPath, newPath);
+            audioFilePath = newPath;
+            audioFileUrl = `/uploads/${audioFileName}`;
+            
+            console.log(`Renamed file from ${req.file.filename} to ${audioFileName}`);
+            
+            // Check if a transcription was provided in the request
+            if (req.body.transcription) {
+                console.log('Using provided transcription instead of generating a new one');
+                apiResponse = { text: req.body.transcription };
+            } else {
+                // Transcribe audio using file path since we already saved it
+                console.log('Generating transcription for the complete audio from path');
+                apiResponse = await text2SpeechGPT({
+                    path: audioFilePath,
+                    filename: audioFileName
+                });
+            }
         }
 
         // Verify course exists if courseId is provided
@@ -110,12 +220,13 @@ app.post('/upload', upload.single('data'), async (req, res) => {
             }
         }
 
-        // Save to MongoDB
+        // Save to MongoDB - notice we store the same structure regardless of storage method
         const recording = new Recording({
-            title: req.body.title || 'Untitled Recording',
+            title: lectureTitle,
             audioFile: {
-                filename: req.file.filename,
-                path: req.file.path
+                filename: audioFileName,
+                path: audioFilePath,
+                isDropbox: isDropboxEnabled  // Flag to indicate if this is a Dropbox URL
             },
             transcription: {
                 text: req.body.transcription || apiResponse.text,
@@ -140,18 +251,21 @@ app.post('/upload', upload.single('data'), async (req, res) => {
                 id: savedRecording._id,
                 title: savedRecording.title,
                 date: savedRecording.createdAt,
-                audioUrl: `/uploads/${req.file.filename}`,
+                audioUrl: audioFileUrl,
                 text: savedRecording.transcription.text,
                 courseId: courseId
             }
         });
     } catch (error) {
         console.error('Upload error:', error);
-        if (req.file) {
+        
+        // Clean up local file if needed
+        if (!isDropboxEnabled && req.file && req.file.path) {
             fs.unlink(req.file.path, (err) => {
                 if (err) console.error('Error deleting file:', err);
             });
         }
+        
         res.status(500).json({ 
             error: 'Upload failed', 
             details: error.message 
@@ -174,11 +288,27 @@ app.get('/api/recordings/:id', async (req, res) => {
         }
 
         console.log('Found recording:', recording);
-        console.log('Audio file:', recording.audioFile);
-        console.log('Transcription:', recording.transcription);
+        console.log('Audio file details:', JSON.stringify(recording.audioFile, null, 2));
+        
+        // Explicitly check for valid dropbox path
+        let isDropbox = false;
+        if (recording.audioFile.isDropbox === true || 
+            (recording.audioFile.path && recording.audioFile.path.includes('dropbox'))) {
+            isDropbox = true;
+            console.log('This is a Dropbox recording');
+        }
 
-        // Construct the audio URL
-        const audioUrl = `/uploads/${recording.audioFile.filename}`;
+        // Construct the audio URL based on storage type
+        let audioUrl;
+        if (isDropbox) {
+            // If stored in Dropbox, use the path directly as the URL
+            audioUrl = recording.audioFile.path;
+            console.log('Using Dropbox URL:', audioUrl);
+        } else {
+            // If stored locally, use the /uploads/ path
+            audioUrl = `/uploads/${recording.audioFile.filename}`;
+            console.log('Using local URL:', audioUrl);
+        }
         
         const responseData = {
             success: true,
@@ -189,7 +319,8 @@ app.get('/api/recordings/:id', async (req, res) => {
                 audioFile: {
                     filename: recording.audioFile.filename,
                     path: recording.audioFile.path,
-                    url: audioUrl
+                    url: audioUrl,
+                    isDropbox: isDropbox
                 },
                 transcription: {
                     text: recording.transcription.text,
@@ -198,7 +329,7 @@ app.get('/api/recordings/:id', async (req, res) => {
             }
         };
 
-        console.log('Sending response:', responseData);
+        console.log('Sending response with audioFile:', JSON.stringify(responseData.recording.audioFile, null, 2));
         res.json(responseData);
     } catch (error) {
         console.error('Error fetching recording:', error);
@@ -2073,6 +2204,143 @@ Lecture Content: ${transcription}`;
         res.status(500).json({ 
             success: false, 
             error: error.message || 'Failed to generate quiz'
+        });
+    }
+});
+
+// Add a new endpoint for fixing Dropbox recordings
+app.get('/admin/fix-dropbox-recordings', async (req, res) => {
+    try {
+        console.log('Running migration to fix Dropbox recordings...');
+        
+        // Find all recordings with paths that include "dropbox"
+        const recordings = await Recording.find({
+            'audioFile.path': { $regex: 'dropbox', $options: 'i' }
+        });
+        
+        console.log(`Found ${recordings.length} recordings with Dropbox paths`);
+        
+        let updatedCount = 0;
+        
+        // Update each recording
+        for (const recording of recordings) {
+            console.log(`Fixing recording "${recording.title}" (${recording._id})`);
+            console.log('Current audioFile:', JSON.stringify(recording.audioFile, null, 2));
+            
+            // Make sure the dropbox flag is set
+            if (!recording.audioFile.isDropbox) {
+                recording.audioFile.isDropbox = true;
+                updatedCount++;
+                
+                console.log('Updated isDropbox flag');
+            }
+            
+            // Convert www.dropbox to dl.dropboxusercontent.com if needed
+            if (recording.audioFile.path && recording.audioFile.path.includes('www.dropbox.com')) {
+                const updatedPath = recording.audioFile.path
+                    .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+                    .replace('?dl=0', '');
+                
+                console.log(`Converting path from ${recording.audioFile.path} to ${updatedPath}`);
+                recording.audioFile.path = updatedPath;
+                updatedCount++;
+            }
+            
+            // Save the changes
+            await recording.save();
+        }
+        
+        res.json({
+            success: true,
+            message: `Fixed ${updatedCount} issues across ${recordings.length} recordings`
+        });
+    } catch (error) {
+        console.error('Migration error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Migration failed',
+            details: error.message
+        });
+    }
+});
+
+// Add an endpoint to fix a specific recording by title
+app.get('/admin/fix-recording-by-title/:title', async (req, res) => {
+    try {
+        const title = req.params.title;
+        console.log(`Attempting to fix recording with title containing: "${title}"`);
+        
+        // Find recordings with matching title (case insensitive)
+        const titleRegex = new RegExp(title, 'i');
+        const recordings = await Recording.find({
+            title: titleRegex
+        });
+        
+        if (recordings.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: `No recordings found with title containing "${title}"`
+            });
+        }
+        
+        console.log(`Found ${recordings.length} matching recordings`);
+        const fixedRecordings = [];
+        
+        // Process each matching recording
+        for (const recording of recordings) {
+            console.log(`Processing recording: "${recording.title}" (${recording._id})`);
+            console.log('Current audioFile:', JSON.stringify(recording.audioFile, null, 2));
+            
+            // Check if this is a Dropbox file based on path
+            const isDropboxPath = recording.audioFile.path && 
+                                  recording.audioFile.path.includes('dropbox');
+            
+            if (isDropboxPath && !recording.audioFile.isDropbox) {
+                // Fix Dropbox flag
+                recording.audioFile.isDropbox = true;
+                console.log('Set isDropbox flag to true');
+            }
+            
+            // Convert www.dropbox to dl.dropboxusercontent.com if needed
+            if (recording.audioFile.path && recording.audioFile.path.includes('www.dropbox.com')) {
+                const updatedPath = recording.audioFile.path
+                    .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+                    .replace('?dl=0', '');
+                
+                console.log(`Converted path from ${recording.audioFile.path} to ${updatedPath}`);
+                recording.audioFile.path = updatedPath;
+            }
+            
+            // If the filename is a Dropbox URL but saved incorrectly, fix it
+            if (recording.audioFile.filename && recording.audioFile.filename.includes('dropbox')) {
+                console.log('Filename contains Dropbox URL, fixing...');
+                // Extract the actual filename from the path
+                const pathParts = recording.audioFile.path.split('/');
+                const actualFilename = pathParts[pathParts.length - 1].split('?')[0];
+                recording.audioFile.filename = actualFilename;
+                console.log(`Set filename to ${actualFilename}`);
+            }
+            
+            // Save changes
+            await recording.save();
+            fixedRecordings.push({
+                id: recording._id,
+                title: recording.title,
+                audioFile: recording.audioFile
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `Fixed ${fixedRecordings.length} recordings`,
+            recordings: fixedRecordings
+        });
+    } catch (error) {
+        console.error('Fix recording error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Fix operation failed',
+            details: error.message
         });
     }
 }); 
