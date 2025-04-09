@@ -2,10 +2,14 @@ const fs = require('fs');
 const request = require('request');
 const path = require('path');
 
-// Load API key from config.json
-const configPath = path.join(__dirname, 'config.json');
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const apiKey = config.OpenAIApiKey || process.env.OPENAI_API_KEY; // Fallback to env var if needed
+// Load API key from environment variables
+// No longer using config.json
+require('dotenv').config();
+const apiKey = process.env.OPENAI_API_KEY;
+
+if (!apiKey) {
+  console.error('ERROR: OPENAI_API_KEY not found in environment variables');
+}
 
 /**
  * Converts audio to text using OpenAI's Whisper API
