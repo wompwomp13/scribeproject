@@ -1,13 +1,34 @@
 class StudentClass {
     constructor() {
         this.courseId = new URLSearchParams(window.location.search).get('id');
+        this.lectures = [];
+        this.searchInput = document.getElementById('lectureSearch');
+        this.sortSelect = document.getElementById('sortLectures');
         
         // Set up dashboard link with user's email
         this.setupDashboardLink();
         
+        // Setup search and filter event listeners
+        this.setupEventListeners();
+        
         if (this.courseId) {
             this.loadCourseDetails();
             this.loadLectures();
+        }
+    }
+
+    setupEventListeners() {
+        // Add event listeners for search and filter
+        if (this.searchInput) {
+            this.searchInput.addEventListener('input', () => {
+                this.filterAndSortLectures();
+            });
+        }
+
+        if (this.sortSelect) {
+            this.sortSelect.addEventListener('change', () => {
+                this.filterAndSortLectures();
+            });
         }
     }
 
@@ -26,11 +47,26 @@ class StudentClass {
             const data = await response.json();
             
             if (data.success) {
-                document.getElementById('courseCode').textContent = data.course.code;
-                document.getElementById('courseName').textContent = data.course.name;
-                document.getElementById('courseDescription').textContent = data.course.description || 'No description available';
-                document.getElementById('courseInstructor').textContent = data.course.instructor || 'TBA';
+                // Always set document title
                 document.title = `SCRIBE - ${data.course.name}`;
+                
+                // Update elements if they exist
+                const codeElement = document.getElementById('courseCode');
+                if (codeElement) codeElement.textContent = data.course.code;
+                
+                const nameElement = document.getElementById('courseName');
+                if (nameElement) nameElement.textContent = data.course.name;
+                
+                const descriptionElement = document.getElementById('courseDescription');
+                if (descriptionElement) {
+                    descriptionElement.textContent = data.course.description || 'No description available';
+                }
+                
+                // Only try to update instructor if the element exists
+                const instructorElement = document.getElementById('courseInstructor');
+                if (instructorElement) {
+                    instructorElement.textContent = data.course.instructor || 'TBA';
+                }
             }
         } catch (error) {
             console.error('Error loading course details:', error);
@@ -43,7 +79,8 @@ class StudentClass {
             const data = await response.json();
             
             if (data.success && data.recordings) {
-                this.renderLectures(data.recordings);
+                this.lectures = data.recordings;
+                this.filterAndSortLectures();
                 this.updateLectureCount(data.recordings.length);
             }
         } catch (error) {
@@ -53,22 +90,65 @@ class StudentClass {
         }
     }
 
-    renderLectures(lectures) {
+    filterAndSortLectures() {
+        const searchText = this.searchInput ? this.searchInput.value.toLowerCase() : '';
+        const sortOption = this.sortSelect ? this.sortSelect.value : 'date-new';
+        
+        // Filter lectures based on search text
+        let filteredLectures = this.lectures.filter(lecture => {
+            const title = (lecture.title || 'Untitled Lecture').toLowerCase();
+            const date = new Date(lecture.createdAt).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }).toLowerCase();
+            
+            return title.includes(searchText) || date.includes(searchText);
+        });
+        
+        // Sort filtered lectures
+        filteredLectures.sort((a, b) => {
+            switch (sortOption) {
+                case 'date-new':
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                case 'date-old':
+                    return new Date(a.createdAt) - new Date(b.createdAt);
+                case 'name-asc':
+                    return (a.title || 'Untitled Lecture').localeCompare(b.title || 'Untitled Lecture');
+                case 'name-desc':
+                    return (b.title || 'Untitled Lecture').localeCompare(a.title || 'Untitled Lecture');
+                default:
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+            }
+        });
+        
+        this.renderFilteredLectures(filteredLectures);
+    }
+
+    renderFilteredLectures(lectures) {
         const container = document.getElementById('lecturesList');
         container.innerHTML = ''; // Clear existing
 
         if (lectures.length === 0) {
-            container.innerHTML = '<p class="no-lectures">No lectures available yet.</p>';
+            container.innerHTML = `
+                <div class="no-results">
+                    <i class="bi bi-search"></i>
+                    <p>No lectures found</p>
+                </div>
+            `;
             return;
         }
-
-        // Sort lectures by date (newest first)
-        lectures.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         lectures.forEach(lecture => {
             const card = this.createLectureCard(lecture);
             container.appendChild(card);
         });
+    }
+
+    renderLectures(lectures) {
+        this.lectures = lectures;
+        this.filterAndSortLectures();
     }
 
     createLectureCard(lecture) {

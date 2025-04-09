@@ -269,7 +269,7 @@ input, textarea {
 .transcription-content,
 #notesEditor,
 #transcriptionText {
-    background: var(--card-bg) !important;
+    background: white;
     color: var(--text-color) !important;
     border: 1px solid var(--border-color);
 }
@@ -431,7 +431,6 @@ input, textarea {
     overflow-y: auto;
     line-height: 1.4;  /* reduced from 1.6 */
     padding: 20px;
-    background: rgba(255, 255, 255, 0.1);
     border-radius: 0.5rem;
     color: #3c2f28;
     border: 1px solid var(--border-color);
@@ -497,7 +496,7 @@ input, textarea {
     justify-content: center;
     padding: 20px;
     text-align: center;
-    background-color: rgba(224, 235, 230, 0.6); /* Using var(--container-bg) with lower opacity */
+    background-color: rgba(224, 235, 230, 0.6); 
     border-radius: 8px;
     margin: 20px 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -1493,7 +1492,7 @@ input:checked:hover + .toggle-slider {
 }
 
 .definable:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: white;
     border-radius: 4px;
 }
 
@@ -6592,7 +6591,7 @@ html {
 }
 
 .visual-slide-text {
-    padding: 20px;
+    padding: 25px;
 }
 
 .visual-slide-text h3 {
@@ -6725,7 +6724,7 @@ html {
 
 /* Text content */
 .visual-slide-text {
-    padding: 20px;
+    padding: 25px;
 }
 
 .visual-slide-text h3 {
@@ -6742,7 +6741,8 @@ html {
     margin: 0 0 15px 0;
     color: #34495e;
     line-height: 1.6;
-    font-size: 16px;
+    font-size: 17px;
+    font-weight: 400;
 }
 
 /* Context box */
@@ -7014,5 +7014,15 @@ html {
     font-size: 0.95rem;
     line-height: 1.5;
     color: var(--text-color);
+}
+
+.visual-slide-text h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #2c3e50;
+    font-size: 24px;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 10px;
 }
   

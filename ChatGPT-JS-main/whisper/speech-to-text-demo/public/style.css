@@ -1,6 +1,6 @@
 :root {
-    --sidebar-bg: #4a4a4a;
-    --card-bg: #4a4a4a;
+    --sidebar-bg: #85b09a;
+    --card-bg: #85b09a;
     --primary-color: #ff7171;
     --sidebar-width: 280px;
     --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
@@ -18,7 +18,7 @@
 }
 
 .studio-header h2 {
-    color: var(--primary-color);
+    color: #7e9ebf;
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
     font-weight: 700;
@@ -170,7 +170,7 @@
 
 .lecture-title-input:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--primary-color);
+    box-shadow: 0 0 0 2px #e0ebe6;
 }
 
 .lecture-title-input::placeholder {

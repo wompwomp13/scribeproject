@@ -674,10 +674,7 @@ class StudentLectureNotes {
                         <div class="visual-slide-text">
                             <h3>${section.term}</h3>
                             <p>${section.explanation}</p>
-                            <div class="term-context">
-                                <small><strong>Context:</strong> ${section.context}</small>
                                     </div>
-                                </div>
                                 </div>
                 `;
                 

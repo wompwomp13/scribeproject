@@ -1,10 +1,10 @@
 :root {
-    --sidebar-bg: #4a4a4a;
-    --card-bg: #4a4a4a;
+    --sidebar-bg: #85b09a;
+    --card-bg: #85b09a;
     --primary-color: #e85d56;
     --sidebar-width: 280px;
     --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
-    --main-bg: #363636;
+    --main-bg: #85b09a;
     --text-light: rgba(255, 255, 255, 0.9);
     --text-muted: rgba(255, 255, 255, 0.6);
 }
@@ -13,7 +13,7 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: #4a4a4a;
+    background-color: #85b09a;
     font-family: var(--font-primary);
 }
 
@@ -85,7 +85,7 @@ body {
 }
 
 .welcome-text {
-    color: var(--primary-color);
+    color: #7e9ebf;
     font-size: 2rem;
     font-weight: 600;
     margin-bottom: 2rem;
@@ -229,10 +229,7 @@ body {
     position: relative;
 }
 
-.action-card:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.1);
-}
+
 
 .action-card i {
     font-size: 1.8rem;
@@ -286,9 +283,6 @@ body {
     transition: transform 0.2s;
 }
 
-.management-card:hover {
-    transform: translateY(-4px);
-}
 
 .card-header {
     display: flex;
@@ -394,21 +388,17 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    background: #525252;
-}
+
 
 .feature-icon {
     width: 64px;
     height: 64px;
-    background: var(--primary-color);
+    background: #7e9ebf;
     border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 10px rgba(232, 93, 86, 0.3);
+ 
 }
 
 .feature-icon i {
@@ -438,7 +428,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(0, 0, 0, 0.3);
+    background: white;
     padding: 1.2rem;
     border-radius: 1rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -454,19 +444,19 @@ body {
 .stat-value {
     font-size: 2rem;
     font-weight: 700;
-    color: white;
+    color: #7e9ebf;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     margin: 0;
 }
 
 .stat-label {
     font-size: 0.9rem;
-    color: var(--text-muted);
+    color: #7e9ebf;
     font-weight: 500;
 }
 
 .feature-btn {
-    background: var(--primary-color);
+    background: #7e9ebf;
     color: white;
     border: none;
     padding: 0.8rem 1.5rem;
@@ -479,8 +469,7 @@ body {
 .feature-btn:hover {
     opacity: 0.9;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    background: #f06960;
+    box-shadow: 0 4px 12px #7e9ebf;
 }
 
 /* Responsive adjustments */

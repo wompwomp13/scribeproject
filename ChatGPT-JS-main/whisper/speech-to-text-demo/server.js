@@ -128,9 +128,9 @@ app.post('/upload', upload.single('data'), async (req, res) => {
                 });
                 
                 // Clean up the temp file if we're using disk storage
-                fs.unlink(req.file.path, (err) => {
-                    if (err) console.error('Error deleting preview file:', err);
-                });
+            fs.unlink(req.file.path, (err) => {
+                if (err) console.error('Error deleting preview file:', err);
+            });
             }
             
             // Return just the transcription
@@ -1004,8 +1004,8 @@ app.get('/api/courses', async (req, res) => {
             name: course.name || 'Unnamed Course',
             code: course.code || 'NO_CODE',
             description: course.description || '',
-            instructor: course.instructor || null,
-            status: course.status || 'active'
+            instructor: course.instructor ? course.instructor.name : 'TBA'
+            // Schedule information intentionally omitted
         }));
 
         console.log('Formatted courses:', formattedCourses); // Debug log
@@ -1069,7 +1069,12 @@ app.put('/api/courses/:id', async (req, res) => {
 
         res.json({
             success: true,
-            course: await Course.findById(course._id).populate('instructor', 'name email')
+            course: {
+                _id: course._id,
+                code: course.code,
+                name: course.name,
+                instructor: course.instructor ? course.instructor.name : 'TBA'
+            }
         });
     } catch (error) {
         console.error('Error updating course:', error);
@@ -1135,7 +1140,16 @@ app.get('/api/course/:id', async (req, res) => {
             return res.status(404).json({ error: 'Course not found' });
         }
 
-        res.json({ success: true, course });
+        res.json({ 
+            success: true, 
+            course: {
+                _id: course._id,
+                code: course.code,
+                name: course.name,
+                description: course.description || '',
+                instructor: course.instructor ? course.instructor.name : 'TBA'
+            }
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1295,8 +1309,7 @@ app.get('/api/courses/:id', async (req, res) => {
             name: course.name || 'Unnamed Course',
             code: course.code || 'NO_CODE',
             description: course.description || '',
-            instructor: course.instructor ? course.instructor.name : 'TBA',
-            schedule: course.schedule || 'Schedule TBA'
+            instructor: course.instructor ? course.instructor.name : 'TBA'
         };
 
         res.json(formattedCourse);
@@ -1342,6 +1355,45 @@ app.get('/scourse/:id', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'scourse.html'));
 });
 
+// Initialize admin user (add this near other initialization code)
+async function initializeAdminUser() {
+    try {
+        const adminEmail = 'admin@scribe.edu'; // Must match the email in admin-access.js
+        
+        // Check if admin user already exists
+        const existingAdmin = await User.findOne({ email: adminEmail });
+        if (existingAdmin) {
+            console.log('Admin user already exists');
+            
+            // Ensure the user has admin role
+            if (existingAdmin.role !== 'admin') {
+                existingAdmin.role = 'admin';
+                existingAdmin.isVerified = true;
+                existingAdmin.status = 'active';
+                await existingAdmin.save();
+                console.log('Updated existing user to admin role');
+            }
+            return;
+        }
+        
+        // Create admin user if it doesn't exist
+        const adminUser = new User({
+            name: 'Admin User',
+            email: adminEmail,
+            password: 'admin123', // You should change this to a strong password
+            schoolId: 'ADMIN001',
+            role: 'admin',
+            isVerified: true,
+            status: 'active'
+        });
+        
+        await adminUser.save();
+        console.log('Created admin user:', adminEmail);
+    } catch (error) {
+        console.error('Error initializing admin user:', error);
+    }
+}
+
 // Start server only after DB connection
 async function startServer() {
     try {
@@ -1351,6 +1403,9 @@ async function startServer() {
             console.log('Available routes:');
             console.log('- GET  /api/recordings');
             console.log('- POST /upload');
+            
+            // Initialize admin user after server starts
+            initializeAdminUser();
         });
     } catch (err) {
         console.error('Failed to start server:', err);
@@ -1932,7 +1987,7 @@ app.get('/api/users/:id/courses', async (req, res) => {
             error: error.message
         });
     }
-});
+}); 
 
 // Add this new endpoint to format transcripts with markdown
 app.post('/api/format-transcript', async (req, res) => {
@@ -2343,4 +2398,79 @@ app.get('/admin/fix-recording-by-title/:title', async (req, res) => {
             details: error.message
         });
     }
-}); 
+});
+
+// Email verification for password reset
+app.post('/api/auth/verify-email', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Validate email
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+
+        // Check if user exists with this email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'No account found with this email'
+            });
+        }
+
+        // Return success if user exists
+        return res.json({
+            success: true,
+            message: 'Email verified'
+        });
+    } catch (error) {
+        console.error('Email verification error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error during email verification'
+        });
+    }
+});
+
+// Reset password route
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Validate inputs
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email and password are required'
+            });
+        }
+
+        // Find user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Update user's password (no need for bcrypt as requested)
+        user.password = password;
+        await user.save();
+
+        return res.json({
+            success: true,
+            message: 'Password updated successfully'
+        });
+    } catch (error) {
+        console.error('Password reset error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error during password reset'
+        });
+    }
+});

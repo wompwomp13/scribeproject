@@ -180,7 +180,7 @@
 }
 
 .lecture-count {
-    color: #666;
+    color: #494949;
     font-size: 0.9rem;
 }
 
@@ -210,13 +210,6 @@
     align-items: center;
 }
 
-.lecture-info h3 {
-    color: white;
-    font-size: 1.4rem;
-    font-weight: 500;
-    margin: 0 0 0.5rem 0;
-}
-
 .lecture-meta {
     display: flex;
     gap: 1.5rem;
@@ -226,7 +219,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: #494949;
     font-size: 0.9rem;
 }
 
@@ -252,15 +245,6 @@
     border-radius: 999px;
     font-size: var(--font-size-xs);
     font-weight: 500;
-}
-
-.lecture-date,
-.lecture-duration {
-    color: var(--text-muted);
-    font-size: var(--font-size-sm);
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
 }
 
 /* Lecture Folders */
@@ -558,7 +542,7 @@
 /* Update dashboard container to include right sidebar */
 .dashboard-container {
     display: grid;
-    grid-template-columns: var(--sidebar-width) 1fr 300px;
+    grid-template-columns: var(--sidebar-width) 1fr auto;
     min-height: 100vh;
 }
 
@@ -574,6 +558,10 @@
     border-radius: 2rem;
     align-items: center;
     justify-content: center;
+    position: sticky;
+    top: 1.5rem;
+    right: 0;
+    z-index: 9;
 }
 
 .recording-content {
@@ -724,17 +712,10 @@
 }
 
 .lecture-info h3 {
-    color: white;
+    color: #494949;
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0 0 0.75rem 0;
-}
-
-.lecture-meta {
-    display: flex;
-    gap: 1.5rem;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
 }
 
 .topic-tag {
@@ -759,7 +740,20 @@
 }
 
 .view-lecture:hover {
-    background: #ff8585;
+    background: #7e9ebf;
     transform: translateY(-1px);
     color: white;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    color: white;
+    padding: 2rem 3rem;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+    z-index: 10;
 }

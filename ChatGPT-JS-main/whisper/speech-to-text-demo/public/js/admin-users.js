@@ -1,6 +1,9 @@
 class UserManager {
     constructor() {
         this.users = [];
+        this.filteredUsers = [];
+        this.searchText = '';
+        this.filterOption = 'all';
         this.courses = [];
         this.selectedCourses = new Set();
         this.selectedAvailableCourses = new Set();
@@ -19,17 +22,22 @@ class UserManager {
     setupEventListeners() {
         this.userModal = new bootstrap.Modal(document.getElementById('userModal'));
 
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            this.handleSearch(e.target.value);
-        });
-
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.handleFilter(btn.dataset.role);
-                document.querySelector('.filter-btn.active').classList.remove('active');
-                btn.classList.add('active');
+        // Setup search and filter events
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.searchText = e.target.value.toLowerCase();
+                this.filterAndSortUsers();
             });
-        });
+        }
+
+        const userRoleFilter = document.getElementById('userRoleFilter');
+        if (userRoleFilter) {
+            userRoleFilter.addEventListener('change', (e) => {
+                this.filterOption = e.target.value;
+                this.filterAndSortUsers();
+            });
+        }
 
         // Add course search event listeners
         document.getElementById('assignedCourseSearch').addEventListener('input', (e) => {
@@ -58,6 +66,98 @@ class UserManager {
                     this.unassignSelectedCourses();
                 }
             }
+        });
+    }
+
+    filterAndSortUsers() {
+        // Filter users based on search text and selected filter
+        this.filteredUsers = this.users.filter(user => {
+            // Apply search filter
+            const searchStr = `${user.name} ${user.email} ${user.schoolId || ''}`.toLowerCase();
+            const matchesSearch = this.searchText === '' || searchStr.includes(this.searchText);
+            
+            // Apply role/verification filter
+            let matchesFilter = true;
+            if (this.filterOption === 'teacher') {
+                matchesFilter = user.role === 'teacher';
+            } else if (this.filterOption === 'student') {
+                matchesFilter = user.role === 'student';
+            } else if (this.filterOption === 'verified') {
+                matchesFilter = user.isVerified === true;
+            } else if (this.filterOption === 'unverified') {
+                matchesFilter = user.isVerified === false;
+            }
+            
+            return matchesSearch && matchesFilter;
+        });
+        
+        // Sort users by name (can add more sort options later)
+        this.filteredUsers.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Render the filtered users
+        this.renderFilteredUsers();
+    }
+    
+    renderFilteredUsers() {
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+        
+        if (this.filteredUsers.length === 0) {
+            // Create a no results row that spans all columns
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.setAttribute('colspan', '5');
+            td.className = 'no-results';
+            td.innerHTML = `
+                <i class="bi bi-search"></i>
+                <p>No users found matching "${this.searchText}"</p>
+            `;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+            return;
+        }
+        
+        this.filteredUsers.forEach(user => {
+            const tr = document.createElement('tr');
+            const initials = user.name.split(' ').map(n => n[0]).join('');
+            
+            tr.innerHTML = `
+                <td style="width: 30%;">
+                    <div class="user-info">
+                        <div class="user-avatar">${initials}</div>
+                        <div class="user-details">
+                            <span class="user-name">${user.name}</span>
+                            <span class="user-id">${user.schoolId || 'N/A'}</span>
+                        </div>
+                    </div>
+                </td>
+                <td style="width: 25%;">${user.email}</td>
+                <td style="width: 15%;">${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</td>
+                <td style="width: 15%;">
+                    <div class="d-flex justify-content-start">
+                        ${user.isVerified ? 
+                            '<span class="verification-badge"><i class="bi bi-check-circle-fill"></i> Verified</span>' : 
+                            '<span class="verification-badge unverified"><i class="bi bi-x-circle-fill"></i> Not Verified</span>'
+                        }
+                    </div>
+                </td>
+                <td style="width: 15%; text-align: center;">
+                    <div class="action-buttons">
+                        ${!user.isVerified ? `
+                            <button class="action-btn verify-btn" onclick="userManager.handleVerifyUser('${user._id}')">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                        ` : ''}
+                        <button class="action-btn edit-btn" onclick="userManager.handleEditUser('${user._id}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="action-btn delete-btn" onclick="userManager.handleDeleteUser('${user._id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
     }
 
@@ -155,76 +255,29 @@ class UserManager {
             
             if (data.success) {
                 this.users = data.users;
-                this.renderUsers(this.users);
+                this.filteredUsers = [...this.users];
+                this.filterAndSortUsers();
             }
         } catch (error) {
             console.error('Error loading users:', error);
-            this.renderUsers(this.users);
+            // Render whatever users we have
+            this.filterAndSortUsers();
         }
     }
 
     renderUsers(users) {
-        const tbody = document.getElementById('usersTableBody');
-        tbody.innerHTML = '';
-
-        users.forEach(user => {
-            const tr = document.createElement('tr');
-            const initials = user.name.split(' ').map(n => n[0]).join('');
-            
-            tr.innerHTML = `
-                <td style="width: 30%;">
-                    <div class="user-info">
-                        <div class="user-avatar">${initials}</div>
-                        <div class="user-details">
-                            <span class="user-name">${user.name}</span>
-                            <span class="user-id">${user.schoolId || 'N/A'}</span>
-                        </div>
-                    </div>
-                </td>
-                <td style="width: 25%;">${user.email}</td>
-                <td style="width: 15%;">${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</td>
-                <td style="width: 15%;">
-                    <div class="d-flex justify-content-start">
-                        ${user.isVerified ? 
-                            '<span class="verification-badge"><i class="bi bi-check-circle-fill"></i> Verified</span>' : 
-                            '<span class="verification-badge unverified"><i class="bi bi-x-circle-fill"></i> Not Verified</span>'
-                        }
-                    </div>
-                </td>
-                <td style="width: 15%; text-align: center;">
-                    <div class="action-buttons">
-                        ${!user.isVerified ? `
-                            <button class="action-btn verify-btn" onclick="userManager.handleVerifyUser('${user._id}')">
-                                <i class="bi bi-check-circle"></i>
-                            </button>
-                        ` : ''}
-                        <button class="action-btn edit-btn" onclick="userManager.handleEditUser('${user._id}')">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="action-btn delete-btn" onclick="userManager.handleDeleteUser('${user._id}')">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+        this.users = users;
+        this.filterAndSortUsers();
     }
 
     handleSearch(query) {
-        const searchTerm = query.toLowerCase();
-        const filteredUsers = this.users.filter(user => {
-            const searchStr = `${user.name} ${user.email} ${user.schoolId}`.toLowerCase();
-            return searchStr.includes(searchTerm);
-        });
-        this.renderUsers(filteredUsers);
+        this.searchText = query.toLowerCase();
+        this.filterAndSortUsers();
     }
 
     handleFilter(role) {
-        const filteredUsers = role === 'all' 
-            ? this.users 
-            : this.users.filter(user => user.role === role);
-        this.renderUsers(filteredUsers);
+        this.filterOption = role;
+        this.filterAndSortUsers();
     }
 
     handleAddUser() {
@@ -240,47 +293,64 @@ class UserManager {
     }
 
     async handleVerifyUser(userId) {
-        if (!confirm('Are you sure you want to verify this user?')) {
-            return;
-        }
+        // Store the userId for later use when confirmed
+        this.userToVerify = userId;
+        
+        // Show the confirmation modal
+        const verifyModal = new bootstrap.Modal(document.getElementById('verifyConfirmModal'));
+        verifyModal.show();
+        
+        // Set up the confirmation button
+        const confirmBtn = document.getElementById('confirmVerifyBtn');
+        
+        // Remove any existing listeners to prevent duplicates
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        // Add click event to the new button
+        newConfirmBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch(`/api/users/${this.userToVerify}/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
 
-        try {
-            const response = await fetch(`/api/users/${userId}/verify`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to verify user');
                 }
-            });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to verify user');
-            }
+                const data = await response.json();
+                
+                // Hide the modal
+                verifyModal.hide();
 
-            const data = await response.json();
+                if (data.success) {
+                    // Update the user in the local array
+                    const userIndex = this.users.findIndex(u => u._id === this.userToVerify);
+                    if (userIndex !== -1) {
+                        this.users[userIndex] = {
+                            ...this.users[userIndex],
+                            isVerified: true,
+                            status: 'active'
+                        };
+                    }
 
-            if (data.success) {
-                // Update the user in the local array
-                const userIndex = this.users.findIndex(u => u._id === userId);
-                if (userIndex !== -1) {
-                    this.users[userIndex] = {
-                        ...this.users[userIndex],
-                        isVerified: true,
-                        status: 'active'
-                    };
+                    // Refresh the display
+                    this.filterAndSortUsers();
+                    this.showToast('User verified successfully!');
+                } else {
+                    throw new Error(data.message || 'Failed to verify user');
                 }
-
-                // Refresh the display
-                this.renderUsers(this.users);
-                alert('User verified successfully!');
-            } else {
-                throw new Error(data.message || 'Failed to verify user');
+            } catch (error) {
+                console.error('Error verifying user:', error);
+                this.showToast('Failed to verify user: ' + error.message, 'error');
+                verifyModal.hide();
             }
-        } catch (error) {
-            console.error('Error verifying user:', error);
-            alert('Failed to verify user: ' + error.message);
-        }
+        });
     }
 
     async handleEditUser(userId) {
@@ -375,13 +445,13 @@ class UserManager {
                 this.selectedAssignedCourses.clear();
                 
                 // Show success toast
-                this.saveToast.show();
+                this.showToast('User saved successfully!');
             } else {
                 throw new Error(data.error || 'Failed to save user');
             }
         } catch (error) {
             console.error('Error saving user:', error);
-            alert('Failed to save user: ' + error.message);
+            this.showToast('Failed to save user: ' + error.message, 'error');
         }
     }
 
@@ -424,30 +494,70 @@ class UserManager {
     }
 
     async handleDeleteUser(userId) {
-        if (!confirm('Are you sure you want to delete this user?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/users/${userId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
+        // Store the userId for later use when confirmed
+        this.userToDelete = userId;
+        
+        // Show the confirmation modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        deleteModal.show();
+        
+        // Set up the confirmation button
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        // Remove any existing listeners to prevent duplicates
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        // Add click event to the new button
+        newConfirmBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch(`/api/users/${this.userToDelete}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                // Hide the modal
+                deleteModal.hide();
+                
+                if (data.success) {
+                    await this.loadUsers();
+                    this.showToast('User deleted successfully!');
+                } else {
+                    throw new Error(data.message || 'Failed to delete user');
                 }
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                await this.loadUsers();
-                alert('User deleted successfully!');
-            } else {
-                throw new Error(data.message || 'Failed to delete user');
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                this.showToast('Failed to delete user: ' + error.message, 'error');
+                deleteModal.hide();
             }
-        } catch (error) {
-            console.error('Error deleting user:', error);
-            alert('Failed to delete user: ' + error.message);
-        }
+        });
+    }
+
+    showToast(message, type = 'success') {
+        const toast = document.getElementById('saveToast');
+        const toastBody = toast.querySelector('.toast-body');
+        
+        // Clear previous classes
+        toast.classList.remove('toast-success', 'toast-error', 'toast-warning', 'toast-info');
+        
+        // Add the appropriate toast color class
+        toast.classList.add(`toast-${type}`);
+        
+        // Update icon based on type
+        let icon = 'check-circle';
+        if (type === 'error') icon = 'x-circle';
+        else if (type === 'warning') icon = 'exclamation-triangle';
+        else if (type === 'info') icon = 'info-circle';
+        
+        // Update message and icon
+        toastBody.innerHTML = `<i class="bi bi-${icon}"></i>${message}`;
+        
+        // Show the toast
+        this.saveToast.show();
     }
 }
 

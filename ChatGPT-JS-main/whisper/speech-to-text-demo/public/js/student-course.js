@@ -19,16 +19,13 @@ async function loadCourseDetails(courseId) {
         document.querySelector('.course-code').textContent = course.code;
         document.querySelector('.course-header h1').textContent = course.name;
         
-        // Update meta information
-        const timeSlot = document.querySelector('.time-slot');
-        if (timeSlot) {
-            timeSlot.innerHTML = `<i class="bi bi-clock"></i> ${course.schedule || 'Schedule TBA'}`;
+        // Set course description if available
+        const descriptionElement = document.getElementById('courseDescription');
+        if (descriptionElement && course.description) {
+            descriptionElement.textContent = course.description;
         }
         
-        const students = document.querySelector('.students');
-        if (students) {
-            students.innerHTML = `<i class="bi bi-person"></i> ${course.instructor || 'TBA'}`;
-        }
+        // Removed meta information update - no longer showing schedule and student count
     } catch (error) {
         console.error('Error loading course details:', error);
     }

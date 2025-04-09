@@ -23,13 +23,9 @@
                     <i class="bi bi-house"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="#" class="nav-item">
-                    <i class="bi bi-gear"></i>
-                    <span>Settings</span>
-                </a>
-                <a href="#" class="nav-item">
-                    <i class="bi bi-bell"></i>
-                    <span>Notifications</span>
+                <a href="/login.html" class="nav-item">
+                    <i class="bi bi-box-arrow-left"></i>
+                    <span>Logout</span>
                 </a>
             </nav>
         </div>
@@ -41,16 +37,7 @@
                 <div class="course-info">
                     <p class="course-code">Physics 101</p>
                     <h1>Introduction to Physics</h1>
-                    <div class="course-meta">
-                        <span class="time-slot">
-                            <i class="bi bi-clock"></i>
-                            MWF 10:00 AM - 11:00 AM
-                        </span>
-                        <span class="students">
-                            <i class="bi bi-person"></i>
-                            30 students
-                        </span>
-                    </div>
+                    <p class="course-description">An introduction to the fundamental principles of physics, covering mechanics, motion, and energy.</p>
                 </div>
             </div>
 
@@ -61,20 +48,31 @@
                     <span class="lecture-count">2 lectures this week</span>
                 </div>
                 
+                <!-- Search and Filter Container -->
+                <div class="search-filter-container">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="lectureSearch" placeholder="Search lectures...">
+                    </div>
+                    <div class="filter-controls">
+                        <select id="sortLectures" class="sort-select">
+                            <option value="date-new">Date (Newest)</option>
+                            <option value="date-old">Date (Oldest)</option>
+                            <option value="name-asc">Title (A-Z)</option>
+                            <option value="name-desc">Title (Z-A)</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <div class="lecture-list">
                     <div class="lecture-card">
                         <div class="lecture-content">
                             <div class="lecture-info">
                                 <h3>Intro to Kinematics</h3>
                                 <div class="lecture-meta">
-                                    <span class="topic-tag">Mechanics</span>
                                     <span class="date">
                                         <i class="bi bi-calendar"></i>
                                         March 15, 2024
-                                    </span>
-                                    <span class="duration">
-                                        <i class="bi bi-clock"></i>
-                                        45 mins
                                     </span>
                                 </div>
                             </div>

@@ -1,4 +1,8 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check if user is admin, otherwise redirect
+    checkAdminAccess();
+    
+    // Load dashboard data
     loadDashboardStats();
     
     // Listen for course changes
@@ -11,6 +15,35 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCourseStats(event.detail.courses);
     });
 });
+
+// Function to verify the user is an admin
+async function checkAdminAccess() {
+    try {
+        // Get the current user email from localStorage or cookie
+        const currentUserEmail = localStorage.getItem('currentUserEmail');
+        if (!currentUserEmail) {
+            // No user is logged in, redirect to login
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // Make a request to get the current user info
+        const response = await fetch(`/api/auth/current-user?userEmail=${currentUserEmail}`);
+        const data = await response.json();
+        
+        if (!data.success || data.user.role !== 'admin') {
+            // User is not an admin, redirect to appropriate dashboard
+            if (data.user.role === 'teacher') {
+                window.location.href = 'dashboard.html';
+            } else {
+                window.location.href = 'studentdashboard.html';
+            }
+        }
+    } catch (error) {
+        console.error('Error verifying admin access:', error);
+        window.location.href = 'login.html';
+    }
+}
 
 async function loadDashboardStats() {
     try {

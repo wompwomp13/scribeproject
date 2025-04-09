@@ -1,7 +1,10 @@
 class CourseManager {
     constructor() {
         this.courses = [];
+        this.filteredCourses = [];
         this.currentCourseId = null;
+        this.searchText = '';
+        this.sortOption = 'name-asc';
         this.setupEventListeners();
         this.loadCourses();
         this.loadInstructors();
@@ -28,6 +31,76 @@ class CourseManager {
                 }
             });
         });
+
+        // Add event listeners for search and sort
+        const searchInput = document.getElementById('courseSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.searchText = e.target.value.toLowerCase();
+                this.filterAndSortCourses();
+            });
+        }
+
+        const sortSelect = document.getElementById('sortCourses');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', (e) => {
+                this.sortOption = e.target.value;
+                this.filterAndSortCourses();
+            });
+        }
+    }
+
+    filterAndSortCourses() {
+        // First filter courses based on search text
+        this.filteredCourses = this.courses.filter(course => {
+            const courseName = (course.name || '').toLowerCase();
+            const courseCode = (course.code || '').toLowerCase();
+            const courseDescription = (course.description || '').toLowerCase();
+            
+            return courseName.includes(this.searchText) || 
+                   courseCode.includes(this.searchText) ||
+                   courseDescription.includes(this.searchText);
+        });
+
+        // Then sort the filtered courses
+        this.filteredCourses.sort((a, b) => {
+            switch (this.sortOption) {
+                case 'name-asc':
+                    return (a.name || '').localeCompare(b.name || '');
+                case 'name-desc':
+                    return (b.name || '').localeCompare(a.name || '');
+                case 'date-new':
+                    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                case 'date-old':
+                    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+                default:
+                    return 0;
+            }
+        });
+
+        // Render the filtered and sorted courses
+        this.renderFilteredCourses();
+    }
+
+    renderFilteredCourses() {
+        const container = document.querySelector('.courses-grid');
+        container.innerHTML = '';
+
+        if (this.filteredCourses.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.className = 'no-results';
+            noResults.innerHTML = `
+                <i class="bi bi-search"></i>
+                <p>No courses found matching "${this.searchText}"</p>
+            `;
+            container.appendChild(noResults);
+            return;
+        }
+
+        this.filteredCourses.forEach(course => {
+            const card = this.createCourseCard(course);
+            container.appendChild(card);
+        });
     }
 
     async loadCourses() {
@@ -40,7 +113,8 @@ class CourseManager {
             
             if (data.success) {
                 this.courses = data.courses;
-                this.renderCourses();
+                this.filteredCourses = [...this.courses];
+                this.filterAndSortCourses();
                 // Dispatch event for course list update
                 window.dispatchEvent(new CustomEvent('coursesUpdated', {
                     detail: { courses: this.courses }
@@ -49,7 +123,7 @@ class CourseManager {
         } catch (error) {
             console.error('Error loading courses:', error);
             // Keep existing courses if API fails
-            this.renderCourses();
+            this.filterAndSortCourses();
         }
     }
 
@@ -82,13 +156,8 @@ class CourseManager {
     }
 
     renderCourses() {
-        const container = document.querySelector('.courses-grid');
-        container.innerHTML = '';
-
-        this.courses.forEach(course => {
-            const card = this.createCourseCard(course);
-            container.appendChild(card);
-        });
+        // Use filterAndSortCourses method instead, which calls renderFilteredCourses
+        this.filterAndSortCourses();
     }
 
     createCourseCard(course) {
@@ -197,19 +266,35 @@ class CourseManager {
     }
 
     showNotification(message, type = 'success') {
-        const notification = document.getElementById('notification');
-        notification.textContent = message;
-        notification.className = 'notification-toast ' + type;
+        const toast = document.getElementById('saveToast');
+        const toastMessage = document.getElementById('toastMessage');
         
-        // Force a reflow to restart the animation
-        notification.offsetHeight;
+        // Clear previous classes
+        toast.classList.remove('toast-success', 'toast-error', 'toast-warning', 'toast-info');
         
-        notification.classList.add('show');
+        // Add the appropriate toast color class
+        toast.classList.add(`toast-${type}`);
         
-        // Hide after 3 seconds
-        setTimeout(() => {
-            notification.classList.remove('show');
-        }, 3000);
+        // Update icon based on type
+        let icon = 'check-circle';
+        if (type === 'error') icon = 'x-circle';
+        else if (type === 'warning') icon = 'exclamation-triangle';
+        else if (type === 'info') icon = 'info-circle';
+        
+        // Update message and icon
+        const iconElement = toast.querySelector('.bi');
+        iconElement.className = `bi bi-${icon}`;
+        toastMessage.textContent = message;
+        
+        // Initialize Bootstrap toast if not already done
+        if (!this.bsToast) {
+            this.bsToast = new bootstrap.Toast(toast, {
+                delay: 3000
+            });
+        }
+        
+        // Show the toast
+        this.bsToast.show();
     }
 
     async handleSaveCourse() {
@@ -274,50 +359,67 @@ class CourseManager {
     }
 
     async handleDeleteCourse(courseId) {
-        if (!confirm('Are you sure you want to delete this course?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/courses/${courseId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            });
-
-            let data;
+        // Store the courseId for later use when confirmed
+        this.courseToDelete = courseId;
+        
+        // Show the confirmation modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        deleteModal.show();
+        
+        // Set up the confirmation button
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        // Remove any existing listeners to prevent duplicates
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        // Add click event to the new button
+        newConfirmBtn.addEventListener('click', async () => {
             try {
-                data = await response.json();
-            } catch (e) {
-                throw new Error('Failed to parse server response');
-            }
-            
-            if (!response.ok) {
-                throw new Error(data.error || `Server error (${response.status})`);
-            }
-            
-            // Reload courses first to ensure UI is updated
-            await this.loadCourses();
-            
-            // Show success notification
-            this.showNotification('Course deleted successfully!');
-            
-            // Dispatch event for dashboard update
-            window.dispatchEvent(new CustomEvent('courseChanged', {
-                detail: { 
-                    action: 'delete',
-                    courseId: courseId
+                const response = await fetch(`/api/courses/${this.courseToDelete}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    throw new Error('Failed to parse server response');
                 }
-            }));
-        } catch (error) {
-            console.error('Error deleting course:', error);
-            this.showNotification(
-                `Failed to delete course: ${error.message}`,
-                'error'
-            );
-        }
+                
+                // Hide the modal
+                deleteModal.hide();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `Server error (${response.status})`);
+                }
+                
+                // Reload courses first to ensure UI is updated
+                await this.loadCourses();
+                
+                // Show success notification
+                this.showNotification('Course deleted successfully!');
+                
+                // Dispatch event for dashboard update
+                window.dispatchEvent(new CustomEvent('courseChanged', {
+                    detail: { 
+                        action: 'delete',
+                        courseId: this.courseToDelete
+                    }
+                }));
+            } catch (error) {
+                console.error('Error deleting course:', error);
+                this.showNotification(
+                    `Failed to delete course: ${error.message}`,
+                    'error'
+                );
+                deleteModal.hide();
+            }
+        });
     }
 }
 

@@ -1,9 +1,31 @@
 class TeacherClass {
     constructor() {
         this.courseId = window.location.pathname.split('/tcourse/')[1];
+        this.lectures = [];
+        this.searchInput = document.getElementById('lectureSearch');
+        this.sortSelect = document.getElementById('sortLectures');
+        
+        // Setup search and filter event listeners
+        this.setupEventListeners();
+        
         this.loadLectures();
         this.setupRecordingButton();
         this.loadCourseDetails();
+    }
+    
+    setupEventListeners() {
+        // Add event listeners for search and filter
+        if (this.searchInput) {
+            this.searchInput.addEventListener('input', () => {
+                this.filterAndSortLectures();
+            });
+        }
+
+        if (this.sortSelect) {
+            this.sortSelect.addEventListener('change', () => {
+                this.filterAndSortLectures();
+            });
+        }
     }
 
     async loadCourseDetails() {
@@ -15,6 +37,13 @@ class TeacherClass {
             if (data.success) {
                 document.getElementById('courseCode').textContent = data.course.code;
                 document.getElementById('courseName').textContent = data.course.name;
+                
+                // Set the course description if it exists
+                const descriptionElement = document.getElementById('courseDescription');
+                if (descriptionElement && data.course.description) {
+                    descriptionElement.textContent = data.course.description;
+                }
+                
                 document.title = `SCRIBE - ${data.course.name}`;
             }
         } catch (error) {
@@ -28,22 +57,74 @@ class TeacherClass {
             const data = await response.json();
             
             if (data.success && data.recordings) {
-                this.renderLectures(data.recordings);
+                this.lectures = data.recordings;
+                this.filterAndSortLectures();
                 this.updateLectureCount(data.recordings.length);
             }
         } catch (error) {
             console.error('Error loading lectures:', error);
         }
     }
-
-    renderLectures(lectures) {
+    
+    filterAndSortLectures() {
+        const searchText = this.searchInput ? this.searchInput.value.toLowerCase() : '';
+        const sortOption = this.sortSelect ? this.sortSelect.value : 'date-new';
+        
+        // Filter lectures based on search text
+        let filteredLectures = this.lectures.filter(lecture => {
+            const title = (lecture.title || 'Untitled Lecture').toLowerCase();
+            const date = new Date(lecture.createdAt).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }).toLowerCase();
+            
+            return title.includes(searchText) || date.includes(searchText);
+        });
+        
+        // Sort filtered lectures
+        filteredLectures.sort((a, b) => {
+            switch (sortOption) {
+                case 'date-new':
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                case 'date-old':
+                    return new Date(a.createdAt) - new Date(b.createdAt);
+                case 'name-asc':
+                    return (a.title || 'Untitled Lecture').localeCompare(b.title || 'Untitled Lecture');
+                case 'name-desc':
+                    return (b.title || 'Untitled Lecture').localeCompare(a.title || 'Untitled Lecture');
+                default:
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+            }
+        });
+        
+        this.renderFilteredLectures(filteredLectures);
+    }
+    
+    renderFilteredLectures(lectures) {
         const container = document.querySelector('.lecture-list');
         container.innerHTML = ''; // Clear existing
+
+        if (lectures.length === 0) {
+            container.innerHTML = `
+                <div class="no-results">
+                    <i class="bi bi-search"></i>
+                    <p>No lectures found</p>
+                </div>
+            `;
+            return;
+        }
 
         lectures.forEach(lecture => {
             const card = this.createLectureCard(lecture);
             container.appendChild(card);
         });
+    }
+
+    renderLectures(lectures) {
+        this.lectures = lectures;
+        this.filterAndSortLectures();
     }
 
     createLectureCard(lecture) {
@@ -59,16 +140,11 @@ class TeacherClass {
         card.innerHTML = `
             <div class="lecture-content">
                 <div class="lecture-info">
-                    <h3>${lecture.title}</h3>
+                    <h3>${lecture.title || 'Untitled Lecture'}</h3>
                     <div class="lecture-meta">
-                        <span class="topic-tag">Mechanics</span>
                         <span class="date">
                             <i class="bi bi-calendar"></i>
                             ${date}
-                        </span>
-                        <span class="duration">
-                            <i class="bi bi-clock"></i>
-                            45 mins
                         </span>
                     </div>
                 </div>
