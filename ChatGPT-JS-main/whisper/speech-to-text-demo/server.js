@@ -2473,4 +2473,4 @@ app.post('/api/auth/reset-password', async (req, res) => {
             message: 'Server error during password reset'
         });
     }
-});
+}); 
