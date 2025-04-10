@@ -85,8 +85,10 @@ function setLoading(show, message = 'Processing...') {
     if (show) {
         overlay.classList.add('active');
         loadingText.textContent = message;
+        console.log('Loading overlay activated:', message);
     } else {
         overlay.classList.remove('active');
+        console.log('Loading overlay deactivated');
     }
 }
 
@@ -180,6 +182,7 @@ function startMainRecorder() {
     mainRecorder.onComplete = function(recorder, blob) { 
         console.log("Main recording encoding complete");
         mainRecordingBlob = blob;
+        console.log("Main recording blob size:", blob.size);
         
         // Don't automatically upload the full recording
         // It will only be uploaded when the user clicks the save button
@@ -188,13 +191,16 @@ function startMainRecorder() {
         saveButton.disabled = false;
     }
 
+    // IMPORTANT: Explicitly set timeLimit to 0 to disable the default 300-second (5-minute) limit
     mainRecorder.setOptions({
         encodeAfterRecord: encodeAfterRecord,
-        mp3: {bitRate: 160}
+        mp3: {bitRate: 160},
+        timeLimit: 3600  
     });
 
     mainRecorder.startRecording();
     isRecording = true;
+    console.log("Main recorder started with no time limit");
 }
 
 // Function to start recording a transcription chunk (for real-time transcription)
@@ -240,51 +246,127 @@ function startTranscriptionChunk() {
     }, CHUNK_DURATION * 1000);
 }
 
+// Add this helper function to force complete loading in case of stalls
+function forceCompleteLoading() {
+    console.log('Force completing loading process');
+    setLoading(false);
+    isProcessingComplete = true;
+    saveButton.disabled = false;
+    
+    // Check if transcription exists but might be incomplete
+    if (transcriptionParts.length > 0) {
+        const transcription = combineTranscriptions();
+        transcriptionText.value = transcription;
+        originalTranscription = transcription;
+        enableTranscriptionEditing();
+    }
+}
+
 // Function to process each transcription chunk
 async function processTranscriptionChunk(blob) {
     try {
+        // Add chunk to array, but limit array size to prevent memory issues
         transcriptionChunks.push(blob);
+        if (transcriptionChunks.length > 10) {
+            // Keep only the last 10 chunks to prevent memory bloat
+            transcriptionChunks = transcriptionChunks.slice(-10);
+        }
         
         // Show loading only for final chunk
         if (!isRecording) {
+            // Ensure loading screen is visible
             setLoading(true, 'Finalizing transcription...');
+            console.log('Showing loading screen for final chunk processing');
+            
+            // Set a safety timeout for long recordings (8-10 minutes)
+            // If we're processing the final chunk and it takes more than 30 seconds, 
+            // force the completion to prevent stuck loading
+            setTimeout(() => {
+                // Only run if we're still showing "Finalizing transcription..."
+                const loadingText = document.getElementById('loadingText');
+                if (loadingText && 
+                    loadingText.textContent === 'Finalizing transcription...' && 
+                    !isRecording) {
+                    console.warn('Final transcription processing timed out after 30 seconds');
+                    forceCompleteLoading();
+                }
+            }, 30000); // Increased to 30 seconds
         }
 
         // Upload and transcribe the chunk
         const formData = new FormData();
         formData.append('data', blob);
         
-        // Use the preview endpoint for transcription
-        const response = await fetch('/upload?preview=true', {
-            method: 'POST',
-            body: formData
-        });
+        console.log(`Processing chunk #${currentChunkNumber}, size: ${blob.size} bytes`);
         
-        if (!response.ok) {
-            throw new Error('Failed to process audio');
+        // Use the preview endpoint for transcription with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout (extended for longer recordings)
+        
+        try {
+            const response = await fetch('/upload?preview=true', {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to process audio: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Validate the response data
+            if (!data || !data.text) {
+                console.warn('Received empty text from transcription service');
+                data.text = ''; // Use empty string if text is missing
+            }
+            
+            transcriptionParts.push(data.text);
+            console.log(`Added transcription part #${transcriptionParts.length}: "${data.text.substring(0, 50)}..."`);
+            
+            // Update the transcription text area with all parts
+            const transcription = combineTranscriptions();
+            transcriptionText.value = transcription;
+            
+            // If this is the final chunk, enable editing
+            if (!isRecording) {
+                originalTranscription = transcription;
+                enableTranscriptionEditing();
+                
+                // Wait a moment before completing to ensure loading screen is visible
+                setTimeout(() => {
+                    // Ensure processing is marked as complete
+                    isProcessingComplete = true;
+                    setLoading(false);
+                    saveButton.disabled = false;
+                }, 1500);
+            }
+            
+            // Scroll to bottom of textarea to show latest text
+            transcriptionText.scrollTop = transcriptionText.scrollHeight;
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            // Handle timeout specifically
+            if (fetchError.name === 'AbortError') {
+                console.error('Transcription request timed out');
+                if (!isRecording) {
+                    // For final chunk timeout, force completion
+                    forceCompleteLoading();
+                    alert('Transcription processing timed out. The recording has been saved but transcription might be incomplete.');
+                }
+            } else {
+                throw fetchError;
+            }
         }
-        
-        const data = await response.json();
-        transcriptionParts.push(data.text);
-        
-        // Update the transcription text area with all parts
-        const transcription = combineTranscriptions();
-        transcriptionText.value = transcription;
-        
-        // If this is the final chunk, enable editing
-        if (!isRecording) {
-            originalTranscription = transcription;
-            enableTranscriptionEditing();
-        }
-        
-        // Scroll to bottom of textarea to show latest text
-        transcriptionText.scrollTop = transcriptionText.scrollHeight;
-        
     } catch (error) {
         console.error('Error processing chunk:', error);
         if (!isRecording) {
-            setLoading(false);
-            alert('Error processing the recording. Please try again.');
+            // Don't block saving if there's an error with transcription
+            forceCompleteLoading();
+            alert('Error processing the recording. You can still save, but the transcription might be incomplete.');
         }
     }
 }
@@ -315,21 +397,88 @@ function stopRecording() {
     // First set isRecording to false to prevent new chunks from starting
     isRecording = false;
     
+    // Make loading visible immediately
+    setLoading(true, 'Processing recording...');
+    
+    // Master safety timeout - if all else fails, ensure UI isn't stuck after 90 seconds
+    const masterTimeout = setTimeout(() => {
+        if (document.getElementById('loadingOverlay').classList.contains('active')) {
+            console.warn('Master timeout reached, forcing completion');
+            forceCompleteLoading();
+            alert('The processing is taking too long. You can now save the recording.');
+        }
+    }, 90000);
+    
+    // Track completion of both recorders
+    let mainComplete = false;
+    let chunkComplete = true; // Default to true if no chunk recorder
+    
     // Stop the main recorder
     if (mainRecorder && mainRecorder.isRecording()) {
         setLoading(true, 'Processing final recording...');
+        
+        // Add timeout to ensure we don't get stuck processing
+        const processTimeout = setTimeout(() => {
+            if (!isProcessingComplete) {
+                console.warn('Recording processing timeout reached');
+                clearTimeout(masterTimeout); // Clear master timeout since we're handling it here
+                forceCompleteLoading();
+                alert('Processing is taking longer than expected. You can try saving now.');
+            }
+        }, 60000); // 60 second timeout as fallback
+        
+        // Override the onComplete handler to track completion
+        const originalOnComplete = mainRecorder.onComplete;
+        mainRecorder.onComplete = function(recorder, blob) {
+            // Call original handler
+            originalOnComplete.call(this, recorder, blob);
+            mainComplete = true;
+            
+            console.log("Main recording complete, blob size:", blob.size);
+            
+            // If both complete, we're done
+            if (mainComplete && chunkComplete) {
+                clearTimeout(processTimeout);
+                clearTimeout(masterTimeout);
+                isProcessingComplete = true;
+                setLoading(false);
+                saveButton.disabled = false;
+            }
+        };
+        
         mainRecorder.finishRecording();
+    } else {
+        mainComplete = true;
     }
     
     // Also stop the current chunk recorder to process the partial chunk
     if (currentChunkRecorder && currentChunkRecorder.isRecording()) {
         console.log("Finishing partial chunk recording");
+        chunkComplete = false;
+        
+        // Override the onComplete handler
+        const originalOnComplete = currentChunkRecorder.onComplete;
+        currentChunkRecorder.onComplete = function(recorder, blob) {
+            // Call original handler
+            originalOnComplete.call(this, recorder, blob);
+            chunkComplete = true;
+            
+            console.log("Final chunk complete, blob size:", blob.size);
+            
+            // If both complete, we're done
+            if (mainComplete && chunkComplete) {
+                clearTimeout(masterTimeout);
+                isProcessingComplete = true;
+                
+                // Keep loading visible for transcription processing
+                // setLoading will be called in processTranscriptionChunk with 'Finalizing transcription...'
+            }
+        };
+        
         currentChunkRecorder.finishRecording();
     }
 
     gumStream.getAudioTracks()[0].stop();
-    
-    // Save button will be enabled when mainRecorder.onComplete fires
 }
 
 // Add this to handle page unload
