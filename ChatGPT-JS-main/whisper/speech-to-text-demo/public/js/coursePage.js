@@ -225,7 +225,7 @@ class TeacherClass {
         const deleteBtn = card.querySelector('.delete-lecture');
         deleteBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            const lectureId = deleteBtn.getAttribute('data-id');
+                    const lectureId = deleteBtn.getAttribute('data-id');
             this.showDeleteToast(lectureId, card);
         });
 

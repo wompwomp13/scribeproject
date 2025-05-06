@@ -606,31 +606,54 @@ body {
 /* Toast styles */
 .toast-container {
     z-index: 1050;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    max-width: 400px;
+    padding: 0;
 }
 
 .toast {
-    background-color: #2a2a2a;
-    color: #fff;
+    background-color: var(--card-bg);
+    color: #494949;
     border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    border-radius: 15px;
+    overflow: hidden;
 }
 
 .toast-header {
-    background-color: #333;
-    color: #fff;
-    border-bottom: 1px solid #444;
+    background-color: var(--primary-color);
+    color: white;
+    border-bottom: none;
+    padding: 1rem 1.25rem;
 }
 
 .toast-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.toast-header .btn-close:hover {
+    opacity: 1;
 }
 
 .toast-body {
-    padding: 1rem;
+    padding: 1.5rem;
+    font-size: 1.1rem;
+    line-height: 1.5;
 }
 
 .toast-body .btn {
-    margin-right: 0.5rem;
+    margin-right: 0.75rem;
+    padding: 0.6rem 1.2rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
 .toast-body .btn-danger {
@@ -641,14 +664,29 @@ body {
 .toast-body .btn-danger:hover {
     background-color: #bb2d3b;
     border-color: #b02a37;
+    transform: translateY(-1px);
 }
 
 .toast-body .btn-secondary {
-    background-color: #6c757d;
-    border-color: #6c757d;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
 }
 
 .toast-body .btn-secondary:hover {
-    background-color: #5c636a;
-    border-color: #565e64;
+    background-color: #6c8ba7;
+    border-color: #6c8ba7;
+    transform: translateY(-1px);
+}
+
+.toast-body .mt-2 {
+    margin-top: 1.5rem !important;
+}
+
+.toast-body .pt-2 {
+    padding-top: 1.5rem !important;
+}
+
+.toast-body .border-top {
+    border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
