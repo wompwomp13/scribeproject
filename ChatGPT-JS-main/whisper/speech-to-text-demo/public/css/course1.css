@@ -602,3 +602,53 @@ body {
         width: 100%;
     }
 }
+
+/* Toast styles */
+.toast-container {
+    z-index: 1050;
+}
+
+.toast {
+    background-color: #2a2a2a;
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toast-header {
+    background-color: #333;
+    color: #fff;
+    border-bottom: 1px solid #444;
+}
+
+.toast-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.toast-body {
+    padding: 1rem;
+}
+
+.toast-body .btn {
+    margin-right: 0.5rem;
+}
+
+.toast-body .btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.toast-body .btn-danger:hover {
+    background-color: #bb2d3b;
+    border-color: #b02a37;
+}
+
+.toast-body .btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.toast-body .btn-secondary:hover {
+    background-color: #5c636a;
+    border-color: #565e64;
+}

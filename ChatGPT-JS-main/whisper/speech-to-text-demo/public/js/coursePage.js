@@ -11,6 +11,7 @@ class TeacherClass {
         this.loadLectures();
         this.setupRecordingButton();
         this.loadCourseDetails();
+        this.setupToast();
     }
     
     setupEventListeners() {
@@ -127,6 +128,67 @@ class TeacherClass {
         this.filterAndSortLectures();
     }
 
+    setupToast() {
+        // Create toast container if it doesn't exist
+        if (!document.querySelector('.toast-container')) {
+            const toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            toastContainer.innerHTML = `
+                <div id="deleteToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                        <strong class="me-auto">Delete Lecture</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        Are you sure you want to delete this lecture? This action cannot be undone.
+                        <div class="mt-2 pt-2 border-top">
+                            <button type="button" class="btn btn-danger btn-sm" id="confirmDeleteBtn">Delete</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="toast">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toastContainer);
+        }
+    }
+
+    showDeleteToast(lectureId, card) {
+        const toast = new bootstrap.Toast(document.getElementById('deleteToast'));
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        
+        // Remove any existing listeners
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        // Add click event to the new button
+        newConfirmBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch(`/api/recordings/${lectureId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    card.remove();
+                    const remainingLectures = document.querySelectorAll('.lecture-card').length;
+                    this.updateLectureCount(remainingLectures);
+                    toast.hide();
+                } else {
+                    throw new Error(data.error || 'Failed to delete lecture');
+                }
+            } catch (error) {
+                console.error('Error deleting lecture:', error);
+                alert('Failed to delete lecture. Please try again.');
+            }
+        });
+        
+        toast.show();
+    }
+
     createLectureCard(lecture) {
         const date = new Date(lecture.createdAt).toLocaleDateString('en-US', {
             weekday: 'long',
@@ -161,32 +223,10 @@ class TeacherClass {
         `;
 
         const deleteBtn = card.querySelector('.delete-lecture');
-        deleteBtn.addEventListener('click', async (e) => {
+        deleteBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            if (confirm('Are you sure you want to delete this lecture? This action cannot be undone.')) {
-                try {
-                    const lectureId = deleteBtn.getAttribute('data-id');
-                    const response = await fetch(`/api/recordings/${lectureId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        card.remove();
-                        const remainingLectures = document.querySelectorAll('.lecture-card').length;
-                        this.updateLectureCount(remainingLectures);
-                    } else {
-                        throw new Error(data.error || 'Failed to delete lecture');
-                    }
-                } catch (error) {
-                    console.error('Error deleting lecture:', error);
-                    alert('Failed to delete lecture. Please try again.');
-                }
-            }
+            const lectureId = deleteBtn.getAttribute('data-id');
+            this.showDeleteToast(lectureId, card);
         });
 
         return card;
