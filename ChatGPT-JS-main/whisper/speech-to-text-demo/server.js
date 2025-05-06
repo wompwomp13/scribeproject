@@ -2133,7 +2133,7 @@ Lecture Content: ${transcription}`;
             messages: [
                 { 
                     role: "system", 
-                    content: "You are an educational content specialist who creates interactive quizzes based on lecture materials. Return ONLY valid JSON in the specified format with no additional text." 
+                    content: "You are an educational content specialist who creates interactive quizzes based on lecture materials. You must return ONLY valid JSON in the specified format. Do not include any additional text, markdown formatting, or explanations. The response must be parseable with JSON.parse()." 
                 },
                 { role: "user", content: quizPrompt }
             ],
@@ -2146,18 +2146,31 @@ Lecture Content: ${transcription}`;
         const responseContent = completion.choices[0]?.message?.content || '';
         
         try {
+            // Clean the response content
+            const cleanedContent = responseContent
+                .replace(/```json\s*/g, '')  // Remove ```json prefix
+                .replace(/```\s*$/g, '')     // Remove ``` suffix
+                .trim();                      // Remove extra whitespace
+            
             // First attempt: direct parsing
-            quizData = JSON.parse(responseContent);
+            quizData = JSON.parse(cleanedContent);
         } catch (parseError) {
             console.error('Initial JSON parse error:', parseError);
+            console.error('Raw response:', responseContent);
             
             try {
                 // Second attempt: Try to extract JSON if wrapped in backticks
                 const jsonMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
                 if (jsonMatch && jsonMatch[1]) {
-                    quizData = JSON.parse(jsonMatch[1]);
+                    quizData = JSON.parse(jsonMatch[1].trim());
                 } else {
-                    throw new Error('Could not extract valid JSON from response');
+                    // Third attempt: Try to find the first valid JSON object
+                    const jsonObjectMatch = responseContent.match(/\{[\s\S]*\}/);
+                    if (jsonObjectMatch) {
+                        quizData = JSON.parse(jsonObjectMatch[0]);
+                    } else {
+                        throw new Error('Could not extract valid JSON from response');
+                    }
                 }
             } catch (extractError) {
                 console.error('Failed to extract JSON:', extractError);
