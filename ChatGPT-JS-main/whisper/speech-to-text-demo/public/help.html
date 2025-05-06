@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help - SCRIBE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/studentdashboard.css">
+    <style>
+        :root {
+            --primary-color: #85b09a;
+            --text-color: #494949;
+            --bg-color: #ffffff;
+            --button-color: #7e9ebf;
+        }
+        
+        body {
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .sidebar {
+            background-color: var(--primary-color);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .help-content {
+            padding: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            margin-top: 2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title i {
+            margin-right: 0.75rem;
+            font-size: 1.6rem;
+            color: var(--primary-color);
+        }
+        
+        .welcome-text {
+            font-size: 2.2rem;
+            margin-bottom: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .help-section {
+            margin-bottom: 2rem;
+        }
+        
+        .help-section p, .help-section li {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        hr {
+            margin: 2rem 0;
+            border-color: rgba(133, 176, 154, 0.3);
+        }
+        
+        .feature-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 1.5rem 0;
+        }
+        
+        .feature-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .feature-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(133, 176, 154, 0.3);
+        }
+        
+        .feature-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .tip-box {
+            background-color: rgba(133, 176, 154, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 1.5rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .tip-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .tip-title i {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>SCRIBE</h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/studentdashboard.html" class="nav-item">
+                    <i class="bi bi-house"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/help.html" class="nav-item active">
+                    <i class="bi bi-question-circle"></i>
+                    <span>Help</span>
+                </a>
+                <a href="/login.html" class="nav-item">
+                    <i class="bi bi-box-arrow-left"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="help-content">
+                <h1 class="welcome-text">
+                    <i class="bi bi-book"></i> How to Use Scribe
+                </h1>
+                <p>Welcome to Scribe! This guide will help you navigate and make the most out of your learning experience.</p>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-house-door"></i> Student Dashboard
+                </h2>
+                <div class="help-section">
+                    <p>After logging in, you will arrive at your Dashboard where you can:</p>
+                    <ul>
+                        <li>View all your enrolled courses at a glance</li>
+                        <li>Search for specific courses using the search bar</li>
+                        <li>Sort your courses by name or date added</li>
+                    </ul>
+                </div>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-journal-text"></i> Viewing Courses and Lectures
+                </h2>
+                <div class="help-section">
+                    <p>Accessing your course content is simple:</p>
+                    <ol>
+                        <li>Click on a course from your dashboard</li>
+                        <li>You will see a list of lectures conducted for that course</li>
+                        <li>Select a lecture to view its content</li>
+                    </ol>
+                </div>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-pencil-square"></i> Viewing and Modifying Lecture Notes
+                </h2>
+                <div class="help-section">
+                    <p>When viewing a lecture, you will see:</p>
+                    <ul>
+                        <li><strong>Formatted Lecture Notes</strong> - Generated from the face-to-face discussion using speech-to-text technology</li>
+                        <li><strong>My Notes</strong> - A section where you can add your personal notes while studying</li>
+                    </ul>
+                </div>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-gear"></i> Using the Modify Notes Feature
+                </h2>
+                <div class="help-section">
+                    <p>To customize how you view your notes:</p>
+                    <ol>
+                        <li>On the lecture page, find the three-dot button (<i class="bi bi-three-dots-vertical"></i>)</li>
+                        <li>Click this button to open additional options</li>
+                        <li>Select one or multiple options depending on how you want to study</li>
+                    </ol>
+                    
+                    <table class="feature-table">
+                        <thead>
+                            <tr>
+                                <th><i class="bi bi-tools"></i> Option</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><i class="bi bi-file-earmark-text"></i> Summarization</td>
+                                <td>Generate a concise summary of the lecture content to quickly review the main points</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-card-text"></i> Flashcards</td>
+                                <td>Create study flashcards from key concepts to help reinforce important topics</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-volume-up"></i> Audio</td>
+                                <td>Access the lecture recording player to listen to the original lecture anytime</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-image"></i> Visual Learning</td>
+                                <td>View relevant images automatically sourced from key lecture concepts to better understand the material</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-question-circle"></i> Quizzes</td>
+                                <td>Test your knowledge and track your progress with interactive questions based on the lecture content</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <hr>
+                
+                <div class="help-section">
+                    <p>If you have any questions or need additional help, please contact your instructor or the Scribe support team.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

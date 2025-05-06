@@ -33,6 +33,10 @@
                     <i class="bi bi-arrow-left"></i>
                     <span>Back to Course</span>
                 </a>
+                <a href="/help.html" class="nav-item">
+                    <i class="bi bi-question-circle"></i>
+                    <span>Help</span>
+                </a>
                 <a href="/login.html" class="nav-item">
                     <i class="bi bi-box-arrow-left"></i>
                     <span>Logout</span>
@@ -115,12 +119,6 @@
                         <div class="practical-applications">
                             <h4>Practical Applications & Real-World Examples</h4>
                             <div id="applications"></div>
-                        </div>
-
-                        <!-- Study Guide -->
-                        <div class="study-guide">
-                            <h4>Key Takeaways & Study Guide</h4>
-                            <div id="studyGuide"></div>
                         </div>
                     </div>
                 </section>
@@ -822,39 +820,6 @@
                             });
                             
                             yPosition += 5;
-                        }
-                        
-                        // Study Guide section
-                        const studyGuide = document.getElementById('studyGuide');
-                        if (studyGuide.children.length > 0) {
-                            ensureSpace(15);
-                            addSectionHeading('Key Takeaways & Study Guide');
-                            
-                            // Process each key highlight
-                            const keyHighlights = studyGuide.querySelectorAll('.key-highlights li');
-                            if (keyHighlights.length > 0) {
-                                ensureSpace(12);
-                                addSubHeading('Essential Points:');
-                                
-                                pdf.setFont('helvetica', 'normal');
-                                keyHighlights.forEach(highlight => {
-                                    addBulletedItem(highlight.textContent.trim());
-                                });
-                                
-                                yPosition += 8;
-                            }
-                            
-                            // Process misconceptions if any
-                            const misconceptions = studyGuide.querySelectorAll('.misconceptions li');
-                            if (misconceptions.length > 0) {
-                                ensureSpace(12);
-                                addSubHeading('Common Misconceptions:');
-                                
-                                pdf.setFont('helvetica', 'normal');
-                                misconceptions.forEach(misconception => {
-                                    addBulletedItem(misconception.textContent.trim());
-                                });
-                            }
                         }
                     }
                     

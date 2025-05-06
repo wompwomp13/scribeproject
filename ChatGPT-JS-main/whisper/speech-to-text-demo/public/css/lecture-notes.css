@@ -5854,7 +5854,7 @@ html {
 
 .item-reason {
     margin: 0;
-    font-size: 0.9rem;
+        font-size: 0.9rem;
     color: var(--text-color-secondary);
     line-height: 1.4;
 }
@@ -6176,9 +6176,9 @@ html {
 }
 
 .ql-editor {
-    padding: 1rem;
+        padding: 1rem;
     color: #3c2f28;
-    font-size: 1rem;
+        font-size: 1rem;
     line-height: 1.6;
     height: 100%;
     background-color: white;
@@ -6310,7 +6310,7 @@ html {
 }
 
 .transcription-content h3 {
-    font-size: 1.3rem;
+        font-size: 1.3rem;
 }
 
 .transcription-content h4 {
@@ -6668,6 +6668,7 @@ html {
 
 /* Responsive Styles */
 @media (min-width: 768px) {
+    /* Desktop layout: side-by-side */
     .visual-slide-content {
         flex-direction: row;
     }

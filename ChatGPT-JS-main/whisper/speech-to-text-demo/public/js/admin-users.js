@@ -417,28 +417,7 @@ class UserManager {
 
             const data = await response.json();
             if (data.success) {
-                // Update course instructors if this is a teacher
-                if (userData.role === 'teacher') {
-                    // First, remove this teacher from all courses
-                    const allCourses = await this.loadAllCourses();
-                    const coursesWithThisTeacher = allCourses.filter(
-                        course => course.instructor === this.currentUserId
-                    );
-                    
-                    // Remove teacher from courses they're no longer assigned to
-                    for (const course of coursesWithThisTeacher) {
-                        if (!userData.courses.includes(course._id)) {
-                            await this.updateCourseInstructor(course._id, null);
-                        }
-                    }
-                    
-                    // Assign teacher to new courses
-                    for (const courseId of userData.courses) {
-                        await this.updateCourseInstructor(courseId, this.currentUserId);
-                    }
-                }
-
-                await this.loadUsers();
+                // Close modal and reset selections - user was saved successfully
                 this.userModal.hide();
                 this.selectedCourses.clear();
                 this.selectedAvailableCourses.clear();
@@ -446,6 +425,10 @@ class UserManager {
                 
                 // Show success toast
                 this.showToast('User saved successfully!');
+                
+                // Skip course-instructor synchronization as requested
+                // Just reload users to reflect changes
+                await this.loadUsers();
             } else {
                 throw new Error(data.error || 'Failed to save user');
             }
@@ -471,10 +454,12 @@ class UserManager {
 
     async updateCourseInstructor(courseId, teacherId) {
         try {
+            // Use the regular course update endpoint since the specialized instructor endpoint doesn't exist
             const response = await fetch(`/api/courses/${courseId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     instructor: teacherId
@@ -482,13 +467,15 @@ class UserManager {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update course instructor');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Failed to update course instructor (Status: ${response.status})`);
             }
 
             // Refresh courses list
             await this.loadCourses();
         } catch (error) {
             console.error('Error updating course instructor:', error);
+            this.showToast(`Failed to update course: ${error.message}`, 'error');
             throw error;
         }
     }

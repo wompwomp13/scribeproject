@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Help - SCRIBE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        :root {
+            --primary-color: #85b09a;
+            --text-color: #494949;
+            --bg-color: #ffffff;
+            --button-color: #7e9ebf;
+        }
+        
+        body {
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .sidebar {
+            background-color: var(--primary-color);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .help-content {
+            padding: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            margin-top: 2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title i {
+            margin-right: 0.75rem;
+            font-size: 1.6rem;
+            color: var(--primary-color);
+        }
+        
+        .welcome-text {
+            font-size: 2.2rem;
+            margin-bottom: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .help-section {
+            margin-bottom: 2rem;
+        }
+        
+        .help-section p, .help-section li {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        hr {
+            margin: 2rem 0;
+            border-color: rgba(133, 176, 154, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>SCRIBE</h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="/dashboard.html" class="nav-item">
+                    <i class="bi bi-house"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/teacher-help.html" class="nav-item active">
+                    <i class="bi bi-question-circle"></i>
+                    <span>Help</span>
+                </a>
+                <a href="/login.html" class="nav-item">
+                    <i class="bi bi-box-arrow-left"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="help-content">
+                <h1 class="welcome-text">
+                    <i class="bi bi-book"></i> How to Use Scribe
+                </h1>
+                <p>Welcome to Scribe! This guide will help you navigate and make the most out of your teaching experience.</p>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-house-door"></i> Accessing Your Dashboard
+                </h2>
+                <div class="help-section">
+                    <p>After logging in, you'll land on your dashboard, providing a comprehensive view of all your assigned classes. It's your central hub for managing your teaching activities.</p>
+                </div>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-mic-fill"></i> Starting a Lecture Recording
+                </h2>
+                <div class="help-section">
+                    <p>Initiate a lecture recording effortlessly by clicking the Microphone button on your dashboard. Ensure you select the correct class to keep your recordings organized.</p>
+                </div>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-record-circle"></i> Recording a Lecture
+                </h2>
+                <div class="help-section">
+                    <p>Once you've selected a class, you'll be directed to the Recording Page. Enter the Lecture Title and hit Record. The system will automatically transcribe your lecture, making it easy to focus on teaching.</p>
+                </div>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-stop-circle"></i> Finishing and Reviewing the Lecture
+                </h2>
+                <div class="help-section">
+                    <p>Conclude your lecture by pressing the Stop button. Review the transcribed text and make any necessary edits to ensure accuracy and clarity.</p>
+                </div>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-save"></i> Saving and Uploading the Lecture
+                </h2>
+                <div class="help-section">
+                    <p>After finalizing your transcript, save and upload the lecture notes to the class page. This allows students to access the materials at their convenience, enhancing their learning experience.</p>
+                </div>
+                
+                <hr>
+                
+                <h2 class="section-title">
+                    <i class="bi bi-pencil"></i> Managing Your Lectures
+                </h2>
+                <div class="help-section">
+                    <p>Revisit and update your lectures anytime through your dashboard. This flexibility ensures your content remains current and relevant.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

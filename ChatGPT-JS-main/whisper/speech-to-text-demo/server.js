@@ -1480,33 +1480,35 @@ Transcript: ${transcription}`;
 
         // Now, structure the transcript into sections and identify key terms
         const sectioningPrompt = `Divide this lecture transcript into 5 logical sections. For each section:
-1. Identify a key educational term or concept that:
-   - Is important for understanding the section
-   - Is likely to be new or unfamiliar to students
-   - Can be visually represented (can find relevant images for it)
-   - Is specific enough to be educational (not too common or generic)
-   - Appears explicitly in the text
 
-2. Extract a concise explanation of that term from the section (1-2 paragraphs maximum)
-
-IMPORTANT: 
-- Each key term should be visually representable (consider whether images would be available for this term)
-- Avoid very common or generic terms (like "science" or "research")
-- Avoid overly complex or obscure terms that would be difficult to find images for
-- Prioritize terms that have educational value
-- Do not include terms that don't appear directly in the text
-
-Format your response as valid JSON with this structure:
-{
-  "sections": [
-    {
-      "term": "The key educational term",
-      "explanation": "Concise explanation of the term from the section",
-      "context": "The surrounding text where the term appears (1-2 paragraphs)"
-    },
-    ...
-  ]
-}
+        1. Identify one key educational term or concept that:
+           - Is important for understanding the section
+           - Is specific and concrete enough to be visually represented with a recognizable, non-abstract image
+           - Is likely to be new or unfamiliar to students
+           - Appears explicitly in the text (do not invent terms)
+           - Preferably is a noun or noun phrase (e.g., "photosynthesis," "supply chain," "mitochondrion")
+           - Is educationally meaningful but not too general (avoid terms like "science" or "information")
+           - Is not overly obscure or technical if no good images are likely available
+        
+        2. Extract a concise, clear explanation of that term based directly on the section (1-2 paragraphs maximum).
+        
+        IMPORTANT:
+        - Prioritize terms that would yield clear, educational images (e.g., objects, processes, diagrams, recognizable scenes).
+        - Avoid abstract, overly broad, or overly technical terms that would be difficult to find good educational images for.
+        - Always ensure that the term is explicitly mentioned in the section's text.
+        - Focus on providing educational value while maximizing visual relevance.
+        
+        Format your response as **valid JSON** with this exact structure:
+        {
+          "sections": [
+            {
+              "term": "The key educational term",
+              "explanation": "Concise explanation of the term from the section",
+              "context": "The surrounding text where the term appears (1-2 paragraphs)"
+            },
+            ...
+          ]
+        }
 
 Cleaned Transcript:
 ${cleanedTranscript}`;
@@ -1548,116 +1550,35 @@ ${cleanedTranscript}`;
                 throw new Error('Invalid sections data: missing or empty sections array');
             }
             
-            // Extract terms
-            const keyTerms = sectionsData.sections
-                .map(section => section.term)
-                .filter(Boolean)
-                .slice(0, 5);
-                
-            // Validate we have terms
-            if (keyTerms.length === 0) {
-                throw new Error('No valid key terms found in the sections');
-            }
+            // Ensure we have at least some sections (could be less than 5)
+            const validSections = sectionsData.sections.filter(section => 
+                section && section.term && section.explanation
+            );
             
-            // Ensure each term appears in the transcript
-            const validTerms = keyTerms.filter(term => {
-                const regex = new RegExp(term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
-                return regex.test(cleanedTranscript);
-            });
-            
-            if (validTerms.length === 0) {
-                throw new Error('No valid terms found in the transcript');
+            if (validSections.length === 0) {
+                throw new Error('No valid sections found with terms and explanations');
             }
             
             res.json({
                 success: true,
-                keyTerms: validTerms,
-                cleanedTranscript,
-                sections: sectionsData.sections
+                sections: validSections
             });
             
         } catch (error) {
             console.error('Error processing sections:', error);
             console.error('Raw response:', sectioningCompletion.choices[0]?.message?.content);
             
-            // Fall back to the original method if sectioning fails
-            const termsPrompt = `From this lecture transcript, identify exactly 5 key terms that:
-1. Appear word-for-word in the text
-2. Are concrete objects or specific educational concepts
-3. Can be easily illustrated with images
-4. Are important to understanding the lecture content
-5. Are sophisticated enough to have educational value (not too basic)
-
-Avoid terms that are:
-- Too generic (like "science" or "research")
-- Too complex or obscure to find relevant images for
-- Not visually representable
-- Not directly mentioned in the text
-
-Output ONLY a JSON array of 5 terms, like this: ["term1", "term2", "term3", "term4", "term5"]
-Do not include any explanation or additional text.
-
-Transcript:
-${cleanedTranscript}`;
-
-            const termsCompletion = await groqClient.chat.completions.create({
-            messages: [
-                { 
-                    role: "system", 
-                        content: "You are a JSON generator that returns ONLY a valid JSON array of 5 terms. No other text." 
-                },
-                    { role: "user", content: termsPrompt }
-            ],
-                model: "Llama3-70B-8192",
-                temperature: 0.1,
-            max_tokens: 1024,
-        });
-
-            // Clean up the response to ensure valid JSON
-            const response = termsCompletion.choices[0]?.message?.content;
-            const cleanedResponse = response.trim()
-                .replace(/^```json\s*/, '')
-                .replace(/\s*```$/, '')
-                .replace(/^[\s\n]*\[/, '[')
-                .replace(/\][\s\n]*$/, ']');
-
-            try {
-                const keyTerms = JSON.parse(cleanedResponse);
-                // Verify terms appear in transcript
-                const validTerms = keyTerms.filter(term => {
-                    const regex = new RegExp(term, 'i');
-                    return regex.test(cleanedTranscript);
-                }).slice(0, 5);
-
-                if (validTerms.length === 0) {
-                    throw new Error('No valid terms found in the transcript');
-                }
-
-        res.json({
-            success: true,
-                    keyTerms: validTerms,
-                    cleanedTranscript,
-                    // Create basic sections as fallback
-                    sections: validTerms.map(term => ({
-                        term: term,
-                        explanation: `This is an important concept related to ${term}.`,
-                        context: cleanedTranscript.substring(
-                            Math.max(0, cleanedTranscript.toLowerCase().indexOf(term.toLowerCase()) - 100),
-                            cleanedTranscript.toLowerCase().indexOf(term.toLowerCase()) + term.length + 200
-                        )
-                    }))
-                });
-    } catch (error) {
-                console.error('Failed to parse terms response:', error);
-                throw new Error('Failed to extract key terms from the transcript');
-            }
+            res.status(500).json({
+                success: false,
+                error: 'Failed to extract key terms from transcript',
+                details: error.message
+            });
         }
     } catch (error) {
-        console.error('Error in extract-key-terms endpoint:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to process transcript',
-            details: error.message
+        console.error('API error in /api/extract-key-terms:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message || 'Failed to extract key terms from transcript'
         });
     }
 });

@@ -447,7 +447,6 @@ class StudentLectureNotes {
             // Clear other sections to avoid displaying partial/incorrect data
             document.getElementById('keyPoints').innerHTML = '';
             document.getElementById('applications').innerHTML = '';
-            document.getElementById('studyGuide').innerHTML = '';
         } finally {
             this.hideLoadingState();
         }
@@ -455,7 +454,7 @@ class StudentLectureNotes {
 
     validateSummaryStructure(summary) {
         // Check required top-level fields
-        const requiredFields = ['title', 'overview', 'keyTopics', 'practicalApplications', 'studyGuide'];
+        const requiredFields = ['title', 'overview', 'keyTopics', 'practicalApplications'];
         const missingFields = [];
         
         for (const field of requiredFields) {
@@ -480,10 +479,6 @@ class StudentLectureNotes {
         
         if (!Array.isArray(summary.practicalApplications) || summary.practicalApplications.length === 0) {
             console.warn('practicalApplications is empty or not an array');
-        }
-        
-        if (!summary.studyGuide.keyHighlights || !Array.isArray(summary.studyGuide.keyHighlights)) {
-            console.warn('Missing keyHighlights in studyGuide or not an array');
         }
     }
 
@@ -536,32 +531,6 @@ class StudentLectureNotes {
                         <p class="definable">${app.explanation || ''}</p>
                     </div>
                 `).join('')}
-            `;
-        }
-
-        // Update study guide
-        if (summary.studyGuide) {
-            document.getElementById('studyGuide').innerHTML = `
-                <div class="study-sections">
-                    <div class="key-highlights">
-                        <h5><i class="bi bi-star"></i> Essential Points</h5>
-                        <ul>
-                            ${summary.studyGuide.keyHighlights?.map(highlight => 
-                                `<li class="definable">${highlight}</li>`
-                            ).join('') || ''}
-                        </ul>
-                    </div>
-                    ${summary.studyGuide.commonMisconceptions?.length ? `
-                        <div class="misconceptions">
-                            <h5><i class="bi bi-exclamation-circle"></i> Common Misconceptions</h5>
-                            <ul>
-                                ${summary.studyGuide.commonMisconceptions.map(misconception => 
-                                    `<li class="definable">${misconception}</li>`
-                                ).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                </div>
             `;
         }
 
@@ -668,14 +637,13 @@ class StudentLectureNotes {
                 slide.innerHTML = `
                     <div class="visual-slide-content">
                         <div class="visual-slide-image">
-                            <img src="${imageUrl || '/images/placeholder.png'}" alt="${section.term}" 
-                                onerror="this.src='/images/placeholder.png'">
-                                </div>
+                            <img src="${imageUrl}" alt="${section.term}" onerror="this.style.display='none'">
+                        </div>
                         <div class="visual-slide-text">
                             <h3>${section.term}</h3>
                             <p>${section.explanation}</p>
-                                    </div>
-                                </div>
+                        </div>
+                    </div>
                 `;
                 
                 // Add the slide to the container
@@ -759,7 +727,7 @@ class StudentLectureNotes {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    query: `${term} educational diagram concept visualization`,
+                    query: ` educational concept illustration about ${term}`,
                 }),
             });
             
