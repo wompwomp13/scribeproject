@@ -412,3 +412,43 @@
         stroke-dashoffset: 283;
     }
 }
+/* Existing styles... */
+
+/* Media query for responsive styles */
+@media (max-width: 768px) {
+    .recording-controls {
+        display: flex; /* Use flexbox for buttons */
+        justify-content: center; /* Center the buttons */
+        margin-bottom: 0.5rem; /* Add space below the buttons */
+        width: 100%; /* Ensure it fits within the viewport */
+        overflow-x: hidden; /* Prevent horizontal scrolling */
+    }
+
+    .control-btn {
+        padding: 0.3rem 0.4rem; /* Keep padding for smaller buttons */
+        font-size: 0.8rem; /* Keep font size small */
+        width: 45%; /* Set a fixed width for buttons */
+        margin: 0 1%; /* Set equal margin for spacing between buttons */
+    }
+
+    .recording-status {
+        padding: 0.2rem 0.4rem; /* Reduce padding for the timer container */
+        margin: 0; /* Remove any margin */
+        display: inline-block; /* Ensure it aligns properly */
+        text-align: center; /* Center the timer text */
+        background: var(--card-bg); /* Optional: Add background color */
+        border-radius: 0.5rem; /* Optional: Add border radius */
+        max-width: fit-content; /* Ensure the timer card fits its content */
+        width: 100%; /* Ensure it fits within the viewport */
+    }
+
+    .timer {
+        font-size: 0.8rem; /* Keep font size small */
+        padding: 0.1rem; /* Keep padding small */
+    }
+
+    /* Prevent horizontal scrolling on small screens */
+    body {
+        overflow-x: hidden; /* Prevent horizontal scrolling */
+    }
+}
