@@ -998,8 +998,8 @@ h2 {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: #e0ebe6;
+    border: 1px solid #e0ebe6;
     transition: all 0.3s ease;
     border-radius: 34px;
 }
@@ -1053,25 +1053,6 @@ input:checked:hover + .toggle-slider {
     color: var(--primary-color);
 }
 
-/* Save Button States */
-.preferences-save-btn {
-    width: calc(100% - 2rem);
-    margin: 0 auto;
-    background: var(--button-color);
-    color: var(--content-bg);
-    border: none;
-    border-radius: 12px;
-    padding: 1rem;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(232, 93, 86, 0.2);
-}
 
 .preferences-save-btn:hover {
     background: #a66b4a; /* Darker shade of primary color */
@@ -2021,25 +2002,23 @@ input:checked:hover + .toggle-slider {
     accent-color: var(--primary-color);
 }
 
-/* Save Preferences button */
 .preferences-save-btn {
-    position: absolute;
-    bottom: 2rem;
-    left: 2rem;
-    right: 2rem;
+    width: calc(100% - 2rem); /* Full width minus margins */
+    margin: 0 1rem; /* Margin on left and right */
     background-color: var(--button-color);
     color: var(--content-bg);
     border: none;
-    padding: 0.8rem;
-    border-radius: 0.8rem;
+    border-radius: 12px;
+    padding: 1rem;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(206, 190, 190, 0.2);
 }
 
 .preferences-save-btn:hover {
@@ -7091,43 +7070,44 @@ html {
         display: inline-block; /* Ensure it aligns properly */
     }
     .lecture-header {
-        display: flex; /* Use flexbox for alignment */
-        align-items: center; /* Center items vertically */
-        margin-top: 20px; /* Adjust top margin as needed */
+        display: flex; 
+        align-items: center; 
+        margin-top: 20px; 
         margin-left: 10px;
     }
     
     .header-content {
-        flex-grow: 1; /* Allow header content to take available space */
+        flex-grow: 1; 
     }
     
     .modify-notes-btn {
-        margin-left: 20px; /* Add left margin for spacing */
-        margin-top: 0; /* Remove top margin to align with header */
-        padding: 5px 10px; /* Adjust padding for size */
-        font-size: 25px; /* Adjust font size for smaller button */
+        margin-left: 20px; 
+        margin-top: 0; 
+        padding: 5px 10px; 
+        font-size: 25px; 
     }
     .download-btn {
-        margin-top: 10px; /* Adjust this value for top margin */
-        margin-left: 0; /* Ensure no left margin */
+        margin-top: 10px; 
+        margin-left: 0; 
         margin-bottom: 10px;
     }
     .editor-container {
-        height: 200px; /* Set a fixed height for smaller screens */
-        width: 100%; /* Set width to 100% to fit the parent container */
-        max-width: 100%; /* Ensure it doesn't exceed the parent width */
-        border: 1px solid #ddd; /* Keep the border for visibility */
-        border-radius: 0.5rem; /* Maintain rounded corners */
+        height: 200px; 
+        width: 100%; 
+        max-width: 100%; 
+        border: 1px solid #ddd; 
+        border-radius: 0.5rem; 
     }
 
     .ql-container.ql-snow {
-        height: calc(100% - 42px); /* Adjust height if necessary */
-        overflow-y: auto; /* Allow scrolling if content exceeds height */
+        height: calc(100% - 42px); 
+        overflow-y: auto; 
     }
 
     .ql-editor {
-        padding: 0.5rem; /* Adjust padding for smaller screens */
-        font-size: 0.9rem; /* Adjust font size for better fit */
-        line-height: 1.4; /* Adjust line height for better readability */
+        padding: 0.5rem; 
+        font-size: 0.9rem;
+        line-height: 1.4; 
     }
+    
 }

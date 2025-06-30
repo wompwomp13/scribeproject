@@ -426,7 +426,7 @@ Keep your response under 50 words when possible.`
                     content: `Define this term or concept in 2-3 sentences: "${text}"`
                 }
             ],
-            model: "Llama3-70B-8192",
+            model: "llama-3.1-8b-instant",
             temperature: 0.3,
             max_tokens: 100,
         });
@@ -563,7 +563,7 @@ IMPORTANT: YOUR RESPONSE MUST BE VALID JSON WITHOUT ANY MARKDOWN CODE BLOCKS OR 
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
             ],
-            model: "Llama3-70B-8192",
+            model: "llama-3.1-8b-instant",
             temperature: 0.3,
             max_tokens: 2000,
         });
@@ -1471,7 +1471,7 @@ Transcript: ${transcription}`;
                 { role: "system", content: "You are a transcript editor that returns ONLY the cleaned transcript without any additional text or explanations." },
                 { role: "user", content: cleanupPrompt }
             ],
-            model: "Llama3-70B-8192",
+            model: "llama-3.1-8b-instant",
             temperature: 0.1,
             max_tokens: 2048,
         });
@@ -1480,35 +1480,33 @@ Transcript: ${transcription}`;
 
         // Now, structure the transcript into sections and identify key terms
         const sectioningPrompt = `Divide this lecture transcript into 5 logical sections. For each section:
+1. Identify a key educational term or concept that:
+   - Is important for understanding the section
+   - Is likely to be new or unfamiliar to students
+   - Can be visually represented (can find relevant images for it)
+   - Is specific enough to be educational (not too common or generic)
+   - Appears explicitly in the text
 
-        1. Identify one key educational term or concept that:
-           - Is important for understanding the section
-           - Is specific and concrete enough to be visually represented with a recognizable, non-abstract image
-           - Is likely to be new or unfamiliar to students
-           - Appears explicitly in the text (do not invent terms)
-           - Preferably is a noun or noun phrase (e.g., "photosynthesis," "supply chain," "mitochondrion")
-           - Is educationally meaningful but not too general (avoid terms like "science" or "information")
-           - Is not overly obscure or technical if no good images are likely available
-        
-        2. Extract a concise, clear explanation of that term based directly on the section (1-2 paragraphs maximum).
-        
-        IMPORTANT:
-        - Prioritize terms that would yield clear, educational images (e.g., objects, processes, diagrams, recognizable scenes).
-        - Avoid abstract, overly broad, or overly technical terms that would be difficult to find good educational images for.
-        - Always ensure that the term is explicitly mentioned in the section's text.
-        - Focus on providing educational value while maximizing visual relevance.
-        
-        Format your response as **valid JSON** with this exact structure:
-        {
-          "sections": [
-            {
-              "term": "The key educational term",
-              "explanation": "Concise explanation of the term from the section",
-              "context": "The surrounding text where the term appears (1-2 paragraphs)"
-            },
-            ...
-          ]
-        }
+2. Extract a concise explanation of that term from the section (1-2 paragraphs maximum)
+
+IMPORTANT: 
+- Each key term should be visually representable (consider whether images would be available for this term)
+- Avoid very common or generic terms (like "science" or "research")
+- Avoid overly complex or obscure terms that would be difficult to find images for
+- Prioritize terms that have educational value
+- Do not include terms that don't appear directly in the text
+
+Format your response as valid JSON with this structure:
+{
+  "sections": [
+    {
+      "term": "The key educational term",
+      "explanation": "Concise explanation of the term from the section",
+      "context": "The surrounding text where the term appears (1-2 paragraphs)"
+    },
+    ...
+  ]
+}
 
 Cleaned Transcript:
 ${cleanedTranscript}`;
@@ -1521,7 +1519,7 @@ ${cleanedTranscript}`;
                 },
                 { role: "user", content: sectioningPrompt }
             ],
-            model: "Llama3-70B-8192",
+            model: "llama-3.1-8b-instant",
             temperature: 0.3,
             max_tokens: 2048,
         });
@@ -1550,35 +1548,116 @@ ${cleanedTranscript}`;
                 throw new Error('Invalid sections data: missing or empty sections array');
             }
             
-            // Ensure we have at least some sections (could be less than 5)
-            const validSections = sectionsData.sections.filter(section => 
-                section && section.term && section.explanation
-            );
+            // Extract terms
+            const keyTerms = sectionsData.sections
+                .map(section => section.term)
+                .filter(Boolean)
+                .slice(0, 5);
+                
+            // Validate we have terms
+            if (keyTerms.length === 0) {
+                throw new Error('No valid key terms found in the sections');
+            }
             
-            if (validSections.length === 0) {
-                throw new Error('No valid sections found with terms and explanations');
+            // Ensure each term appears in the transcript
+            const validTerms = keyTerms.filter(term => {
+                const regex = new RegExp(term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
+                return regex.test(cleanedTranscript);
+            });
+            
+            if (validTerms.length === 0) {
+                throw new Error('No valid terms found in the transcript');
             }
             
             res.json({
                 success: true,
-                sections: validSections
+                keyTerms: validTerms,
+                cleanedTranscript,
+                sections: sectionsData.sections
             });
             
         } catch (error) {
             console.error('Error processing sections:', error);
             console.error('Raw response:', sectioningCompletion.choices[0]?.message?.content);
             
-            res.status(500).json({
-                success: false,
-                error: 'Failed to extract key terms from transcript',
-                details: error.message
-            });
+            // Fall back to the original method if sectioning fails
+            const termsPrompt = `From this lecture transcript, identify exactly 5 key terms that:
+1. Appear word-for-word in the text
+2. Are concrete objects or specific educational concepts
+3. Can be easily illustrated with images
+4. Are important to understanding the lecture content
+5. Are sophisticated enough to have educational value (not too basic)
+
+Avoid terms that are:
+- Too generic (like "science" or "research")
+- Too complex or obscure to find relevant images for
+- Not visually representable
+- Not directly mentioned in the text
+
+Output ONLY a JSON array of 5 terms, like this: ["term1", "term2", "term3", "term4", "term5"]
+Do not include any explanation or additional text.
+
+Transcript:
+${cleanedTranscript}`;
+
+            const termsCompletion = await groqClient.chat.completions.create({
+            messages: [
+                { 
+                    role: "system", 
+                        content: "You are a JSON generator that returns ONLY a valid JSON array of 5 terms. No other text." 
+                },
+                    { role: "user", content: termsPrompt }
+            ],
+                model: "llama-3.1-8b-instant",
+                temperature: 0.1,
+            max_tokens: 1024,
+        });
+
+            // Clean up the response to ensure valid JSON
+            const response = termsCompletion.choices[0]?.message?.content;
+            const cleanedResponse = response.trim()
+                .replace(/^```json\s*/, '')
+                .replace(/\s*```$/, '')
+                .replace(/^[\s\n]*\[/, '[')
+                .replace(/\][\s\n]*$/, ']');
+
+            try {
+                const keyTerms = JSON.parse(cleanedResponse);
+                // Verify terms appear in transcript
+                const validTerms = keyTerms.filter(term => {
+                    const regex = new RegExp(term, 'i');
+                    return regex.test(cleanedTranscript);
+                }).slice(0, 5);
+
+                if (validTerms.length === 0) {
+                    throw new Error('No valid terms found in the transcript');
+                }
+
+        res.json({
+            success: true,
+                    keyTerms: validTerms,
+                    cleanedTranscript,
+                    // Create basic sections as fallback
+                    sections: validTerms.map(term => ({
+                        term: term,
+                        explanation: `This is an important concept related to ${term}.`,
+                        context: cleanedTranscript.substring(
+                            Math.max(0, cleanedTranscript.toLowerCase().indexOf(term.toLowerCase()) - 100),
+                            cleanedTranscript.toLowerCase().indexOf(term.toLowerCase()) + term.length + 200
+                        )
+                    }))
+                });
+    } catch (error) {
+                console.error('Failed to parse terms response:', error);
+                throw new Error('Failed to extract key terms from the transcript');
+            }
         }
     } catch (error) {
-        console.error('API error in /api/extract-key-terms:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message || 'Failed to extract key terms from transcript'
+        console.error('Error in extract-key-terms endpoint:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to process transcript',
+            details: error.message
         });
     }
 });
@@ -1635,7 +1714,7 @@ Lecture Content: ${transcription}`;
                 },
                 { role: "user", content: flashcardsPrompt }
             ],
-            model: "Llama3-70B-8192",
+            model: "llama-3.1-8b-instant",
             temperature: 0.7,
             max_tokens: 2048,
         });
@@ -1948,7 +2027,7 @@ IMPORTANT: Return ONLY the formatted transcript text with minimal markdown. Do n
                 },
                 { role: "user", content: formatPrompt }
             ],
-            model: "Llama3-70B-8192",
+            model: "llama-3.1-8b-instant",
             temperature: 0.3,
             max_tokens: 2048,
         });
@@ -2133,11 +2212,11 @@ Lecture Content: ${transcription}`;
             messages: [
                 { 
                     role: "system", 
-                    content: "You are an educational content specialist who creates interactive quizzes based on lecture materials. You must return ONLY valid JSON in the specified format. Do not include any additional text, markdown formatting, or explanations. The response must be parseable with JSON.parse()." 
+                    content: "You are an educational content specialist who creates interactive quizzes based on lecture materials. Return ONLY valid JSON in the specified format with no additional text." 
                 },
                 { role: "user", content: quizPrompt }
             ],
-            model: "Llama3-70B-8192",
+            model: "llama-3.1-8b-instant",
             temperature: 0.7,
             max_tokens: 2048,
         });
@@ -2146,31 +2225,18 @@ Lecture Content: ${transcription}`;
         const responseContent = completion.choices[0]?.message?.content || '';
         
         try {
-            // Clean the response content
-            const cleanedContent = responseContent
-                .replace(/```json\s*/g, '')  // Remove ```json prefix
-                .replace(/```\s*$/g, '')     // Remove ``` suffix
-                .trim();                      // Remove extra whitespace
-            
             // First attempt: direct parsing
-            quizData = JSON.parse(cleanedContent);
+            quizData = JSON.parse(responseContent);
         } catch (parseError) {
             console.error('Initial JSON parse error:', parseError);
-            console.error('Raw response:', responseContent);
             
             try {
                 // Second attempt: Try to extract JSON if wrapped in backticks
                 const jsonMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
                 if (jsonMatch && jsonMatch[1]) {
-                    quizData = JSON.parse(jsonMatch[1].trim());
+                    quizData = JSON.parse(jsonMatch[1]);
                 } else {
-                    // Third attempt: Try to find the first valid JSON object
-                    const jsonObjectMatch = responseContent.match(/\{[\s\S]*\}/);
-                    if (jsonObjectMatch) {
-                        quizData = JSON.parse(jsonObjectMatch[0]);
-                    } else {
-                        throw new Error('Could not extract valid JSON from response');
-                    }
+                    throw new Error('Could not extract valid JSON from response');
                 }
             } catch (extractError) {
                 console.error('Failed to extract JSON:', extractError);
@@ -2407,4 +2473,4 @@ app.post('/api/auth/reset-password', async (req, res) => {
             message: 'Server error during password reset'
         });
     }
-}); 
+});

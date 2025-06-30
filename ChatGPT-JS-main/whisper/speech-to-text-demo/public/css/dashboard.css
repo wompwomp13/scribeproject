@@ -178,7 +178,7 @@ body {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background-color: var(--primary-color);
+    background-color: #ff8585;
     border: none;
     color: white;
     font-size: 1.5rem;
@@ -249,14 +249,14 @@ body {
 }
 
 .form-select {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: white;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
+    color: #494949;
 }
 
 .form-select option {
     background-color: var(--sidebar-bg);
-    color: white;
+    color: #494949;
 }
 
 #startRecordingBtn {

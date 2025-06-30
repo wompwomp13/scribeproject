@@ -484,59 +484,54 @@ class StudentLectureNotes {
 
     updateSummaryContent(summary) {
         // Update title and overview
-        document.querySelector('.summary-title').textContent = summary.title || '';
+        document.querySelector('.summary-title').textContent = summary.title || 'Lecture Summary';
         document.getElementById('mainThesis').textContent = summary.overview?.mainThesis || '';
         document.getElementById('context').textContent = summary.overview?.context || '';
         document.getElementById('significance').textContent = summary.overview?.significance || '';
 
         // Update key points
-        if (summary.keyTopics) {
-            document.getElementById('keyPoints').innerHTML = `
-                ${summary.keyTopics.map(topic => `
-                    <div class="key-point">
-                        <div class="point-header">
-                            <h5><i class="bi bi-arrow-right-circle"></i> ${topic.heading || ''}</h5>
-                        </div>
-                        <div class="point-content">
-                            <ul>
-                                ${topic.mainPoints?.map(point => `
-                                    <li class="definable">${point}</li>
-                                `).join('') || ''}
-                            </ul>
-                            ${topic.details?.length ? `
-                                <div class="supporting-details">
-                                    <h6>Supporting Evidence & Examples</h6>
-                                    <ul class="details-list">
-                                        ${topic.details.map(detail => `
-                                            <li class="definable">${detail}</li>
-                                        `).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                        </div>
+        const keyPointsContainer = document.getElementById('keyPoints');
+        if (summary.keyTopics && summary.keyTopics.length > 0) {
+            keyPointsContainer.innerHTML = summary.keyTopics.map(topic => `
+                <div class="key-point">
+                    <div class="point-header">
+                        <h5><i class="bi bi-arrow-right-circle"></i> ${topic.heading || ''}</h5>
                     </div>
-                `).join('')}
-            `;
+                    <div class="point-content">
+                        <ul>
+                            ${topic.mainPoints?.map(point => `
+                                <li class="definable">${point}</li>
+                            `).join('') || ''}
+                        </ul>
+                        ${topic.details?.length ? `
+                            <div class="supporting-details">
+                                <h6>Supporting Evidence & Examples</h6>
+                                <ul class="details-list">
+                                    ${topic.details.map(detail => `
+                                        <li class="definable">${detail}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            keyPointsContainer.innerHTML = '<p>No key points available.</p>';
         }
 
         // Update practical applications
-        if (summary.practicalApplications) {
-            document.getElementById('applications').innerHTML = `
-                ${summary.practicalApplications.map(app => `
-                    <div class="application-card">
-                        <div class="application-header">
-                            <i class="bi bi-gear"></i>
-                            <h5>${app.scenario || ''}</h5>
-                        </div>
-                        <p class="definable">${app.explanation || ''}</p>
-                    </div>
-                `).join('')}
-            `;
+        const applicationsContainer = document.getElementById('applications');
+        if (summary.practicalApplications && summary.practicalApplications.length > 0) {
+            applicationsContainer.innerHTML = summary.practicalApplications.map(app => `
+                <div class="application-item definable">
+                    <h5>${app.scenario}</h5>
+                    <p>${app.explanation}</p>
+                </div>
+            `).join('');
+        } else {
+            applicationsContainer.innerHTML = '<p>No practical applications available.</p>';
         }
-
-        // Initialize definitions handler for the new summary content
-        const handler = new DefinitionsHandler();
-        handler.initializeSection(document.querySelector('.summary-section'));
     }
 
     async handleVisualLearning() {
@@ -722,12 +717,13 @@ class StudentLectureNotes {
         if (!term) return null;
         
         try {
-            // First try with educational focus
+            const lectureTitle = document.getElementById('lectureTitle').textContent;
+            console.log('Lecture Title:', lectureTitle);
             const response = await fetch('/api/search-image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    query: ` educational concept illustration about ${term}`,
+                    query: `educational concept illustration about ${term} in the context of ${lectureTitle}`,
                 }),
             });
             
@@ -746,7 +742,7 @@ class StudentLectureNotes {
                 const fallbackResponse = await fetch('/api/search-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: `${term} visualization` }),
+                    body: JSON.stringify({ query: `${term} in the context of ${lectureTitle}` }),
                 });
                 
                 if (fallbackResponse.ok) {
@@ -1335,76 +1331,157 @@ class StudentLectureNotes {
     initializeCategorizationDragDrop() {
         const items = document.querySelectorAll('.item');
         const categoryContainers = document.querySelectorAll('.category-items');
-        
-        // Set up draggable items
+        const itemsPool = document.querySelector('.items-pool');
+
+        // Set up draggable items (desktop)
         items.forEach(item => {
             item.addEventListener('dragstart', () => {
                 item.classList.add('dragging');
-        setTimeout(() => {
+                setTimeout(() => {
                     item.style.opacity = '0.4';
                 }, 0);
             });
-            
             item.addEventListener('dragend', () => {
                 item.classList.remove('dragging');
                 item.style.opacity = '1';
             });
         });
-        
-        // Set up drop zones
+
+        // Set up drop zones (desktop)
         categoryContainers.forEach(container => {
-            // When dragging over a container
             container.addEventListener('dragover', e => {
                 e.preventDefault();
                 container.classList.add('drag-over');
             });
-
-            // When leaving a container
             container.addEventListener('dragleave', () => {
                 container.classList.remove('drag-over');
             });
-
-            // When dropping in a container
             container.addEventListener('drop', e => {
                 e.preventDefault();
                 const item = document.querySelector('.dragging');
                 if (!item) return;
-                
-                // Clear placeholder text if this is the first item
                 if (container.textContent.trim() === 'Drop items here') {
                     container.innerHTML = '';
                 }
-                
-                // Add the item to the container
                 container.appendChild(item);
                 container.classList.remove('drag-over');
             });
         });
-        
-        // Set up the items pool as a drop zone too
-        const itemsPool = document.querySelector('.items-pool');
         if (itemsPool) {
             itemsPool.addEventListener('dragover', e => {
                 e.preventDefault();
                 itemsPool.classList.add('drag-over');
             });
-            
             itemsPool.addEventListener('dragleave', () => {
                 itemsPool.classList.remove('drag-over');
             });
-            
             itemsPool.addEventListener('drop', e => {
                 e.preventDefault();
                 const item = document.querySelector('.dragging');
                 if (!item) return;
-                
                 itemsPool.appendChild(item);
                 itemsPool.classList.remove('drag-over');
-                
-                // Reset any styling or classes on the item
                 item.classList.remove('correct', 'incorrect');
             });
         }
+
+        // --- Mobile Touch Support ---
+        let touchDragItem = null;
+        let touchDragClone = null;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let lastTouchTarget = null;
+
+        function getDropTarget(touch) {
+            // Check all drop zones under the touch point
+            const x = touch.clientX;
+            const y = touch.clientY;
+            // Try categories first
+            for (const container of categoryContainers) {
+                const rect = container.getBoundingClientRect();
+                if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                    return container;
+                }
+            }
+            // Then pool
+            if (itemsPool) {
+                const rect = itemsPool.getBoundingClientRect();
+                if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                    return itemsPool;
+                }
+            }
+            return null;
+        }
+
+        items.forEach(item => {
+            // Touch start
+            item.addEventListener('touchstart', function(e) {
+                if (e.touches.length > 1) return; // Ignore multi-touch
+                touchDragItem = item;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                // Create a visual clone
+                touchDragClone = item.cloneNode(true);
+                touchDragClone.style.position = 'fixed';
+                touchDragClone.style.left = touchStartX + 'px';
+                touchDragClone.style.top = touchStartY + 'px';
+                touchDragClone.style.width = item.offsetWidth + 'px';
+                touchDragClone.style.pointerEvents = 'none';
+                touchDragClone.style.opacity = '0.8';
+                touchDragClone.style.zIndex = '9999';
+                touchDragClone.classList.add('dragging');
+                document.body.appendChild(touchDragClone);
+                item.classList.add('dragging');
+                lastTouchTarget = null;
+                e.preventDefault();
+            }, { passive: false });
+
+            // Touch move
+            item.addEventListener('touchmove', function(e) {
+                if (!touchDragClone || !touchDragItem) return;
+                const touch = e.touches[0];
+                touchDragClone.style.left = (touch.clientX - touchDragClone.offsetWidth / 2) + 'px';
+                touchDragClone.style.top = (touch.clientY - touchDragClone.offsetHeight / 2) + 'px';
+                // Highlight drop zone under finger
+                const target = getDropTarget(touch);
+                if (lastTouchTarget && lastTouchTarget !== target) {
+                    lastTouchTarget.classList.remove('drag-over');
+                }
+                if (target) {
+                    target.classList.add('drag-over');
+                }
+                lastTouchTarget = target;
+                e.preventDefault();
+            }, { passive: false });
+
+            // Touch end
+            item.addEventListener('touchend', function(e) {
+                if (!touchDragClone || !touchDragItem) return;
+                const touch = e.changedTouches[0];
+                const dropTarget = getDropTarget(touch);
+                // Remove visual clone
+                document.body.removeChild(touchDragClone);
+                touchDragClone = null;
+                // Remove highlight
+                if (lastTouchTarget) lastTouchTarget.classList.remove('drag-over');
+                // Move item to drop zone
+                if (dropTarget) {
+                    if (dropTarget.classList.contains('category-items')) {
+                        if (dropTarget.textContent.trim() === 'Drop items here') {
+                            dropTarget.innerHTML = '';
+                        }
+                        dropTarget.appendChild(touchDragItem);
+                    } else if (dropTarget === itemsPool) {
+                        itemsPool.appendChild(touchDragItem);
+                        touchDragItem.classList.remove('correct', 'incorrect');
+                    }
+                }
+                touchDragItem.classList.remove('dragging');
+                touchDragItem = null;
+                lastTouchTarget = null;
+                e.preventDefault();
+            }, { passive: false });
+        });
     }
 
     // Improve getLectureIdFromUrl to handle different URL patterns
@@ -1863,4 +1940,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }.bind(this)); 
 
-// End of file (any content after this line should be removed) 

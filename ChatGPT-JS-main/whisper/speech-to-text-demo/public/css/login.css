@@ -198,15 +198,12 @@ select.form-select:-moz-focusring {
 }
 
 .forgot-password a {
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--primary-color);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s ease;
 }
 
-.forgot-password a:hover {
-    color: var(--primary-color);
-}
 
 @media (max-width: 576px) {
     .login-card {
@@ -281,7 +278,7 @@ select.form-select:-moz-focusring {
 
 /* Links */
 .signup-link, .forgot-password {
-    color: var(--primary-color);
+    color: white;
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s ease;
