@@ -10,6 +10,51 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/course1.css">
     <link rel="stylesheet" href="css/lecture-notes.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Force editable transcription textarea to have white background */
+        #transcriptionEditor {
+            background: #fff !important;
+            color: #000 !important;
+        }
+        /* Equal-height transcript boxes */
+        .transcript-box {
+            display: flex;
+            flex-direction: column;
+            height: 440px;
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+        }
+        .transcript-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        .transcript-header h3 {
+            font-size: inherit;
+            font-weight: inherit;
+            margin: 0;
+        }
+        .transcript-content {
+            padding: 1rem;
+            flex: 1;
+            overflow: hidden; /* default: child controls scroll */
+        }
+        .transcript-content.scrollable { overflow: auto; }
+        .transcript-content textarea {
+            height: 100%;
+            width: 100%;
+            border: none;
+            outline: none;
+            background: #fff;
+            color: #000;
+            resize: none;
+            overflow: auto;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container teacher-view">
@@ -43,6 +88,9 @@
                         <span id="lectureDate"></span>
                     </div>
                 </div>
+                <button id="modifyNotesBtn" class="modify-notes-btn" aria-label="Modify Notes">
+                    <i class="bi bi-list"></i>
+                </button>
             </div>
 
             <div class="breadcrumb">
@@ -59,9 +107,9 @@
                 </section>
 
                 <!-- Transcription Section -->
-                <section class="transcription-section">
+                <section id="transcription-section" class="transcription-section">
                     <div class="section-header">
-                        <h2>Transcription</h2>
+                        <h2>Lecture Transcription</h2>
                         <div class="header-actions">
                             <button id="saveTranscription" class="save-transcription">
                                 <i class="bi bi-save"></i>
@@ -69,29 +117,287 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="transcription-toolbar">
                         <button class="tool-btn active" data-action="edit">
                             <i class="bi bi-pencil"></i>
                             Edit
                         </button>
                     </div>
-                    
-                    <div class="transcription-editor">
-                        <textarea id="transcriptionEditor" 
-                                 placeholder="Transcription will appear here..."
-                                 spellcheck="true"
-                                 aria-label="Transcription editor"></textarea>
-                        <div class="save-status">
-                            <i class="bi bi-check-circle"></i>
-                            <span>All changes saved</span>
+
+                    <div class="row g-3 align-items-stretch">
+                        <div class="col-12 col-lg-6 d-flex">
+                            <div class="transcript-box w-100">
+                                <div class="transcript-header"><h3>Editable Transcription</h3></div>
+                                <div class="transcript-content">
+                                    <textarea id="transcriptionEditor" class="form-control" placeholder="Transcription will appear here..." spellcheck="true" aria-label="Transcription editor"></textarea>
+                                </div>
+                                <div class="save-status" style="padding: 0 1rem 0.75rem 1rem;">
+                                    <i class="bi bi-check-circle"></i>
+                                    <span>All changes saved</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6 d-flex">
+                            <div class="transcript-box w-100">
+                                <div class="transcript-header"><h3>Cleaned Transcript</h3></div>
+                                <div class="transcript-content scrollable">
+                                    <div id="formattedTranscriptionText" class="transcription-content definable" style="padding:0; border:none; border-radius:0; min-height:auto; background:#fff;"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
+
+                
+
+                <!-- Enhanced Summary Section (hidden by default) -->
+                <section class="summary-section" style="display: none;">
+                    <div class="summary-content">
+                        <h3 class="summary-title"></h3>
+                        <div class="summary-overview">
+                            <h4>Context & Purpose</h4>
+                            <div class="overview-box">
+                                <p class="definable"><strong>Main Theme:</strong> <span id="mainThesis"></span></p>
+                                <p class="definable"><strong>Scientific Context:</strong> <span id="context"></span></p>
+                                <p class="definable"><strong>Real-World Significance:</strong> <span id="significance"></span></p>
+                            </div>
+                        </div>
+                        <div class="key-points">
+                            <h4>Main Discussion Points</h4>
+                            <div id="keyPoints"></div>
+                        </div>
+                        <div class="practical-applications">
+                            <h4>Practical Applications & Real-World Examples</h4>
+                            <div id="applications"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Visual Learning Section (hidden by default) -->
+                <section id="visual-learning-section" class="visual-learning-section" style="display: none;">
+                    <h2>Visual Learning</h2>
+                    <div class="visual-content"></div>
+                </section>
+
+                <!-- Interactive Learning Section (hidden by default) -->
+                <section id="kinesthetic-section" class="kinesthetic-section" style="display: none;">
+                    <h2>Interactive Learning</h2>
+                    <div class="interactive-content"></div>
+                    <div class="quiz-controls">
+                        <button class="check-answers-btn">Check Answers</button>
+                        <button class="reset-quiz-btn">Reset Quiz</button>
+                        <button class="explanation-btn" disabled>Show Explanation</button>
+                    </div>
+                </section>
+
+                <!-- Flashcards Section (hidden by default) -->
+                <section id="flashcards-section" class="flashcards-section" style="display: none;">
+                    <h2>Flashcards</h2>
+                    <div class="flashcards-content"></div>
+                </section>
+            </div>
+
+            <!-- Quick Jump Menu -->
+            <div class="quick-jump">
+                <button class="quick-jump-btn" onclick="toggleQuickJump()">
+                    <i class="bi bi-list"></i>
+                    Quick Jump
+                </button>
+                <div class="quick-jump-menu"></div>
             </div>
         </main>
+
+        <!-- Modify Notes Sidebar -->
+        <div id="modifySidebar" class="modify-sidebar">
+            <div class="sidebar-header">
+                <h3>View Note Types</h3>
+                <button id="closeSidebar" class="close-btn" aria-label="Close sidebar">×</button>
+            </div>
+            <div class="sidebar-content">
+                <div class="preferences-section">
+                    <div class="preference-card">
+                        <div class="preference-icon">
+                            <i class="bi bi-file-text"></i>
+                        </div>
+                        <div class="preference-details">
+                            <h4>Summarization</h4>
+                            <p>Generate a concise summary of the lecture content</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="summarization">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="preference-card">
+                        <div class="preference-icon">
+                            <i class="bi bi-card-text"></i>
+                        </div>
+                        <div class="preference-details">
+                            <h4>Flashcards</h4>
+                            <p>Create study flashcards from key concepts</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="flashcards">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="preference-card">
+                        <div class="preference-icon">
+                            <i class="bi bi-volume-up"></i>
+                        </div>
+                        <div class="preference-details">
+                            <h4>Audio</h4>
+                            <p>Show lecture recording player</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="audio">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="preference-card">
+                        <div class="preference-icon">
+                            <i class="bi bi-eye"></i>
+                        </div>
+                        <div class="preference-details">
+                            <h4>Visual Learning</h4>
+                            <p>Enhance understanding with relevant images sourced from key lecture concepts</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="visual">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="preference-card">
+                        <div class="preference-icon">
+                            <i class="bi bi-hand-index"></i>
+                        </div>
+                        <div class="preference-details">
+                            <h4>Quizzes</h4>
+                            <p>Test your understanding and track your progress with interactive questions</p>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="kinesthetic">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="save-button-container">
+                    <button class="preferences-save-btn" id="savePreferences">
+                        <i class="bi bi-check2"></i>
+                        Apply Changes
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script src="/js/definitions.js"></script>
+    <script>
+        function toggleQuickJump() {
+            const menu = document.querySelector('.quick-jump-menu');
+            menu.classList.toggle('show');
+        }
+
+        function scrollToSection(sectionId) {
+            const section = document.querySelector(`section#${sectionId}, section.${sectionId}`);
+            if (section) {
+                if (section.style.display === 'none') {
+                    const checkboxId = {
+                        'audio-section': 'audio',
+                        'summary-section': 'summarization',
+                        'flashcards-section': 'flashcards',
+                        'visual-learning-section': 'visual',
+                        'kinesthetic-section': 'kinesthetic'
+                    }[sectionId];
+                    const checkbox = document.getElementById(checkboxId);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        section.style.display = 'block';
+                    }
+                }
+                void section.offsetHeight;
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.querySelector('.quick-jump-menu').classList.remove('show');
+            }
+        }
+
+        function updateQuickJumpMenu() {
+            const menu = document.querySelector('.quick-jump-menu');
+            if (!menu) return;
+            menu.innerHTML = '';
+            const alwaysVisibleSections = [
+                { id: 'transcription-section', name: 'Lecture Transcription', icon: 'bi-text-paragraph' }
+            ];
+            const optionalSections = [
+                { id: 'audio-section', name: 'Audio Player', icon: 'bi-mic', checkboxId: 'audio' },
+                { id: 'summary-section', name: 'Summary', icon: 'bi-card-text', checkboxId: 'summarization' },
+                { id: 'visual-learning-section', name: 'Visual Learning', icon: 'bi-image', checkboxId: 'visual' },
+                { id: 'kinesthetic-section', name: 'Interactive Learning', icon: 'bi-puzzle', checkboxId: 'kinesthetic' },
+                { id: 'flashcards-section', name: 'Flashcards', icon: 'bi-card-list', checkboxId: 'flashcards' }
+            ];
+            alwaysVisibleSections.forEach(section => {
+                const sectionElement = document.querySelector(`section#${section.id}`);
+                if (sectionElement) {
+                    const item = document.createElement('div');
+                    item.className = 'quick-jump-item';
+                    item.innerHTML = `<i class="bi ${section.icon}"></i>${section.name}`;
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        scrollToSection(section.id);
+                    });
+                    menu.appendChild(item);
+                }
+            });
+            optionalSections.forEach(section => {
+                const checkbox = document.getElementById(section.checkboxId);
+                const sectionElement = document.querySelector(`section#${section.id}`);
+                if (checkbox && checkbox.checked && sectionElement) {
+                    const item = document.createElement('div');
+                    item.className = 'quick-jump-item';
+                    item.innerHTML = `<i class="bi ${section.icon}"></i>${section.name}`;
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        scrollToSection(section.id);
+                    });
+                    menu.appendChild(item);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savePreferences = document.getElementById('savePreferences');
+            if (savePreferences) {
+                savePreferences.addEventListener('click', function() {
+                    const preferences = {
+                        'audio': 'audio-section',
+                        'summarization': 'summary-section',
+                        'flashcards': 'flashcards-section',
+                        'visual': 'visual-learning-section',
+                        'kinesthetic': 'kinesthetic-section'
+                    };
+                    Object.entries(preferences).forEach(([prefId, sectionId]) => {
+                        const isChecked = document.getElementById(prefId).checked;
+                        const section = document.getElementById(sectionId);
+                        if (section) section.style.display = isChecked ? 'block' : 'none';
+                    });
+                    updateQuickJumpMenu();
+                    const ms = document.getElementById('modifySidebar');
+                    if (ms) ms.classList.remove('active');
+                });
+            }
+            updateQuickJumpMenu();
+            document.addEventListener('click', function(event) {
+                const quickJump = document.querySelector('.quick-jump');
+                const menu = document.querySelector('.quick-jump-menu');
+                if (quickJump && menu && !quickJump.contains(event.target) && menu.classList.contains('show')) {
+                    menu.classList.remove('show');
+                }
+            });
+        });
+    </script>
     <script src="js/teacher-lecture-notes.js"></script>
 </body>
 </html>

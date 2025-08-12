@@ -6,7 +6,15 @@ const connectDB = require('./config/db');
 const Recording = require('./models/Recordings');
 const { text2SpeechGPT } = require('./speechToText.js');
 const Groq = require('groq-sdk');
-require('dotenv').config();
+// Load environment variables
+const dotenv = require('dotenv');
+// 1) Try local .env inside speech-to-text-demo
+dotenv.config();
+// 2) Fallback: try parent whisper/.env if GROQ_API_KEY is still missing
+if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
+    const parentEnvPath = path.join(__dirname, '../.env');
+    dotenv.config({ path: parentEnvPath });
+}
 const User = require('./models/User');
 const Course = require('./models/Course');
 const { uploadFile } = require('./utils/dropbox'); // Add Dropbox utility
