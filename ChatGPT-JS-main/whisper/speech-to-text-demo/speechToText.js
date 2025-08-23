@@ -1,13 +1,18 @@
 const fs = require('fs');
 const request = require('request');
 const path = require('path');
+const dotenv = require('dotenv');
 
-// Load API key from environment variables
-// No longer using config.json
-require('dotenv').config();
+// Load API key from environment variables with fallback to parent .env (like server.js)
+dotenv.config();
+if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.trim() === '') {
+  const parentEnvPath = path.join(__dirname, '../.env');
+  dotenv.config({ path: parentEnvPath });
+}
+
 const apiKey = process.env.OPENAI_API_KEY;
 
-if (!apiKey) {
+if (!apiKey || apiKey.trim() === '') {
   console.error('ERROR: OPENAI_API_KEY not found in environment variables');
 }
 
@@ -39,8 +44,7 @@ async function text2SpeechGPT(options) {
             method: "POST",
             url: "https://api.openai.com/v1/audio/translations",
             headers: {
-                "Authorization": "Bearer " + apiKey,
-                "Content-Type": "multipart/form-data"
+                "Authorization": "Bearer " + apiKey
             },
             formData: {
                 "model": "whisper-1"

@@ -3,6 +3,7 @@ class StudentLectureNotes {
         this.lectureId = new URLSearchParams(window.location.search).get('id');
         this.courseId = new URLSearchParams(window.location.search).get('courseId');
         this.quill = null; // Initialize Quill reference
+        this.finalized = null; // Teacher-approved content
         
         if (!this.lectureId) {
             window.location.href = '/studentdashboard.html';
@@ -48,6 +49,16 @@ class StudentLectureNotes {
         if (dashboardLink && userEmail) {
             dashboardLink.href = `/studentdashboard.html?email=${encodeURIComponent(userEmail)}`;
         }
+
+        // Global zoom handler
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest && e.target.closest('.zoom-image-btn');
+            if (btn) {
+                const src = btn.dataset.src || '';
+                const alt = btn.dataset.alt || 'Image';
+                if (src) this.openImageLightbox(src, alt);
+            }
+        });
     }
 
     setupNotesModification() {
@@ -101,6 +112,8 @@ class StudentLectureNotes {
             }
             
             await this.loadCourseDetails();
+            // Fetch teacher-finalized content in parallel
+            await this.fetchFinalizedContent();
             this.updateUI(data.recording);
             this.loadNotes();
             
@@ -218,8 +231,13 @@ class StudentLectureNotes {
             // First show the raw transcription
             transcriptionElement.textContent = lecture.transcription.text;
             
-            // Then format the transcription with Groq
-            this.formatTranscript(lecture.transcription.text);
+            // Prefer teacher-finalized cleaned transcript when available
+            if (this.finalized && this.finalized.formattedTranscript) {
+                transcriptionElement.innerHTML = this.finalized.formattedTranscript;
+            } else {
+                // Fallback: format the transcription with Groq
+                this.formatTranscript(lecture.transcription.text);
+            }
             
             const handler = new DefinitionsHandler();
             handler.initializeSection(transcriptionElement.parentElement);
@@ -282,6 +300,19 @@ class StudentLectureNotes {
             // Fallback to original transcription
             const transcriptionElement = document.getElementById('transcriptionText');
             transcriptionElement.textContent = transcription;
+        }
+    }
+
+    async fetchFinalizedContent() {
+        try {
+            const res = await fetch(`/api/recordings/${this.lectureId}/finalized`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success) {
+                this.finalized = data.finalized;
+            }
+        } catch (e) {
+            console.error('Failed to fetch finalized content:', e);
         }
     }
 
@@ -348,9 +379,20 @@ class StudentLectureNotes {
             audioSection.style.display = preferences.audio ? 'block' : 'none';
         }
 
-        // Handle summarization if selected
+        // Handle summarization (student view: load teacher-finalized)
         if (preferences.summarization) {
-            await this.handleSummarization();
+            if (this.finalized && this.finalized.summary) {
+                this.updateSummaryContent(this.finalized.summary);
+                document.querySelector('.summary-section').style.display = 'block';
+            } else {
+                document.querySelector('.summary-section').style.display = 'block';
+                document.querySelector('.summary-title').textContent = 'Summary (Awaiting Teacher Finalization)';
+                document.getElementById('mainThesis').textContent = '';
+                document.getElementById('context').textContent = '';
+                document.getElementById('significance').textContent = '';
+                document.getElementById('keyPoints').innerHTML = '<p>No summary published by teacher yet.</p>';
+                document.getElementById('applications').innerHTML = '';
+            }
         }
 
         // Handle flashcards if selected
@@ -358,9 +400,18 @@ class StudentLectureNotes {
             await this.handleFlashcards();
         }
 
-        // Handle visual learning if selected
+        // Handle visual learning (student view: load teacher-finalized)
         if (preferences.visual) {
-            await this.handleVisualLearning();
+            if (this.finalized && Array.isArray(this.finalized.visualSections) && this.finalized.visualSections.length) {
+                await this.updateVisualLearningFromFinalized(this.finalized.visualSections);
+                this.showToastNotification('Visual learning loaded');
+            } else {
+                const section = document.getElementById('visual-learning-section') || document.querySelector('.visual-learning-section');
+                if (section) {
+                    section.style.display = 'block';
+                    section.innerHTML = '<h2>Visual Learning</h2><p class="error">No teacher-published visual content yet.</p>';
+                }
+            }
         }
 
         // Handle kinesthetic learning if selected
@@ -631,8 +682,12 @@ class StudentLectureNotes {
                 // Create the content for the slide
                 slide.innerHTML = `
                     <div class="visual-slide-content">
-                        <div class="visual-slide-image">
+                        <div class="visual-slide-image" style="position:relative;">
                             <img src="${imageUrl}" alt="${section.term}" onerror="this.style.display='none'">
+                            <button class="zoom-image-btn" data-src="${imageUrl}" data-alt="${section.term}"
+                                style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:6px; padding:6px 8px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Expand">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
                         </div>
                         <div class="visual-slide-text">
                             <h3>${section.term}</h3>
@@ -674,6 +729,106 @@ class StudentLectureNotes {
         visualLearningSection.appendChild(navigation);
         
         // Set up navigation
+        this.setupVisualSlideNavigation(slideContainer, navigation);
+    }
+
+    // Lightbox for student visual learning
+    openImageLightbox(src, alt) {
+        const existing = document.getElementById('image-lightbox');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'image-lightbox';
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.75)';
+        overlay.style.zIndex = '2147483647';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.padding = '24px';
+        const imgWrap = document.createElement('div');
+        imgWrap.style.width = '90vw';
+        imgWrap.style.height = '90vh';
+        imgWrap.style.display = 'flex';
+        imgWrap.style.alignItems = 'center';
+        imgWrap.style.justifyContent = 'center';
+        imgWrap.style.position = 'relative';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = alt || 'Zoomed Image';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.style.borderRadius = '8px';
+        img.style.boxShadow = '0 12px 36px rgba(0,0,0,0.5)';
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '×';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.top = '8px';
+        closeBtn.style.right = '8px';
+        closeBtn.style.width = '32px';
+        closeBtn.style.height = '32px';
+        closeBtn.style.borderRadius = '50%';
+        closeBtn.style.border = 'none';
+        closeBtn.style.background = '#ffffff';
+        closeBtn.style.color = '#111827';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        closeBtn.addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        imgWrap.appendChild(img);
+        imgWrap.appendChild(closeBtn);
+        overlay.appendChild(imgWrap);
+        document.body.appendChild(overlay);
+    }
+
+    // Render finalized visual content from teacher without scraping
+    async updateVisualLearningFromFinalized(sections) {
+        const visualLearningSection = document.getElementById('visual-learning-section') || document.querySelector('.visual-learning-section');
+        if (!visualLearningSection) return;
+        visualLearningSection.innerHTML = '<h2>Visual Learning</h2>';
+        visualLearningSection.style.display = 'block';
+        if (!sections.length) {
+            visualLearningSection.innerHTML += '<p class="no-results">No visual learning items available.</p>';
+            return;
+        }
+        const slideContainer = document.createElement('div');
+        slideContainer.className = 'visual-slideshow-container';
+        for (const section of sections) {
+            const slide = document.createElement('div');
+            slide.className = 'visual-slide';
+            slide.innerHTML = `
+                <div class="visual-slide-content">
+                    <div class="visual-slide-image" style="position:relative;">
+                        <img src="${section.imageUrl || ''}" alt="${section.term || ''}" onerror="this.style.display='none'">
+                        <button class="zoom-image-btn" data-src="${section.imageUrl || ''}" data-alt="${section.term || ''}"
+                            style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:6px; padding:6px 8px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Expand">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="visual-slide-text">
+                        <h3>${section.term || ''}</h3>
+                        <p>${section.explanation || ''}</p>
+                    </div>
+                </div>
+            `;
+            slideContainer.appendChild(slide);
+        }
+        if (slideContainer.children.length === 0) {
+            visualLearningSection.innerHTML += '<p class="no-results">No visual learning items available.</p>';
+            return;
+        }
+        slideContainer.querySelector('.visual-slide').style.display = 'block';
+        const navigation = document.createElement('div');
+        navigation.className = 'visual-slide-navigation';
+        navigation.innerHTML = `
+            <button class="slide-btn prev-slide" disabled><i class="bi bi-chevron-left"></i> Previous</button>
+            <span class="slide-counter">1/${slideContainer.children.length}</span>
+            <button class="slide-btn next-slide" ${slideContainer.children.length > 1 ? '' : 'disabled'}>Next <i class="bi bi-chevron-right"></i></button>
+        `;
+        visualLearningSection.appendChild(slideContainer);
+        visualLearningSection.appendChild(navigation);
         this.setupVisualSlideNavigation(slideContainer, navigation);
     }
 
@@ -918,24 +1073,30 @@ class StudentLectureNotes {
     }
 
     async createQuizSection(quizContent) {
-        // Remove existing quiz section if it exists
-        const existingQuiz = document.querySelector('.kinesthetic-section');
-        if (existingQuiz) {
-            existingQuiz.remove();
+        // Render inside existing placeholder section to preserve position
+        let quizSection = document.getElementById('kinesthetic-section') || document.querySelector('.kinesthetic-section');
+        if (!quizSection) {
+            quizSection = document.createElement('section');
+            quizSection.className = 'kinesthetic-section';
+            quizSection.id = 'kinesthetic-section';
+            const contentGrid = document.querySelector('.content-grid');
+            contentGrid.appendChild(quizSection);
         }
 
-        // Create quiz section
-        const quizSection = document.createElement('section');
-        quizSection.className = 'kinesthetic-section';
-        
-        // Apply the background color to the section
+        // Apply styles
         quizSection.style.backgroundColor = '#e0ebe6';
         quizSection.style.padding = '1.5rem';
         quizSection.style.borderRadius = '0.8rem';
-        
+        quizSection.style.display = 'block';
+
         // Initial HTML with quiz mode selection
         quizSection.innerHTML = `
-            <h2>Interactive Quizzes</h2>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                <h2>Interactive Quizzes</h2>
+                <button class="regen-quiz btn btn-sm btn-outline-secondary" type="button" title="Regenerate quizzes">
+                    <i class="bi bi-arrow-clockwise"></i> Regenerate
+                </button>
+            </div>
             <div class="mode-selector">
                 <button class="mode-btn active" data-mode="categorization" style="background-color: #7e9ebf; color: white;">Drag & Drop Quiz</button>
                 <button class="mode-btn" data-mode="multipleChoice" style="background-color: #7e9ebf; color: white;">Multiple Choice Quiz</button>
@@ -945,14 +1106,18 @@ class StudentLectureNotes {
                 <div class="multiple-choice-mode" id="multipleChoiceQuiz"></div>
             </div>
         `;
-        
-        // Add to content grid
-        const contentGrid = document.querySelector('.content-grid');
-        contentGrid.appendChild(quizSection);
 
         // Create both quiz types
         this.createCategorizationQuiz(quizContent.categorization, document.getElementById('categorizationQuiz'));
         this.createMultipleChoiceQuiz(quizContent.multipleChoice, document.getElementById('multipleChoiceQuiz'));
+
+        // Regenerate quizzes
+        const regenQuizBtn = quizSection.querySelector('.regen-quiz');
+        if (regenQuizBtn) {
+            regenQuizBtn.addEventListener('click', async () => {
+                await this.handleKinestheticLearning();
+            });
+        }
 
         // Add event listeners for mode buttons
         const modeButtons = quizSection.querySelectorAll('.mode-btn');
@@ -1549,18 +1714,24 @@ class StudentLectureNotes {
     }
 
     createFlashcardsSection(flashcards) {
-        // Remove existing flashcards section if it exists
-        const existingSection = document.querySelector('.flashcards-section');
-        if (existingSection) {
-            existingSection.remove();
+        // Use existing flashcards section placeholder to preserve position
+        let section = document.getElementById('flashcards-section') || document.querySelector('.flashcards-section');
+        if (!section) {
+            section = document.createElement('section');
+            section.className = 'flashcards-section';
+            section.id = 'flashcards-section';
+            const contentGrid = document.querySelector('.content-grid');
+            contentGrid.appendChild(section);
         }
+        section.style.display = 'block';
 
-        // Create flashcards section
-        const section = document.createElement('section');
-        section.className = 'flashcards-section';
-        
         section.innerHTML = `
-            <h2>Study Flashcards</h2>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                <h2>Study Flashcards</h2>
+                <button class="regen-flashcards btn btn-sm btn-outline-secondary" type="button" title="Regenerate flashcards">
+                    <i class="bi bi-arrow-clockwise"></i> Regenerate
+                </button>
+            </div>
             <div class="flashcards-controls">
                 <div class="mode-selector">
                     <button class="mode-btn active" data-mode="read">Read Mode</button>
@@ -1636,12 +1807,16 @@ class StudentLectureNotes {
             </div>
         `;
 
-        // Add to content grid
-        const contentGrid = document.querySelector('.content-grid');
-        contentGrid.appendChild(section);
-
         // Initialize flashcards functionality
         this.initializeFlashcards();
+
+        // Regenerate flashcards
+        const regenBtn = section.querySelector('.regen-flashcards');
+        if (regenBtn) {
+            regenBtn.addEventListener('click', async () => {
+                await this.handleFlashcards();
+            });
+        }
     }
 
     initializeFlashcards() {

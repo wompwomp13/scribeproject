@@ -11,14 +11,123 @@ class TeacherLectureNotes {
         this.setupToolbar();
         this.setupNotesModification();
         this.loadSavedPreferences();
+        // Source selectors removed; default to showing saved if present
         
         // Hide save status initially
         const status = document.querySelector('.save-status');
         if (status) status.style.display = 'none';
     }
 
+    ensureSummaryVisibleWithMessage(message) {
+        const section = document.querySelector('.summary-section');
+        if (!section) return;
+        section.style.display = 'block';
+        const titleEl = section.querySelector('.summary-title');
+        if (titleEl) titleEl.textContent = 'Summary';
+        const mainThesis = document.getElementById('mainThesis');
+        const context = document.getElementById('context');
+        const significance = document.getElementById('significance');
+        const keyPoints = document.getElementById('keyPoints');
+        const applications = document.getElementById('applications');
+        if (mainThesis) mainThesis.textContent = message || '';
+        if (context) context.textContent = '';
+        if (significance) significance.textContent = '';
+        if (keyPoints) keyPoints.innerHTML = '';
+        if (applications) applications.innerHTML = '';
+    }
+
     setupEventListeners() {
-        document.getElementById('saveTranscription').addEventListener('click', () => this.saveTranscription());
+        const topSaveBtn = document.getElementById('saveTranscription');
+        if (topSaveBtn) {
+            topSaveBtn.addEventListener('click', async () => {
+                const ok = await this.saveTranscription(false);
+                if (ok) {
+                    this.showToastNotification('Transcription saved');
+                } else {
+                    this.showToastNotification('Failed to save transcription', false);
+                }
+            });
+        }
+        // Wire up regenerate/save buttons for transcript and cleaned transcript
+        document.addEventListener('click', async (e) => {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.id === 'saveTranscriptBtn') {
+                const editor = document.getElementById('transcriptionEditor');
+                if (!editor) return;
+                // Save raw transcription text via existing endpoint and toast result
+                const ok = await this.saveTranscription(false);
+                if (ok) {
+                    this.showToastNotification('Transcription saved');
+                } else {
+                    this.showToastNotification('Failed to save transcription', false);
+                }
+            }
+            if (target.id === 'editTranscriptBtn') {
+                const editor = document.getElementById('transcriptionEditor');
+                if (editor) {
+                    editor.focus();
+                    // add subtle focus ring to container
+                    const wrap = editor.closest('.transcript-box');
+                    if (wrap) {
+                        wrap.classList.add('editing-focus');
+                        setTimeout(() => wrap.classList.remove('editing-focus'), 1500);
+                    }
+                }
+            }
+            if (target.id === 'regenCleanedBtn') {
+                const editor = document.getElementById('transcriptionEditor');
+                await this.renderFormattedTranscript(editor.value, null);
+            }
+            if (target.id === 'saveCleanedBtn') {
+                const container = document.getElementById('formattedTranscriptionText');
+                const html = container ? container.innerHTML : '';
+                await this.saveFinalizedContent({ formattedTranscript: html, summary: null, visualSections: undefined }, 'cleaned transcript');
+            }
+            if (target.id === 'editCleanedBtn') {
+                const container = document.getElementById('formattedTranscriptionText');
+                if (container) {
+                    container.setAttribute('contenteditable', 'true');
+                    this.showToastNotification('Edit mode: Cleaned Transcript');
+                }
+            }
+            // Summary buttons
+            if (target.id === 'regenSummaryBtn') {
+                await this.handleSummarization();
+            }
+            if (target.id === 'saveSummaryBtn') {
+                // Disable edit mode before collecting
+                this.toggleSummaryEditing(false);
+                const summary = this.collectRenderedSummary();
+                await this.saveFinalizedContent({ formattedTranscript: undefined, summary, visualSections: undefined }, 'summary');
+            }
+            if (target.id === 'editSummaryBtn') {
+                this.toggleSummaryEditing(true);
+                this.showToastNotification('Edit mode: Summary');
+            }
+            // Visual learning buttons
+            if (target.id === 'regenVisualBtn') {
+                await this.handleVisualLearning();
+                this.showToastNotification('Visual learning regenerated');
+            }
+            if (target.id === 'saveVisualBtn') {
+                const sections = this.collectRenderedVisualSections();
+                await this.saveFinalizedContent({ formattedTranscript: undefined, summary: undefined, visualSections: sections }, 'visual learning');
+            }
+            if (target.id === 'editVisualBtn') {
+                this.toggleVisualEditing(true);
+            }
+
+            // Zoom image (lightbox) handler - supports clicking icon inside the button
+            const zoomBtn = target.closest && target.closest('.zoom-image-btn');
+            if (zoomBtn) {
+                const src = zoomBtn.dataset.src || '';
+                const alt = zoomBtn.dataset.alt || 'Image';
+                if (src) {
+                    this.openImageLightbox(src, alt);
+                }
+            }
+        });
     }
 
     async loadLectureData() {
@@ -41,6 +150,65 @@ class TeacherLectureNotes {
             console.error('Error loading lecture:', error);
             alert('Failed to load lecture data: ' + error.message);
         }
+    }
+
+    collectRenderedSummary() {
+        const summary = {
+            title: document.querySelector('.summary-title')?.textContent || 'Lecture Summary',
+            overview: {
+                mainThesis: document.getElementById('mainThesis')?.textContent || '',
+                context: document.getElementById('context')?.textContent || '',
+                significance: document.getElementById('significance')?.textContent || ''
+            },
+            keyTopics: [],
+            practicalApplications: []
+        };
+        document.querySelectorAll('#keyPoints .key-point').forEach(point => {
+            const heading = point.querySelector('.point-header h5')?.textContent?.replace(/^\d+\.\s*/, '') || '';
+            const mainPoints = Array.from(point.querySelectorAll('.point-content ul li')).map(li => li.textContent.trim());
+            summary.keyTopics.push({ heading, mainPoints });
+        });
+        document.querySelectorAll('#applications .application-item').forEach(app => {
+            const h5 = app.querySelector('h5')?.textContent || '';
+            const p = app.querySelector('p')?.textContent || '';
+            summary.practicalApplications.push({ scenario: h5, explanation: p });
+        });
+        return summary;
+    }
+
+    toggleSummaryEditing(enable) {
+        const editableSelectors = [
+            '.summary-title',
+            '#mainThesis',
+            '#context',
+            '#significance',
+            '#keyPoints .key-point .point-header h5',
+            '#keyPoints .key-point .point-content li',
+            '#applications .application-item h5',
+            '#applications .application-item p'
+        ];
+        editableSelectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                if (enable) {
+                    el.setAttribute('contenteditable', 'true');
+                } else {
+                    el.removeAttribute('contenteditable');
+                }
+            });
+        });
+    }
+
+    collectRenderedVisualSections() {
+        const sections = [];
+        const slides = document.querySelectorAll('#visual-learning-section .visual-slide');
+        slides.forEach(slide => {
+            const term = slide.querySelector('h3')?.textContent || '';
+            const explanation = slide.querySelector('p')?.textContent || '';
+            const img = slide.querySelector('img');
+            const imageUrl = img ? img.getAttribute('src') : '';
+            sections.push({ term, explanation, imageUrl });
+        });
+        return sections;
     }
 
     updateUI(lecture) {
@@ -123,8 +291,23 @@ class TeacherLectureNotes {
         
         document.getElementById('transcriptionEditor').value = lecture.transcription.text;
 
-        // Render AI-cleaned transcript (same endpoint the student page uses)
-        this.renderFormattedTranscript(lecture.transcription.text);
+        // Store finalized for source switching
+        this.finalized = lecture.finalized || null;
+
+        // Render AI-cleaned transcript (prefer saved by default)
+        this.renderFormattedTranscript(lecture.transcription.text, lecture.finalized?.formattedTranscript);
+
+        // If saved summary exists, render it by default
+        if (this.finalized?.summary) {
+            this.updateSummaryContent(this.finalized.summary);
+            const section = document.querySelector('.summary-section');
+            if (section) section.style.display = 'block';
+        }
+
+        // If saved visual learning exists, render it by default
+        if (this.finalized?.visualSections?.length) {
+            this.updateVisualLearningSection(this.finalized.visualSections);
+        }
         // Also replace the student-like immediate formatting into the editable area preview if needed
 
         // Apply initial audio section visibility based on preferences
@@ -144,28 +327,28 @@ class TeacherLectureNotes {
 
     setupToolbar() {
         const toolbar = document.querySelector('.transcription-toolbar');
+        if (!toolbar) return; // toolbar removed in HTML; keep safe-guard
         toolbar.addEventListener('click', (e) => {
             const button = e.target.closest('.tool-btn');
             if (!button) return;
-
-            // Remove active class from all buttons
-            toolbar.querySelectorAll('.tool-btn').forEach(btn => 
-                btn.classList.remove('active'));
-            
-            // Add active class to clicked button
+            toolbar.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
-
-            // Handle tool action
             const action = button.dataset.action;
             this.handleToolAction(action);
         });
     }
 
-    async renderFormattedTranscript(transcription) {
+    async renderFormattedTranscript(transcription, finalizedHtml) {
         try {
             const container = document.getElementById('formattedTranscriptionText');
             if (!container) return;
-            container.innerHTML = '<div class="loading-indicator"><div class="loading-spinner"></div><p>Preparing AI-Cleaned Transcript...</p></div>';
+            // Respect current source selector when available
+            const sourceMode = document.getElementById('cleanedSourceSelect')?.value || 'saved';
+            if (sourceMode === 'saved' && finalizedHtml && finalizedHtml.trim()) {
+                container.innerHTML = finalizedHtml;
+            } else {
+                container.innerHTML = '<div class="loading-indicator"><div class="loading-spinner"></div><p>Preparing AI-Cleaned Transcript...</p></div>';
+            }
 
             const response = await fetch('/api/format-transcript', {
                 method: 'POST',
@@ -177,7 +360,11 @@ class TeacherLectureNotes {
             const data = await response.json();
 
             if (data.success && data.formattedTranscript) {
-                container.innerHTML = marked.parse(data.formattedTranscript);
+                // Only overwrite UI with generated content if mode is generate
+                const modeNow = document.getElementById('cleanedSourceSelect')?.value || 'saved';
+                if (modeNow === 'generate' || !finalizedHtml) {
+                    container.innerHTML = marked.parse(data.formattedTranscript);
+                }
                 const handler = new DefinitionsHandler();
                 handler.initializeSection(container.parentElement);
             } else {
@@ -194,6 +381,27 @@ class TeacherLectureNotes {
                 const fallbackMd = `# ${title}\n\n${transcription}`;
                 container.innerHTML = typeof marked !== 'undefined' ? marked.parse(fallbackMd) : `<h1>${title}</h1><pre>${transcription}</pre>`;
             }
+        }
+    }
+
+    // Save finalized content helpers
+    async saveFinalizedContent({ formattedTranscript, summary, visualSections }, label = 'content') {
+        try {
+            const userEmail = localStorage.getItem('currentUserEmail') || '';
+            const userRes = await fetch(`/api/auth/current-user?userEmail=${encodeURIComponent(userEmail)}`);
+            const userData = await userRes.json();
+            const userId = userData?.user?._id || null;
+            const res = await fetch(`/api/recordings/${this.lectureId}/finalize`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ formattedTranscript, summary, visualSections, userId })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save');
+            this.showToastNotification(`Saved ${label} successfully`);
+        } catch (e) {
+            console.error('Save finalized error:', e);
+            this.showToastNotification(`Failed to save ${label}`, false);
         }
     }
 
@@ -248,12 +456,13 @@ class TeacherLectureNotes {
                     status.style.display = 'none';
                 }, 3000);
             }
-
+            return true;
         } catch (error) {
             console.error('Error saving transcription:', error);
             if (!isAutoSave) {
                 alert('Failed to save transcription: ' + error.message);
             }
+            return false;
         }
     }
 
@@ -411,14 +620,82 @@ class TeacherLectureNotes {
         const savePreferencesBtn = document.getElementById('savePreferences');
         const sidebar = document.getElementById('modifySidebar');
 
-        if (modifyBtn) modifyBtn.addEventListener('click', () => this.toggleSidebar());
+        if (modifyBtn) modifyBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.toggleSidebar(); });
         if (closeBtn) closeBtn.addEventListener('click', () => this.closeSidebar());
         if (savePreferencesBtn) savePreferencesBtn.addEventListener('click', () => this.handleSavePreferences());
+
+        // Source buttons inside preference cards (Saved / Generate New)
+        sidebar?.addEventListener('click', async (e) => {
+            const btn = e.target.closest && e.target.closest('.source-btn');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const feature = btn.getAttribute('data-feature');
+            const mode = btn.getAttribute('data-mode');
+            try {
+                if (feature === 'cleaned') {
+                    const editor = document.getElementById('transcriptionEditor');
+                    const text = editor?.value || '';
+                    if (mode === 'saved') {
+                        if (this.finalized?.formattedTranscript) {
+                            const container = document.getElementById('formattedTranscriptionText');
+                            if (container) container.innerHTML = this.finalized.formattedTranscript;
+                            this.showToastNotification('Loaded saved cleaned transcript');
+                        } else {
+                            this.showToastNotification('No saved cleaned transcript yet', false);
+                        }
+                    } else {
+                        await this.renderFormattedTranscript(text, null);
+                        this.showToastNotification('Generated new cleaned transcript');
+                    }
+                }
+                if (feature === 'summary') {
+                    if (mode === 'saved') {
+                        if (this.finalized?.summary) {
+                            this.updateSummaryContent(this.finalized.summary);
+                            const section = document.querySelector('.summary-section');
+                            if (section) section.style.display = 'block';
+                            this.showToastNotification('Loaded saved summary');
+                        } else {
+                            this.ensureSummaryVisibleWithMessage('No saved summary yet.');
+                            this.showToastNotification('No saved summary yet', false);
+                        }
+                    } else {
+                        await this.handleSummarization();
+                        this.showToastNotification('Generated new summary');
+                    }
+                }
+                if (feature === 'visual') {
+                    if (mode === 'saved') {
+                        if (this.finalized?.visualSections?.length) {
+                            await this.updateVisualLearningSection(this.finalized.visualSections);
+                            this.showToastNotification('Loaded saved visual learning');
+                        } else {
+                            const visualSection = document.getElementById('visual-learning-section') || document.querySelector('.visual-learning-section');
+                            if (visualSection) {
+                                visualSection.style.display = 'block';
+                                const contentRoot = visualSection.querySelector('.visual-content') || visualSection;
+                                contentRoot.innerHTML = '<p class="no-results">No saved visual learning yet.</p>';
+                            }
+                            this.showToastNotification('No saved visual learning yet', false);
+                        }
+                    } else {
+                        await this.handleVisualLearning();
+                        this.showToastNotification('Generated new visual learning');
+                    }
+                }
+            } catch (err) {
+                console.error('Source switch error:', err);
+                this.showToastNotification('Failed to switch content source', false);
+            }
+        });
 
         // Close on outside click
         document.addEventListener('click', (e) => {
             if (!sidebar) return;
-            if (!sidebar.contains(e.target) && !modifyBtn.contains(e.target) && sidebar.classList.contains('active')) {
+            const target = e.target;
+            const clickedToggle = (target && (target.id === 'modifyNotesBtn' || target.closest && target.closest('#modifyNotesBtn')));
+            if (!sidebar.contains(e.target) && !clickedToggle && sidebar.classList.contains('active')) {
                 this.closeSidebar();
             }
         });
@@ -624,53 +901,92 @@ class TeacherLectureNotes {
     }
 
     async updateVisualLearningSection(sections) {
-        const section = document.getElementById('visual-learning-section') || document.querySelector('.visual-learning-section');
-        if (!section) throw new Error('Visual learning section not found in the DOM');
-        section.innerHTML = '<h2>Visual Learning</h2>';
-        section.style.display = 'block';
+        const visualLearningSection = document.getElementById('visual-learning-section') || 
+                                  document.querySelector('.visual-learning-section');
+        
+        if (!visualLearningSection) {
+            throw new Error('Visual learning section not found in the DOM');
+        }
 
-        const limited = sections.slice(0, 5);
-        if (limited.length === 0) {
-            section.innerHTML += '<p class="no-results">No visual learning items could be generated for this lecture.</p>';
+        // Use the dedicated content root when present
+        const contentRoot = visualLearningSection.querySelector('.visual-content') || visualLearningSection;
+        contentRoot.innerHTML = '';
+        visualLearningSection.style.display = 'block';
+        
+        // Use all available sections (already teacher-saved or newly generated)
+        const limitedSections = sections;
+        
+        if (limitedSections.length === 0) {
+            contentRoot.innerHTML += '<p class="no-results">No visual learning items could be generated for this lecture.</p>'; 
             return;
         }
+        
+        // Create a container for the visual learning slideshow
         const slideContainer = document.createElement('div');
         slideContainer.className = 'visual-slideshow-container';
-        for (const s of limited) {
+        
+        // Add slides for each term
+        for (const section of limitedSections) {
             try {
-                const imageUrl = await this.searchImageForTerm(s.term);
+                // Prefer saved imageUrl if provided (teacher-saved). Fallback to scraping if missing.
+                const imageUrl = section.imageUrl && section.imageUrl.trim()
+                    ? section.imageUrl
+                    : await this.searchImageForTerm(section.term);
+                
+                // Create the slide
                 const slide = document.createElement('div');
                 slide.className = 'visual-slide';
+                
+                // Create the content for the slide
                 slide.innerHTML = `
                     <div class="visual-slide-content">
-                        <div class="visual-slide-image">
-                            <img src="${imageUrl}" alt="${s.term}" onerror="this.style.display='none'">
+                        <div class="visual-slide-image" style="position:relative;">
+                            <img src="${imageUrl}" alt="${section.term}" onerror="this.style.display='none'">
+                            <button class="zoom-image-btn" data-src="${imageUrl}" data-alt="${section.term}"
+                                style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); color:#fff; border:none; border-radius:6px; padding:6px 8px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;" title="Expand">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
                         </div>
                         <div class="visual-slide-text">
-                            <h3>${s.term}</h3>
-                            <p>${s.explanation}</p>
+                            <h3>${section.term}</h3>
+                            <p>${section.explanation}</p>
                         </div>
                     </div>
                 `;
+                
+                // Add the slide to the container
                 slideContainer.appendChild(slide);
-            } catch (e) {
-                console.error('Error creating visual item:', e);
+            } catch (error) {
+                console.error(`Error creating visual item for ${section.term}:`, error);
             }
         }
+        
         if (slideContainer.children.length === 0) {
-            section.innerHTML += '<p class="no-results">Failed to create any visual learning items.</p>';
+            contentRoot.innerHTML += '<p class="no-results">Failed to create any visual learning items.</p>';
             return;
         }
+        
+        // Show first slide initially
         slideContainer.querySelector('.visual-slide').style.display = 'block';
+        
+        // Create navigation controls
         const navigation = document.createElement('div');
         navigation.className = 'visual-slide-navigation';
         navigation.innerHTML = `
-            <button class="slide-btn prev-slide" disabled><i class="bi bi-chevron-left"></i> Previous</button>
+            <button class="slide-btn prev-slide" disabled>
+                    <i class="bi bi-chevron-left"></i> Previous
+                </button>
             <span class="slide-counter">1/${slideContainer.children.length}</span>
-            <button class="slide-btn next-slide" ${slideContainer.children.length > 1 ? '' : 'disabled'}>Next <i class="bi bi-chevron-right"></i></button>
-        `;
-        section.appendChild(slideContainer);
-        section.appendChild(navigation);
+            <button class="slide-btn next-slide" ${slideContainer.children.length > 1 ? '' : 'disabled'}>
+                    Next <i class="bi bi-chevron-right"></i>
+                </button>
+            `;
+
+        // Add the slideshow and navigation to the section
+        contentRoot.appendChild(slideContainer);
+        contentRoot.appendChild(navigation);
+        
+        // Set up navigation
         this.setupVisualSlideNavigation(slideContainer, navigation);
     }
 
@@ -714,7 +1030,12 @@ class TeacherLectureNotes {
             });
             if (!response.ok) throw new Error(`Image search failed with status: ${response.status}`);
             const data = await response.json();
-            if (data.success && data.imageUrl) return data.imageUrl;
+            if (data.success && data.imageUrl) {
+                if (window.toast && data.source) {
+                    window.toast.info(`Image source: ${data.source}`);
+                }
+                return data.imageUrl;
+            }
             const fallback = await fetch('/api/search-image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -722,7 +1043,12 @@ class TeacherLectureNotes {
             });
             if (fallback.ok) {
                 const fData = await fallback.json();
-                if (fData.success && fData.imageUrl) return fData.imageUrl;
+                if (fData.success && fData.imageUrl) {
+                    if (window.toast && fData.source) {
+                        window.toast.info(`Image source: ${fData.source}`);
+                    }
+                    return fData.imageUrl;
+                }
             }
             return null;
         } catch (e) {
@@ -747,23 +1073,81 @@ class TeacherLectureNotes {
     }
 
     showToastNotification(message, isSuccess = true, duration = 3000) {
-        const existingToast = document.querySelector('.toast');
-        if (existingToast) existingToast.remove();
+        try { console.log('[Toast] Request', { message, isSuccess, duration }); } catch(_) {}
+        // Remove any existing scribe toast
+        const existing = document.getElementById('scribe-toast');
+        if (existing) existing.remove();
+
+        // Container
         const toast = document.createElement('div');
-        toast.className = `toast ${isSuccess ? 'success' : 'error'}`;
-        toast.innerHTML = `
-            <div class="toast-content">
-                <i class="bi ${isSuccess ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'}"></i>
-                <span class="toast-message">${message}</span>
-            </div>
-            <div class="toast-progress"><div class="progress-bar"></div></div>
-        `;
+        toast.id = 'scribe-toast';
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.maxWidth = '360px';
+        toast.style.background = '#ffffff';
+        toast.style.color = '#333';
+        toast.style.borderRadius = '8px';
+        toast.style.padding = '12px 14px';
+        toast.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
+        toast.style.zIndex = '2147483647';
+        toast.style.display = 'flex';
+        toast.style.alignItems = 'center';
+        toast.style.gap = '10px';
+        toast.style.borderLeft = `4px solid ${isSuccess ? '#22c55e' : '#ef4444'}`;
+
+        // Icon (simple text to avoid asset issues)
+        const icon = document.createElement('span');
+        icon.textContent = isSuccess ? '✓' : '✕';
+        icon.style.fontWeight = '700';
+        icon.style.color = isSuccess ? '#22c55e' : '#ef4444';
+        icon.style.fontSize = '18px';
+
+        const text = document.createElement('span');
+        text.textContent = message;
+        text.style.flex = '1';
+        text.style.fontSize = '14px';
+
+        // Progress bar
+        const track = document.createElement('div');
+        track.style.position = 'absolute';
+        track.style.bottom = '0';
+        track.style.left = '0';
+        track.style.width = '100%';
+        track.style.height = '4px';
+        track.style.background = 'rgba(0,0,0,0.1)';
+
+        const bar = document.createElement('div');
+        bar.style.width = '100%';
+        bar.style.height = '100%';
+        bar.style.background = isSuccess ? '#22c55e' : '#ef4444';
+        bar.style.transition = `width ${duration}ms linear`;
+        setTimeout(() => { bar.style.width = '0%'; }, 10);
+
+        track.appendChild(bar);
+        toast.appendChild(icon);
+        toast.appendChild(text);
+        toast.appendChild(track);
+
         document.body.appendChild(toast);
-        const progressBar = toast.querySelector('.progress-bar');
-        progressBar.style.transition = `width ${duration}ms linear`;
-        setTimeout(() => { progressBar.style.width = '0%'; }, 10);
-        setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => toast.remove(), 300); }, duration);
-        toast.addEventListener('click', () => { toast.classList.add('fade-out'); setTimeout(() => toast.remove(), 300); });
+        try { console.log('[Toast] Mounted to DOM'); } catch(_) {}
+
+        // Auto-dismiss
+        const hide = () => {
+            try { console.log('[Toast] Auto-dismiss'); } catch(_) {}
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 200ms ease';
+            setTimeout(() => toast.remove(), 200);
+        };
+        setTimeout(hide, duration);
+
+        // Click to dismiss
+        toast.addEventListener('click', () => {
+            try { console.log('[Toast] Click-dismiss'); } catch(_) {}
+            hide();
+        });
     }
 
     async handleKinestheticLearning() {
@@ -1197,6 +1581,91 @@ class TeacherLectureNotes {
         function updateCounter() { counter.textContent = `${currentIndex + 1}/${visibleCards.length}`; prevButton.disabled = currentIndex === 0; nextButton.disabled = currentIndex === visibleCards.length - 1; }
         let touchStartX = 0; flashcardsContainer.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }); flashcardsContainer.addEventListener('touchend', e => { const touchEndX = e.changedTouches[0].screenX; const diff = touchStartX - touchEndX; const swipeThreshold = 50; if (Math.abs(diff) < swipeThreshold) return; if (diff > 0 && currentIndex < visibleCards.length - 1) { currentIndex++; } else if (diff < 0 && currentIndex > 0) { currentIndex--; } updateCardVisibility(); updateCounter(); });
         updatePracticeMode(); updateProgressCount();
+    }
+
+    toggleVisualEditing(enable) {
+        const section = document.getElementById('visual-learning-section') || document.querySelector('.visual-learning-section');
+        if (!section) return;
+        const slides = section.querySelectorAll('.visual-slide-text h3, .visual-slide-text p');
+        slides.forEach(el => {
+            if (enable) {
+                el.setAttribute('contenteditable', 'true');
+                // seamless styles handled by CSS
+            } else {
+                el.removeAttribute('contenteditable');
+                // reset handled by CSS
+            }
+        });
+    }
+
+    showEditingChip(anchorButton, text) {
+        // Prevent duplicates
+        const existing = anchorButton.parentElement?.querySelector('.editing-chip');
+        if (existing) return;
+        const chip = document.createElement('span');
+        chip.className = 'editing-chip';
+        chip.textContent = text;
+        anchorButton.parentElement?.appendChild(chip);
+        // Auto-hide after 5 seconds
+        setTimeout(() => chip.remove(), 5000);
+    }
+
+    openImageLightbox(src, alt) {
+        // Remove existing lightbox
+        const existing = document.getElementById('image-lightbox');
+        if (existing) existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'image-lightbox';
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.75)';
+        overlay.style.zIndex = '2147483647';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.padding = '24px';
+        
+        const imgWrap = document.createElement('div');
+        imgWrap.style.width = '90vw';
+        imgWrap.style.height = '90vh';
+        imgWrap.style.display = 'flex';
+        imgWrap.style.alignItems = 'center';
+        imgWrap.style.justifyContent = 'center';
+        imgWrap.style.position = 'relative';
+        
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = alt || 'Zoomed Image';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.style.borderRadius = '8px';
+        img.style.boxShadow = '0 12px 36px rgba(0,0,0,0.5)';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '×';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.top = '8px';
+        closeBtn.style.right = '8px';
+        closeBtn.style.width = '32px';
+        closeBtn.style.height = '32px';
+        closeBtn.style.borderRadius = '50%';
+        closeBtn.style.border = 'none';
+        closeBtn.style.background = '#ffffff';
+        closeBtn.style.color = '#111827';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        closeBtn.addEventListener('click', () => overlay.remove());
+        
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+        
+        imgWrap.appendChild(img);
+        imgWrap.appendChild(closeBtn);
+        overlay.appendChild(imgWrap);
+        document.body.appendChild(overlay);
     }
 }
 

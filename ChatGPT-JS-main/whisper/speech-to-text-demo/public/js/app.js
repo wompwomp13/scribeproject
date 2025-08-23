@@ -506,7 +506,7 @@ function showSuccessMessage() {
 // Update save button handler
 saveButton.addEventListener('click', async () => {
     if (!isProcessingComplete) {
-        alert('Please wait for processing to complete before saving.');
+        if (window.toast && window.toast.warn) window.toast.warn('Please wait for processing to complete before saving.'); else alert('Please wait for processing to complete before saving.');
         return;
     }
 
@@ -520,7 +520,7 @@ saveButton.addEventListener('click', async () => {
         const courseId = courseSelect.value;
         
         if (!courseId) {
-            alert('Please select a course before saving');
+            if (window.toast && window.toast.warn) window.toast.warn('Please select a course before saving'); else alert('Please select a course before saving');
             return;
         }
 
@@ -548,6 +548,12 @@ saveButton.addEventListener('click', async () => {
         const data = await response.json();
         
         if (data.success) {
+            // Attempt to save the audio locally on the teacher's laptop (optional)
+            try {
+                await trySaveLectureLocally(data.recording);
+            } catch (e) {
+                console.warn('Local save skipped/failed:', e);
+            }
             // Clear all recording data
             transcriptionChunks = [];
             transcriptionParts = [];
@@ -574,7 +580,7 @@ saveButton.addEventListener('click', async () => {
         console.error('Error saving recording:', error);
         setLoading(false);
         saveButton.disabled = false;
-        alert('Failed to save recording: ' + error.message);
+        if (window.toast && window.toast.error) window.toast.error('Failed to save recording: ' + error.message); else alert('Failed to save recording: ' + error.message);
     }
 });
 
@@ -601,6 +607,133 @@ function uploadBlob(soundBlob, encoding) {
         throw error;
     });
 }
+
+// ===== Optional Local Sync (Teacher's laptop) =====
+// Uses the File System Access API (Chromium-based browsers) with IndexedDB to remember the folder
+(function() {
+    const DB_NAME = 'scribe-sync';
+    const DB_VERSION = 1;
+    const STORE_HANDLES = 'handles';
+    const STORE_FILES = 'files'; // key: recordingId, value: { filename }
+
+    function supportsFileSystemAccess() {
+        return 'showDirectoryPicker' in window;
+    }
+
+    function openDb() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = function(e) {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(STORE_HANDLES)) db.createObjectStore(STORE_HANDLES);
+                if (!db.objectStoreNames.contains(STORE_FILES)) db.createObjectStore(STORE_FILES);
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbGet(storeName, key) {
+        const db = await openDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readonly');
+            const store = tx.objectStore(storeName);
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbSet(storeName, key, value) {
+        const db = await openDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            const req = store.put(value, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbDelete(storeName, key) {
+        const db = await openDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            const req = store.delete(key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function getSyncDirHandle() {
+        try {
+            return await idbGet(STORE_HANDLES, 'syncDir');
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function setSyncDirHandle(handle) {
+        await idbSet(STORE_HANDLES, 'syncDir', handle);
+    }
+
+    async function ensureSyncDirHandleWithPrompt() {
+        let handle = await getSyncDirHandle();
+        if (!handle) {
+            const proceed = confirm('Enable local sync? Pick a folder to save lecture audio locally.');
+            if (!proceed) return null;
+            handle = await window.showDirectoryPicker();
+            await setSyncDirHandle(handle);
+        }
+        // Request permission if needed
+        if (handle) {
+            const perm = await handle.requestPermission({ mode: 'readwrite' });
+            if (perm !== 'granted') return null;
+        }
+        return handle;
+    }
+
+    async function writeFileToDir(dirHandle, fileName, blob) {
+        const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+    }
+
+    function extractFilenameFromUrl(url) {
+        try {
+            const u = new URL(url, window.location.origin);
+            return u.pathname.split('/').pop();
+        } catch (e) {
+            // Fallback if relative path
+            const parts = (url || '').split('/');
+            return parts[parts.length - 1] || 'lecture.mp3';
+        }
+    }
+
+    async function recordLocalMapping(recordingId, fileName) {
+        await idbSet(STORE_FILES, recordingId, { filename: fileName });
+    }
+
+    // Expose helper to global scope for reuse elsewhere
+    window.trySaveLectureLocally = async function trySaveLectureLocally(recording) {
+        try {
+            if (!supportsFileSystemAccess() || !recording || !recording.audioUrl || !recording.id) return;
+            const dir = await ensureSyncDirHandleWithPrompt();
+            if (!dir) return; // user declined
+            const fileName = extractFilenameFromUrl(recording.audioUrl);
+            const res = await fetch(recording.audioUrl);
+            if (!res.ok) throw new Error('Failed to download audio for local save');
+            const blob = await res.blob();
+            await writeFileToDir(dir, fileName, blob);
+            await recordLocalMapping(recording.id, fileName);
+        } catch (e) {
+            // Silent failure; local save is optional
+            console.warn('Local sync error:', e);
+        }
+    };
+})();
 
 // Function to load recordings from MongoDB
 async function loadRecordings() {

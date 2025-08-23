@@ -58,7 +58,17 @@ console.log(`Dropbox integration is ${isDropboxEnabled ? 'ENABLED' : 'DISABLED'}
 console.log(`DROPBOX_ENABLED=${process.env.DROPBOX_ENABLED}`);
 console.log(`DROPBOX_ACCESS_TOKEN exists: ${Boolean(process.env.DROPBOX_ACCESS_TOKEN)}`);
 
-const storage = isDropboxEnabled ? memoryStorage : diskStorage;
+// Feature flag to force local storage without removing Dropbox code
+// const forceLocalStorage = process.env.FORCE_LOCAL_STORAGE === 'true';
+// console.log(`FORCE_LOCAL_STORAGE=${process.env.FORCE_LOCAL_STORAGE}`);
+// const dropboxActive = isDropboxEnabled && !forceLocalStorage;
+// console.log(`Effective storage: ${dropboxActive ? 'DROPBOX' : 'LOCAL DISK'}`);
+
+// TEMPORARILY DISABLE DROPBOX (panel trial) – always use LOCAL DISK
+const dropboxActive = false;
+console.log('Dropbox temporarily disabled in code. Using LOCAL DISK for uploads.');
+
+const storage = dropboxActive ? memoryStorage : diskStorage;
 
 const upload = multer({ 
     storage: storage,
@@ -162,7 +172,7 @@ app.post('/upload', upload.single('data'), async (req, res) => {
         const timestamp = Date.now();
         
         // Check if we're using Dropbox or local storage
-        if (isDropboxEnabled && req.file.buffer) {
+        if (dropboxActive && req.file.buffer) {
             console.log('Using Dropbox storage for complete lecture audio file');
             
             // Determine the folder path
@@ -202,6 +212,7 @@ app.post('/upload', upload.single('data'), async (req, res) => {
             // Rename the file
             fs.renameSync(originalPath, newPath);
             audioFilePath = newPath;
+            audioFilePath = newPath;
             audioFileUrl = `/uploads/${audioFileName}`;
             
             console.log(`Renamed file from ${req.file.filename} to ${audioFileName}`);
@@ -234,7 +245,7 @@ app.post('/upload', upload.single('data'), async (req, res) => {
             audioFile: {
                 filename: audioFileName,
                 path: audioFilePath,
-                isDropbox: isDropboxEnabled  // Flag to indicate if this is a Dropbox URL
+                isDropbox: dropboxActive  // Flag to indicate if this is a Dropbox URL
             },
             transcription: {
                 text: req.body.transcription || apiResponse.text,
@@ -268,7 +279,7 @@ app.post('/upload', upload.single('data'), async (req, res) => {
         console.error('Upload error:', error);
         
         // Clean up local file if needed
-        if (!isDropboxEnabled && req.file && req.file.path) {
+        if (!dropboxActive && req.file && req.file.path) {
             fs.unlink(req.file.path, (err) => {
                 if (err) console.error('Error deleting file:', err);
             });
@@ -333,7 +344,8 @@ app.get('/api/recordings/:id', async (req, res) => {
                 transcription: {
                     text: recording.transcription.text,
                     createdAt: recording.transcription.createdAt
-                }
+                },
+                finalized: recording.finalized || null
             }
         };
 
@@ -417,22 +429,11 @@ app.post('/api/get-definition', async (req, res) => {
             apiKey: process.env.GROQ_API_KEY 
         });
 
+        // Techniques: Role-based prompting; Explicit brevity constraint; Limiting extraneous tokens; Zero-shot prompting
         const completion = await groq.chat.completions.create({
             messages: [
-                {
-                    role: "system",
-                    content: `You are a concise academic assistant. Provide brief, clear definitions that are 2-3 sentences maximum. Focus on the most important aspects only. Format your response in a way that's easy to read and understand quickly.
-
-If the term is a concept, start with "A concept in [field] that..." or similar.
-If it's a process, start with "The process of..." or similar.
-If it's an object or thing, start with "A [type] that..." or similar.
-
-Keep your response under 50 words when possible.`
-                },
-                {
-                    role: "user",
-                    content: `Define this term or concept in 2-3 sentences: "${text}"`
-                }
+                { role: "system", content: "You are a concise academic assistant. Return 2–3 plain sentences (≤50 words), no markdown or citations." },
+                { role: "user", content: `Define this term strictly from context as if explaining to a student. Be clear and concise. Term: "${text}"` }
             ],
             model: "llama-3.1-8b-instant",
             temperature: 0.3,
@@ -502,69 +503,25 @@ app.post('/api/summarize-lecture', async (req, res) => {
         const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
         console.log('Sending request to Groq API for lecture summarization...');
 
+        // Techniques: Role-based prompting; Schema-first formatting; Explicit restrictions; Limiting extraneous tokens; Zero-shot prompting
         const systemPrompt = 
-            `You are an expert academic lecturer and note-taking specialist. Create detailed, well-structured summaries that serve as comprehensive study materials.
+            "You are an expert academic note-taker. Produce accurate, structured study notes ONLY from the provided transcript. " +
+            "- No outside knowledge. " +
+            "- No markdown, code blocks, or backticks. " +
+            "- Output MUST be valid JSON matching the schema below (property names and types must match). " +
+            "- If a field is not present in the transcript, use an empty string, [] or {} as appropriate. " +
+            "Schema: { " +
+            "\"title\": string, " +
+            "\"overview\": { \"mainThesis\": string, \"context\": string, \"significance\": string }, " +
+            "\"keyTopics\": [ { \"heading\": string, \"mainPoints\": string[], \"details\": string[], \"relatedConcepts\": string[] } ], " +
+            "\"conceptualFramework\": { \"coreTheories\": string[], \"keyTerms\": [ { \"term\": string, \"definition\": string, \"context\": string } ] }, " +
+            "\"practicalApplications\": [ { \"scenario\": string, \"explanation\": string } ], " +
+            "\"connections\": { \"interdisciplinary\": string[], \"prerequisites\": string[], \"futureTopics\": string[] }, " +
+            "\"supplementalInsights\": { \"historicalContext\": string, \"currentDevelopments\": string, \"additionalResources\": string[] }, " +
+            "\"studyGuide\": { \"keyHighlights\": string[], \"commonMisconceptions\": string[], \"reviewQuestions\": string[] } " +
+            "}";
 
-IMPORTANT: YOUR RESPONSE MUST BE VALID JSON WITHOUT ANY MARKDOWN CODE BLOCKS OR BACKTICKS. DO NOT WRAP THE JSON IN \`\`\`json or \`\`\` TAGS.
-
-                    Your response MUST be in valid JSON format with the following structure:
-                    {
-                        "title": "Main topic of the lecture",
-                        "overview": {
-                            "mainThesis": "Core argument or main point of the lecture",
-                            "context": "Brief background or context",
-                            "significance": "Why this topic matters"
-                        },
-                        "keyTopics": [
-                            {
-                                "heading": "Topic heading",
-                                "mainPoints": ["Key point 1", "Key point 2"],
-                                "details": ["Supporting detail or example"],
-                                "relatedConcepts": ["Related terms or ideas"]
-                            }
-                        ],
-                        "conceptualFramework": {
-                            "coreTheories": ["List of main theories discussed"],
-                            "keyTerms": [
-                                {
-                                    "term": "Technical term",
-                                    "definition": "Brief definition",
-                                    "context": "How it's used in this lecture"
-                                }
-                            ]
-                        },
-                        "practicalApplications": [
-                            {
-                                "scenario": "Real-world application",
-                                "explanation": "How the concept applies"
-                            }
-                        ],
-                        "connections": {
-                            "interdisciplinary": ["Links to other fields"],
-                            "prerequisites": ["Important background knowledge"],
-                            "futureTopics": ["What this leads to"]
-                        },
-                        "supplementalInsights": {
-                            "historicalContext": "Relevant historical background",
-                            "currentDevelopments": "Recent developments or debates",
-                            "additionalResources": ["Recommended readings or materials"]
-                        },
-                        "studyGuide": {
-                            "keyHighlights": ["Most important takeaways"],
-                            "commonMisconceptions": ["Points that students often misunderstand"],
-                            "reviewQuestions": ["Questions for self-review"]
-                        }
-                    }
-
-                    Guidelines:
-1. Break down long lectures into logical sections
-                    2. Include both theoretical concepts and practical applications
-                    3. Highlight key terms and their relationships
-                    4. Preserve important contextual information
-5. Do NOT use any markdown formatting or code blocks
-6. Return ONLY valid JSON without backticks or tags`;
-
-        const userPrompt = `Create a comprehensive academic summary of this lecture: "${transcription}"`;
+        const userPrompt = "Create the JSON summary from this transcript. Do not add content not in the transcript. Transcript: \n" + transcription;
 
         const completion = await groqClient.chat.completions.create({
             messages: [
@@ -1453,30 +1410,21 @@ app.post('/api/extract-key-terms', async (req, res) => {
             apiKey: process.env.GROQ_API_KEY 
         });
 
-        // First, clean up the transcript
-        const cleanupPrompt = `Clean this lecture transcript by:
-1. Fixing grammar and spelling errors
-2. Removing filler words (um, uh, like, you know)
-3. Fixing any transcription errors or incomplete sentences
-4. Maintaining ALL original content and meaning
-5. Keeping the same level of detail and information
-6. Preserving technical terms and specific examples
-
-DO NOT:
-- Summarize or shorten the content
-- Remove any key information
-- Change technical terminology
-- Alter the lecture's structure
-- Add any introductory phrases or explanations
-- Include phrases like "here's the transcript" or "here's the cleaned version"
-
-IMPORTANT: Return ONLY the cleaned transcript text. Do not add any introductory text, explanations, or conclusions.
-
-Transcript: ${transcription}`;
+        // Techniques: Role-based prompting; Explicit restrictions; Limiting extraneous tokens; Zero-shot prompting
+        const cleanupSystem = "You are a transcript editor. Return ONLY the cleaned transcript text. " +
+            "- Fix grammar and obvious transcription errors. - Remove filler words and repeated stutters. " +
+            "- Preserve all meaning, technical terms, and detail. - Do not add summaries, headings, or commentary.";
+        const cleanupPrompt = "Clean this transcript by:\n" +
+            "- Fixing grammar and obvious transcription errors.\n" +
+            "- Removing filler/discourse markers when not needed (um, uhm, uh, erm, like, you know, I mean, so, well, okay/ok, basically, actually, sort of, kind of).\n" +
+            "- Collapsing repeated words and stutters (e.g., 'th-th-the' -> 'the', 'I I I' -> 'I').\n" +
+            "- Preserving meaning, technical terms, proper nouns, and domain wording.\n" +
+            "Return only the cleaned text with no preface or suffix.\n\n" +
+            "Transcript:\n" + transcription;
 
         const cleanupCompletion = await groqClient.chat.completions.create({
             messages: [
-                { role: "system", content: "You are a transcript editor that returns ONLY the cleaned transcript without any additional text or explanations." },
+                { role: "system", content: cleanupSystem },
                 { role: "user", content: cleanupPrompt }
             ],
             model: "llama-3.1-8b-instant",
@@ -1486,45 +1434,19 @@ Transcript: ${transcription}`;
 
         const cleanedTranscript = cleanupCompletion.choices[0]?.message?.content;
 
-        // Now, structure the transcript into sections and identify key terms
-        const sectioningPrompt = `Divide this lecture transcript into 5 logical sections. For each section:
-1. Identify a key educational term or concept that:
-   - Is important for understanding the section
-   - Is likely to be new or unfamiliar to students
-   - Can be visually represented (can find relevant images for it)
-   - Is specific enough to be educational (not too common or generic)
-   - Appears explicitly in the text
-
-2. Extract a concise explanation of that term from the section (1-2 paragraphs maximum)
-
-IMPORTANT: 
-- Each key term should be visually representable (consider whether images would be available for this term)
-- Avoid very common or generic terms (like "science" or "research")
-- Avoid overly complex or obscure terms that would be difficult to find images for
-- Prioritize terms that have educational value
-- Do not include terms that don't appear directly in the text
-
-Format your response as valid JSON with this structure:
-{
-  "sections": [
-    {
-      "term": "The key educational term",
-      "explanation": "Concise explanation of the term from the section",
-      "context": "The surrounding text where the term appears (1-2 paragraphs)"
-    },
-    ...
-  ]
-}
-
-Cleaned Transcript:
-${cleanedTranscript}`;
+        // Techniques: Role-based prompting; Decomposed steps; Concrete constraints; Schema-first formatting; Zero-shot prompting
+        const sectioningSystem = "You are an educational content parser. Return ONLY valid JSON per the schema. No backticks or markdown.";
+        const sectioningPrompt = "Divide the cleaned transcript into 5 logical sections. For EACH section produce: " +
+            "- term: a concrete, visually representable term that appears verbatim in the text, not generic. " +
+            "- explanation: 1–2 concise paragraphs extracted or minimally rephrased from the relevant part of the transcript. " +
+            "- context: a short surrounding excerpt from the transcript. " +
+            "Rules: transcript content only; no external facts; JSON only; match schema.\n" +
+            "Schema: { \"sections\": [ { \"term\": string, \"explanation\": string, \"context\": string } ] }\n" +
+            "Cleaned Transcript:\n" + cleanedTranscript;
 
         const sectioningCompletion = await groqClient.chat.completions.create({
             messages: [
-                { 
-                    role: "system", 
-                    content: "You are an educational content parser that structures lecture content into sections with key visual learning terms. Return ONLY valid JSON with the structure specified in the prompt." 
-                },
+                { role: "system", content: sectioningSystem },
                 { role: "user", content: sectioningPrompt }
             ],
             model: "llama-3.1-8b-instant",
@@ -1589,24 +1511,8 @@ ${cleanedTranscript}`;
             console.error('Raw response:', sectioningCompletion.choices[0]?.message?.content);
             
             // Fall back to the original method if sectioning fails
-            const termsPrompt = `From this lecture transcript, identify exactly 5 key terms that:
-1. Appear word-for-word in the text
-2. Are concrete objects or specific educational concepts
-3. Can be easily illustrated with images
-4. Are important to understanding the lecture content
-5. Are sophisticated enough to have educational value (not too basic)
-
-Avoid terms that are:
-- Too generic (like "science" or "research")
-- Too complex or obscure to find relevant images for
-- Not visually representable
-- Not directly mentioned in the text
-
-Output ONLY a JSON array of 5 terms, like this: ["term1", "term2", "term3", "term4", "term5"]
-Do not include any explanation or additional text.
-
-Transcript:
-${cleanedTranscript}`;
+            // Techniques: Explicit constraints; Limiting extraneous tokens; Zero-shot prompting
+            const termsPrompt = "From this transcript, output EXACTLY 5 key terms as a JSON array. Rules: terms must appear verbatim in the text; be concrete/visual; not generic (avoid 'science'); no explanations; JSON array only.\nTranscript:\n" + cleanedTranscript;
 
             const termsCompletion = await groqClient.chat.completions.create({
             messages: [
@@ -1686,40 +1592,12 @@ app.post('/api/generate-flashcards', async (req, res) => {
             apiKey: process.env.GROQ_API_KEY 
         });
 
-        // Generate flashcards content
-        const flashcardsPrompt = `Create a set of educational flashcards based on this lecture transcription.
-
-        Generate 10-15 flashcards that cover the most important concepts, definitions, and key points from the lecture.
-
-        Return the flashcards in this JSON format WITHOUT ANY ADDITIONAL TEXT:
-{
-    "flashcards": [
-        {
-                    "front": "Term or concept (question)",
-                    "back": "Definition or explanation (answer)",
-                    "category": "Assign a logical category like 'Definition', 'Concept', 'Process', etc."
-                },
-                // More flashcards following the same structure...
-            ]
-        }
-        
-        IMPORTANT GUIDELINES:
-        1. Ensure the front side is concise (question/term)
-        2. The back side should be comprehensive but concise (answer/explanation)
-        3. Assign a meaningful category to each flashcard
-        4. Cover a variety of important topics from the lecture
-        5. Return ONLY valid JSON, nothing else
-        6. DO NOT include any explanatory text before or after the JSON
-        
-        Lecture Title: ${lectureTitle || "Lecture"}
-Lecture Content: ${transcription}`;
+        // Techniques: Role-based prompting; Schema-first formatting; Explicit constraints; Limiting extraneous tokens; Zero-shot prompting
+        const flashcardsPrompt = "Generate 12–15 flashcards strictly from the transcript. Rules: front is a short question/term; back is a clear, concise answer; category is one of [\"Definition\",\"Concept\",\"Process\",\"Example\"]. Avoid duplicates and trivial facts. Use only transcript content; no outside knowledge. Return ONLY valid JSON per the schema.\nSchema:{ \"flashcards\":[{ \"front\":string, \"back\":string, \"category\":string }]}\nLecture Title: " + (lectureTitle || "Lecture") + "\nLecture Transcript:\n" + transcription;
 
         const completion = await groqClient.chat.completions.create({
             messages: [
-                { 
-                    role: "system", 
-                    content: "You are an educational content specialist who creates study materials. Return ONLY valid JSON in the specified format with no additional text." 
-                },
+                { role: "system", content: "You create study flashcards. Return ONLY valid JSON per the schema. No extra text or backticks." },
                 { role: "user", content: flashcardsPrompt }
             ],
             model: "llama-3.1-8b-instant",
@@ -2011,21 +1889,14 @@ app.post('/api/format-transcript', async (req, res) => {
         // Create Groq client without redeclaring the variable
         const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-        const formatPrompt = `Format this lecture transcript to improve readability. 
-        
-Guidelines:
-1. Add clear headers for main topics (use # for main headers and ## for subheaders)
-2. Break walls of text into logical paragraphs (short paragraphs preferred)
-3. Keep bullet points if they exist
-4. Do not add or remove any actual content
-5. Do not add key points, summaries, or any additional content
-6. Keep spacing minimal - use only one blank line between paragraphs
-7. Use markdown sparingly - don't make everything bold or italic
-
-Original Transcript:
-${transcription}
-
-IMPORTANT: Return ONLY the formatted transcript text with minimal markdown. Do not add any introductory text, explanations, summaries, or conclusions.`;
+        // Techniques: Role-based prompting; Explicit stylistic constraints; Limiting extraneous tokens; Zero-shot prompting
+        const formatPrompt = "Improve readability with minimal markdown ONLY where helpful: " +
+            "- Use # and ## for clear headers inferred from topic shifts. " +
+            "- Break long blocks into short paragraphs. " +
+            "- Keep existing bullet points; do not invent new ones. " +
+            "- Preserve all original meaning; do not add/remove content. " +
+            "Return just the formatted transcript text (no prologue/epilogue).\n\n" +
+            "Original Transcript:\n" + transcription;
 
         const formatCompletion = await groqClient.chat.completions.create({
             messages: [
@@ -2093,64 +1964,202 @@ app.get('/api/recordings/:id/raw-transcript', async (req, res) => {
     }
 });
 
+// Save finalized content for a recording (teacher-only flow)
+app.post('/api/recordings/:id/finalize', async (req, res) => {
+    try {
+        const { formattedTranscript, summary, visualSections, userId } = req.body;
+        const recording = await Recording.findById(req.params.id);
+        if (!recording) {
+            return res.status(404).json({ success: false, error: 'Recording not found' });
+        }
+        recording.finalized = {
+            formattedTranscript: formattedTranscript ?? recording.finalized?.formattedTranscript ?? null,
+            summary: summary ?? recording.finalized?.summary ?? null,
+            visualSections: Array.isArray(visualSections) ? visualSections : (recording.finalized?.visualSections || []),
+            updatedAt: new Date(),
+            updatedBy: userId || null
+        };
+        await recording.save();
+        res.json({ success: true, finalized: recording.finalized });
+    } catch (error) {
+        console.error('Finalize error:', error);
+        res.status(500).json({ success: false, error: 'Failed to save finalized content', details: error.message });
+    }
+});
+
+// Get finalized content for a recording (student consumes this)
+app.get('/api/recordings/:id/finalized', async (req, res) => {
+    try {
+        const recording = await Recording.findById(req.params.id).lean();
+        if (!recording) {
+            return res.status(404).json({ success: false, error: 'Recording not found' });
+        }
+        res.json({ success: true, finalized: recording.finalized || null });
+    } catch (error) {
+        console.error('Get finalized error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch finalized content', details: error.message });
+    }
+});
+
 // Add this new endpoint for image search (to replace direct Serper API calls in the client)
 app.post('/api/search-image', async (req, res) => {
     try {
         const { query } = req.body;
-        
         if (!query) {
-            return res.status(400).json({
-                success: false,
-                error: 'No search query provided'
-            });
+            return res.status(400).json({ success: false, error: 'No search query provided' });
         }
         
-        // Set up Serper API headers
+        // NOTE: SERPER USAGE TEMPORARILY DISABLED (kept for future re-enable)
+        /*
+        // Serper API (commented out for panel request)
         const headers = new Headers();
-        headers.append("X-API-KEY", process.env.SERPER_API_KEY || "8ef3d1c3d162936e1361df119ae1fa56c75db388");
-        headers.append("Content-Type", "application/json");
-        
+        headers.append('X-API-KEY', process.env.SERPER_API_KEY || 'REDACTED');
+        headers.append('Content-Type', 'application/json');
         const requestOptions = {
-            method: "POST",
+            method: 'POST',
             headers: headers,
-            body: JSON.stringify({
-                "q": query,
-                "gl": "us",
-                "hl": "en"
-            })
+            body: JSON.stringify({ q: query, gl: 'us', hl: 'en' })
         };
-        
-        // Make request to Serper API
-        const response = await fetch("https://google.serper.dev/images", requestOptions);
-        
-        if (!response.ok) {
-            throw new Error(`Serper API error! status: ${response.status}`);
-        }
-        
+        const response = await fetch('https://google.serper.dev/images', requestOptions);
+        if (!response.ok) throw new Error(`Serper API error ${response.status}`);
         const responseData = await response.json();
-        
-        // Check if the response contains images
         if (responseData?.images?.length > 0) {
             const image = responseData.images[0];
             const imageUrl = image.imageUrl || image.image || image.link || image.thumbnail;
-            
-            res.json({
-                success: true,
-                imageUrl: imageUrl
-            });
-        } else {
-            res.json({
-                success: false,
-                error: 'No images found for the query'
-            });
+            return res.json({ success: true, imageUrl });
         }
+        */
+
+        // Own-code HTML scraping approach (no third-party API)
+        async function fetchFirstBingImage(term) {
+            const url = 'https://www.bing.com/images/search?q=' + encodeURIComponent(term) + '&form=HDRSC2&first=1&qft=%2Bfilterui%3Aimagesize-large&setlang=en';
+            const resp = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                }
+            });
+            if (!resp.ok) throw new Error('Bing request failed: ' + resp.status);
+            const html = await resp.text();
+            const candidates = [];
+
+            // 1) Parse m attribute on iusc anchors (contains JSON with murl/imgurl)
+            try {
+                const anchorRegex = /<a[^>]+class="[^"]*iusc[^"]*"[^>]+m="([^"]+)"/g;
+                let match;
+                while ((match = anchorRegex.exec(html)) !== null) {
+                    let jsonStr = match[1]
+                        .replace(/&quot;/g, '"')
+                        .replace(/&#34;/g, '"')
+                        .replace(/&amp;/g, '&');
+                    try {
+                        const mobj = JSON.parse(jsonStr);
+                        if (mobj && typeof mobj === 'object') {
+                            if (mobj.murl) candidates.push(mobj.murl);
+                            if (mobj.imgurl) candidates.push(mobj.imgurl);
+                        }
+                    } catch (_) {}
+                }
+            } catch (_) {}
+
+            // 2) Fallback: parse inline JSON metadata murl/imgurl in page script
+            const murlMatches = html.match(/\"murl\":\"(https?:[^\"\\]+)\"/g) || [];
+            const imgurlMatches = html.match(/\"imgurl\":\"(https?:[^\"\\]+)\"/g) || [];
+            for (const m of murlMatches) {
+                const u = (m.match(/\"murl\":\"(https?:[^\"\\]+)\"/) || [])[1];
+                if (u) candidates.push(u);
+            }
+            for (const m of imgurlMatches) {
+                const u = (m.match(/\"imgurl\":\"(https?:[^\"\\]+)\"/) || [])[1];
+                if (u) candidates.push(u);
+            }
+
+            const seen = new Set();
+            const ordered = candidates
+                .map(u => u.replace(/\\\//g, '/'))
+                .filter(u => {
+                    if (seen.has(u)) return false;
+                    seen.add(u);
+                    // Ignore known Bing thumbnail hosts
+                    if (/mm\.bing\.net|tse\d+\.mm\.bing\.net/i.test(u)) return false;
+                    return /\.(jpg|jpeg|png|webp)(\?|$)/i.test(u);
+                });
+            if (ordered.length > 0) return ordered[0];
+            // Fallback: visible mimg thumbs
+            const thumb = html.match(/<img[^>]+class="[^"]*mimg[^"]*"[^>]+(?:data-)?src="(https?:[^"#]+)"/i);
+            if (thumb && thumb[1]) {
+                // Try to resolve potential redirect to higher-res by preferring https scheme and removing sizing params
+                const t = thumb[1].replace(/&(w|h|c|r|o|pid|rm)=[^&]*/g, '');
+                return t;
+            }
+            throw new Error('No full-size image found in Bing HTML');
+        }
+
+        async function fetchWikipediaInfoboxImage(term) {
+            // Simple Wikipedia page scrape for infobox image
+            const page = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(term.replace(/\s+/g, '_'));
+            const resp = await fetch(page, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                }
+            });
+            if (!resp.ok) throw new Error('Wikipedia request failed: ' + resp.status);
+            const html = await resp.text();
+            // Look for infobox image link and convert thumbnails to original when needed
+            const m = html.match(/<table[^>]*class="[^"]*infobox[^"]*"[\s\S]*?<img[^>]+src="(\/\/upload\.wikimedia\.org[^"]+)"/i);
+            if (m && m[1]) {
+                let src = 'https:' + m[1].replace(/\\\//g, '/');
+                if (/\/thumb\//.test(src)) {
+                    const parts = src.split('/thumb/');
+                    if (parts.length === 2) {
+                        const tail = parts[1];
+                        const orig = tail.substring(0, tail.lastIndexOf('/'));
+                        src = parts[0] + '/' + orig;
+                    }
+                }
+                return src;
+            }
+            // Fallback: any upload.wikimedia image (de-thumb if needed)
+            const any = html.match(/src="(\/\/upload\.wikimedia\.org[^"]+)"/i);
+            if (any && any[1]) {
+                let src = 'https:' + any[1].replace(/\\\//g, '/');
+                if (/\/thumb\//.test(src)) {
+                    const parts = src.split('/thumb/');
+                    if (parts.length === 2) {
+                        const tail = parts[1];
+                        const orig = tail.substring(0, tail.lastIndexOf('/'));
+                        src = parts[0] + '/' + orig;
+                    }
+                }
+                return src;
+            }
+            throw new Error('No Wikipedia infobox image found');
+        }
+
+        let imageUrl = null;
+        let source = null;
+        try {
+            imageUrl = await fetchFirstBingImage(query);
+            source = 'scraper-bing';
+        } catch (e1) {
+            console.warn('Bing scrape failed, trying Wikipedia:', e1.message);
+            try {
+                imageUrl = await fetchWikipediaInfoboxImage(query);
+                source = 'scraper-wikipedia';
+            } catch (e2) {
+                console.warn('Wikipedia scrape failed:', e2.message);
+            }
+        }
+
+        if (imageUrl) {
+            return res.json({ success: true, imageUrl, source });
+        }
+
+        return res.json({ success: false, error: 'No images found for the query (scraper)' });
     } catch (error) {
         console.error('Image search error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to search for images',
-            details: error.message
-        });
+        res.status(500).json({ success: false, error: 'Failed to search for images', details: error.message });
     }
 });
 
@@ -2170,58 +2179,17 @@ app.post('/api/generate-quiz', async (req, res) => {
             apiKey: process.env.GROQ_API_KEY 
         });
 
-        // Generate quiz content
-        const quizPrompt = `Create an educational quiz based on this lecture transcription. Generate TWO different quiz types:
-
-1. A Drag-and-Drop Categorization Quiz:
-   - Provide 3-4 categories
-   - Create 8-10 items that need to be sorted into the correct categories
-   - Each item should clearly belong to one specific category
-
-2. A Multiple-Choice Quiz:
-   - Create 5-8 multiple-choice questions
-   - Each question should have four answer choices (A, B, C, D)
-   - Clearly indicate which answer is correct
-
-Return the quiz in this JSON format WITHOUT ANY ADDITIONAL TEXT:
-{
-    "categorization": {
-        "categories": ["category1", "category2", "category3"],
-        "items": [
-            { "text": "item1", "category": "category1" },
-            { "text": "item2", "category": "category2" },
-            // 8-10 items total
-        ]
-    },
-    "multipleChoice": {
-        "questions": [
-            {
-                "question": "Question text?",
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correctAnswer": 0,  // Index of correct answer (0-3)
-                "explanation": "Explanation of why this answer is correct and the educational context."
-            },
-            // 5-8 questions total
-        ]
-    }
-}
-
-IMPORTANT:
-- Both quiz types should test understanding of the most important concepts from the lecture
-- Return ONLY valid JSON, nothing else
-- DO NOT include any explanatory text before or after the JSON
-- DO NOT wrap the JSON in markdown code blocks or backticks
-- The response must be parseable directly with JSON.parse()
-
-Lecture Title: ${lectureTitle || "Lecture"}
-Lecture Content: ${transcription}`;
+        // Techniques: Role-based prompting; Schema-first formatting; Explicit constraints; Limiting extraneous tokens; Zero-shot prompting
+        const quizPrompt = "Create TWO quiz types from the transcript content ONLY.\n" +
+            "1) Categorization: 3–4 meaningful categories; 8–10 items; each item belongs to exactly one category.\n" +
+            "2) Multiple-choice: 6–8 questions; 4 options each; exactly one correct answer (0-based index); explanation grounded in transcript.\n" +
+            "Rules: transcript facts only; plausible, distinct distractors; no 'All of the above'; JSON ONLY per schema; no backticks.\n" +
+            "Schema: { \"categorization\": { \"categories\": string[], \"items\": [ { \"text\": string, \"category\": string } ] }, \"multipleChoice\": { \"questions\": [ { \"question\": string, \"options\": string[], \"correctAnswer\": number, \"explanation\": string } ] } }\n" +
+            "Lecture Title: " + (lectureTitle || "Lecture") + "\nLecture Content:\n" + transcription;
 
         const completion = await groqClient.chat.completions.create({
             messages: [
-                { 
-                    role: "system", 
-                    content: "You are an educational content specialist who creates interactive quizzes based on lecture materials. Return ONLY valid JSON in the specified format with no additional text." 
-                },
+                { role: "system", content: "You are an educational quiz generator. Return ONLY valid JSON per the schema. No backticks or markdown." },
                 { role: "user", content: quizPrompt }
             ],
             model: "llama-3.1-8b-instant",

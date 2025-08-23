@@ -65,7 +65,13 @@ class TeacherClass {
         const deleteBtn = card.querySelector('.delete-lecture');
         deleteBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            if (confirm('Are you sure you want to delete this lecture? This action cannot be undone.')) {
+            const ok = await (window.confirmDialog ? window.confirmDialog({
+                title: 'Delete Lecture',
+                message: 'Are you sure you want to delete this lecture? This action cannot be undone.',
+                confirmText: 'Delete',
+                cancelText: 'Cancel'
+            }) : Promise.resolve(confirm('Are you sure you want to delete this lecture? This action cannot be undone.')));
+            if (ok) {
                 try {
                     const lectureId = deleteBtn.getAttribute('data-id');
                     const response = await fetch(`/api/recordings/${lectureId}`, {
@@ -78,6 +84,13 @@ class TeacherClass {
                     const data = await response.json();
                     
                     if (data.success) {
+                        if (window.toast?.success) window.toast.success('Lecture deleted');
+                        // Attempt to delete local copy if present (optional)
+                        try {
+                            await this.tryDeleteLocalCopy(lectureId);
+                        } catch (e) {
+                            console.warn('Local delete skipped/failed:', e);
+                        }
                         card.remove(); // Remove the card from the UI
                         const remainingLectures = document.querySelectorAll('.lecture-card').length;
                         this.updateLectureCount(remainingLectures);
@@ -86,12 +99,108 @@ class TeacherClass {
                     }
                 } catch (error) {
                     console.error('Error deleting lecture:', error);
-                    alert('Failed to delete lecture. Please try again.');
+                    if (window.toast?.error) window.toast.error('Failed to delete lecture. Please try again.'); else alert('Failed to delete lecture. Please try again.');
                 }
             }
         });
 
         return card;
+    }
+
+    // ===== Optional Local Delete Sync (Teacher's laptop) =====
+    async tryDeleteLocalCopy(recordingId) {
+        if (!('showDirectoryPicker' in window)) return; // not supported
+        // Reuse IndexedDB from app.js namespace
+        const DB_NAME = 'scribe-sync';
+        const DB_VERSION = 1;
+        const STORE_HANDLES = 'handles';
+        const STORE_FILES = 'files';
+
+        function openDb() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = function() {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains(STORE_HANDLES)) db.createObjectStore(STORE_HANDLES);
+                    if (!db.objectStoreNames.contains(STORE_FILES)) db.createObjectStore(STORE_FILES);
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function idbGet(db, storeName, key) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                const req = store.get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function idbSet(db, storeName, key, value) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                const req = store.put(value, key);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function idbDelete(db, storeName, key) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                const req = store.delete(key);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        const db = await openDb();
+        let dirHandle = await idbGet(db, STORE_HANDLES, 'syncDir');
+
+        // If no handle saved yet, prompt the teacher to pick the folder used for local sync
+        if (!dirHandle) {
+            const shouldLink = await (window.confirmDialog ? window.confirmDialog({
+                title: 'Link Local Folder',
+                message: 'To remove the local copy, link the folder where lectures were saved.',
+                confirmText: 'Link Folder',
+                cancelText: 'Skip'
+            }) : Promise.resolve(confirm('Link the folder where lectures were saved to remove the local copy?')));
+            if (!shouldLink) return;
+            dirHandle = await window.showDirectoryPicker();
+            await idbSet(db, STORE_HANDLES, 'syncDir', dirHandle);
+        }
+
+        // Check permission
+        const perm = await dirHandle.requestPermission?.({ mode: 'readwrite' });
+        if (perm && perm !== 'granted') return;
+
+        // Try to find filename from mapping, otherwise derive from server record
+        let mapping = await idbGet(db, STORE_FILES, recordingId);
+        let filename = mapping && mapping.filename;
+        if (!filename) {
+            try {
+                const resp = await fetch(`/api/recordings/${recordingId}`);
+                if (resp.ok) {
+                    const recData = await resp.json();
+                    filename = recData?.recording?.audioFile?.filename || null;
+                }
+            } catch (e) {}
+        }
+        if (!filename) return; // nothing to delete locally
+
+        try {
+            await dirHandle.removeEntry(filename);
+        } catch (e) {
+            // If file doesn't exist, ignore
+        }
+
+        // Clear mapping if present
+        try { await idbDelete(db, STORE_FILES, recordingId); } catch (e) {}
     }
 
     updateLectureCount(count) {

@@ -32,6 +32,18 @@ const RecordingSchema = new mongoose.Schema({
             default: Date.now
         }
     },
+    finalized: {
+        formattedTranscript: { type: String }, // HTML of cleaned transcript approved by teacher
+        summary: { type: mongoose.Schema.Types.Mixed }, // structured summary object
+        visualSections: [{
+            term: String,
+            explanation: String,
+            context: String,
+            imageUrl: String
+        }],
+        updatedAt: Date,
+        updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    },
     notes: [{
         content: String,
         timestamp: Date,
