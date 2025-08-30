@@ -418,13 +418,18 @@
             }
             
             // Setup download buttons
-            document.getElementById('downloadTranscription').addEventListener('click', function() {
-                downloadSectionAsPDF('transcription-section', 'lecture-transcription');
-            });
-            
-            document.getElementById('downloadSummary').addEventListener('click', function() {
-                downloadSectionAsPDF('summary-section', 'lecture-summary');
-            });
+            const dlTransBtn = document.getElementById('downloadTranscription');
+            if (dlTransBtn) {
+                dlTransBtn.addEventListener('click', function() {
+                    downloadSectionAsPDF('transcription-section', 'lecture-transcription');
+                });
+            }
+            const dlSummaryBtn = document.getElementById('downloadSummary');
+            if (dlSummaryBtn) {
+                dlSummaryBtn.addEventListener('click', function() {
+                    downloadSectionAsPDF('summary-section', 'lecture-summary');
+                });
+            }
             
             // Function to download a section as PDF
             function downloadSectionAsPDF(sectionId, filename) {
