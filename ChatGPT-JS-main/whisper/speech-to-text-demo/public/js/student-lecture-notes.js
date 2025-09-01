@@ -211,6 +211,8 @@ class StudentLectureNotes {
                         if (blobUrl) {
                             console.log('Falling back to local cached audio');
                             audio.src = blobUrl;
+                            audio.dataset.source = 'local';
+                            this.renderOfflineStatus('Playing from your device');
                             return;
                         }
                     } catch (_) {}
@@ -222,6 +224,59 @@ class StudentLectureNotes {
                     errorMsg.innerHTML = `<strong>Error:</strong> Could not load audio file. <br>
                         Please contact your teacher or try again later.`;
                     audioSection.appendChild(errorMsg);
+
+                    // If we have a cached copy, offer a button to play from cache (no permissions needed)
+                    try {
+                        const cachedUrl = await this.getCachedAudioBlobUrl(audio.dataset.networkUrl || '');
+                        if (cachedUrl) {
+                            this.renderPlayLocalButton(async () => {
+                                audio.src = cachedUrl;
+                                audio.dataset.source = 'cache';
+                                this.renderOfflineStatus('Playing from this device');
+                            });
+                        }
+                    } catch (_) {}
+
+                    // If we have a known local mapping, offer a button to play from device (requests permission via user gesture)
+                    const mapping = await this.idbGet('files', this.lectureId).catch(() => null);
+                    if (mapping && mapping.filename) {
+                        this.renderPlayLocalButton(async () => {
+                            try {
+                                const handle = await this.ensureStudentAudioDirHandle();
+                                if (!handle) return;
+                                const fileHandle = await handle.getFileHandle(mapping.filename, { create: false });
+                                const file = await fileHandle.getFile();
+                                const url = URL.createObjectURL(file);
+                                audio.src = url;
+                                audio.dataset.source = 'local';
+                                audio.dataset.localFilename = mapping.filename;
+                                this.renderOfflineStatus('Playing from your device');
+                            } catch (err) {
+                                console.error('Play local failed:', err);
+                                if (window.toast && window.toast.error) window.toast.error('Could not open local copy.');
+                            }
+                        });
+                    }
+
+                    // Always offer a button to grant folder access again (user gesture)
+                    this.renderGrantAccessButton(async () => {
+                        try {
+                            const handle = await this.ensureStudentAudioDirHandle();
+                            if (!handle) return;
+                            // After permission, try to play from cache first, then local FS
+                            const cachedUrl2 = await this.getCachedAudioBlobUrl(audio.dataset.networkUrl || '');
+                            if (cachedUrl2) {
+                                audio.src = cachedUrl2;
+                                audio.dataset.source = 'cache';
+                                this.renderOfflineStatus('Playing from this device');
+                                return;
+                            }
+                            await this.tryPlayFromLocalIfAvailable(audio);
+                        } catch (err) {
+                            console.error('Grant access failed:', err);
+                            if (window.toast && window.toast.error) window.toast.error('Folder access denied.');
+                        }
+                    });
                 };
                 
                 audio.onloadeddata = () => {
@@ -287,14 +342,38 @@ class StudentLectureNotes {
 
     // ===== Student-side local audio caching (File System Access API + IndexedDB) =====
     async tryLoadLocalAudioOrOfferDownload({ audioEl, lectureId, filename, networkUrl }) {
-        // If local copy exists and permission granted, load it; otherwise set network and show a "Save for offline" button
+        // If local copy exists, load it; otherwise set network and show a "Make available offline" button
+        // Try IndexedDB blob first (no special permissions)
+        const idbUrl = await this.idbGetAudioBlobUrl(lectureId);
+        if (idbUrl) {
+            console.log('[AudioSource] Using IDB blob', { lectureId, url: idbUrl });
+            audioEl.src = idbUrl;
+            audioEl.dataset.source = 'idb';
+            audioEl.dataset.networkUrl = networkUrl;
+            this.renderOfflineStatus('Playing from this device');
+            this.removeSaveOfflineButton();
+            return;
+        }
+
+        // Then Cache Storage
+        const cachedUrl = await this.getCachedAudioBlobUrl(networkUrl);
+        if (cachedUrl) {
+            console.log('[AudioSource] Using CACHED blob (Cache Storage)', { lectureId, url: cachedUrl, key: networkUrl });
+            audioEl.src = cachedUrl;
+            audioEl.dataset.source = 'cache';
+            audioEl.dataset.networkUrl = networkUrl;
+            this.renderOfflineStatus('Playing from this device');
+            this.removeSaveOfflineButton();
+            return;
+        }
+
         const localInfo = await this.getLocalAudioInfo(lectureId);
         if (localInfo) {
             console.log('[AudioSource] Using LOCAL file', { lectureId, filename: localInfo.filename, url: localInfo.url });
             audioEl.src = localInfo.url;
             audioEl.dataset.source = 'local';
             audioEl.dataset.localFilename = localInfo.filename || '';
-            this.renderOfflineStatus('Playing from your device');
+            this.renderOfflineStatus('Playing from this device');
             return;
         }
 
@@ -305,16 +384,22 @@ class StudentLectureNotes {
         console.log('[AudioSource] Using NETWORK url', { lectureId, url: networkUrl });
         this.renderSaveOfflineButton(async () => {
             try {
-                const handle = await this.ensureStudentAudioDirHandle();
-                if (!handle) return;
-                const resp = await fetch(networkUrl);
-                if (!resp.ok) throw new Error('Download failed with status ' + resp.status);
-                const blob = await resp.blob();
-                const safeName = filename || ('lecture-' + lectureId + '.mp3');
-                await this.writeFileToDir(handle, safeName, blob);
-                await this.idbSet('files', lectureId, { filename: safeName });
-                console.log('[AudioSource] Saved offline', { lectureId, filename: safeName });
-                this.renderOfflineStatus('Saved to your device for offline listening');
+                // Try IndexedDB first
+                const ok = await this.saveAudioToIdb(lectureId, networkUrl);
+                if (ok) {
+                    console.log('[AudioSource] Saved to IndexedDB', { lectureId });
+                    this.renderOfflineStatus('Saved for offline listening');
+                    this.removeSaveOfflineButton();
+                    return;
+                }
+                // Fallback: Cache Storage
+                const saved = await this.saveAudioToCache(networkUrl);
+                if (saved) {
+                    console.log('[AudioSource] Saved to Cache Storage', { lectureId, key: networkUrl });
+                    this.renderOfflineStatus('Saved for offline listening');
+                    this.removeSaveOfflineButton();
+                    return;
+                }
             } catch (err) {
                 console.error('Save offline failed:', err);
                 if (window.toast && window.toast.error) window.toast.error('Failed to save for offline: ' + err.message);
@@ -345,6 +430,72 @@ class StudentLectureNotes {
         btn.onclick = onClick;
     }
 
+    removeSaveOfflineButton() {
+        const audioSection = document.querySelector('.audio-section');
+        if (!audioSection) return;
+        const btn = audioSection.querySelector('#saveOfflineBtn');
+        if (btn && btn.parentElement) btn.remove();
+    }
+
+    renderPlayLocalButton(onClick) {
+        const audioSection = document.querySelector('.audio-section');
+        if (!audioSection) return;
+        let btn = audioSection.querySelector('#playLocalBtn');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'playLocalBtn';
+            btn.textContent = 'Play from my device';
+            btn.style.marginLeft = '10px';
+            btn.className = 'btn btn-sm btn-outline-primary';
+            const h2 = audioSection.querySelector('h2');
+            if (h2) {
+                const wrap = document.createElement('span');
+                wrap.style.marginLeft = '10px';
+                wrap.appendChild(btn);
+                h2.appendChild(wrap);
+            } else {
+                audioSection.appendChild(btn);
+            }
+        }
+        btn.onclick = onClick;
+    }
+
+    renderGrantAccessButton(onClick) {
+        const audioSection = document.querySelector('.audio-section');
+        if (!audioSection) return;
+        let btn = audioSection.querySelector('#grantAccessBtn');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'grantAccessBtn';
+            btn.textContent = 'Grant folder access';
+            btn.style.marginLeft = '10px';
+            btn.className = 'btn btn-sm btn-outline-dark';
+            const h2 = audioSection.querySelector('h2');
+            if (h2) {
+                const wrap = document.createElement('span');
+                wrap.style.marginLeft = '10px';
+                wrap.appendChild(btn);
+                h2.appendChild(wrap);
+            } else {
+                audioSection.appendChild(btn);
+            }
+        }
+        btn.onclick = onClick;
+    }
+
+    async tryPlayFromLocalIfAvailable(audioEl) {
+        const info = await this.getLocalAudioInfo(this.lectureId);
+        if (info) {
+            audioEl.src = info.url;
+            audioEl.dataset.source = 'local';
+            audioEl.dataset.localFilename = info.filename;
+            this.renderOfflineStatus('Playing from your device');
+            console.log('[AudioSource] Using LOCAL file (after access granted)', { lectureId: this.lectureId, filename: info.filename, url: info.url });
+            return true;
+        }
+        return false;
+    }
+
     renderOfflineStatus(text) {
         const audioSection = document.querySelector('.audio-section');
         if (!audioSection) return;
@@ -373,8 +524,9 @@ class StudentLectureNotes {
         const handle = await this.idbGet('handles', 'studentAudioDir');
         const mapping = await this.idbGet('files', lectureId);
         if (!handle || !mapping || !mapping.filename) return null;
-        const perm = await handle.requestPermission?.({ mode: 'read' });
-        if (perm && perm !== 'granted') return null;
+        // Avoid requestPermission here (requires user gesture). Only proceed if already granted.
+        const permQuery = await handle.queryPermission?.({ mode: 'read' });
+        if (permQuery && permQuery !== 'granted') return null;
         try {
             const fileHandle = await handle.getFileHandle(mapping.filename, { create: false });
             const file = await fileHandle.getFile();
@@ -382,6 +534,75 @@ class StudentLectureNotes {
             return { url, filename: mapping.filename };
         } catch (e) {
             return null;
+        }
+    }
+
+    // ===== Cache Storage helpers =====
+    async idbGetAudioBlobUrl(lectureId) {
+        try {
+            const db = await this.openStudentDb();
+            return await new Promise((resolve, reject) => {
+                const tx = db.transaction('files', 'readonly');
+                const st = tx.objectStore('files');
+                const rq = st.get('blob:' + lectureId);
+                rq.onsuccess = () => {
+                    const val = rq.result;
+                    if (!val || !(val instanceof Blob)) return resolve(null);
+                    resolve(URL.createObjectURL(val));
+                };
+                rq.onerror = () => reject(rq.error);
+            });
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async saveAudioToIdb(lectureId, networkUrl) {
+        try {
+            const resp = await fetch(networkUrl, { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const blob = await resp.blob();
+            const db = await this.openStudentDb();
+            await new Promise((resolve, reject) => {
+                const tx = db.transaction('files', 'readwrite');
+                const st = tx.objectStore('files');
+                const rq = st.put(blob, 'blob:' + lectureId);
+                rq.onsuccess = () => resolve();
+                rq.onerror = () => reject(rq.error);
+            });
+            return true;
+        } catch (e) {
+            console.warn('IDB save failed:', e);
+            return false;
+        }
+    }
+    async getCachedAudioBlobUrl(networkUrl) {
+        try {
+            if (!('caches' in window) || !networkUrl) return null;
+            const cache = await caches.open('scribe-audio-v1');
+            const res = await cache.match(networkUrl);
+            if (!res) return null;
+            const blob = await res.blob();
+            return URL.createObjectURL(blob);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async saveAudioToCache(networkUrl) {
+        try {
+            if (!('caches' in window) || !networkUrl) return false;
+            const resp = await fetch(networkUrl, { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const cache = await caches.open('scribe-audio-v1');
+            await cache.put(networkUrl, resp.clone());
+            if (navigator.storage && navigator.storage.persist) {
+                try { await navigator.storage.persist(); } catch (_) {}
+            }
+            return true;
+        } catch (e) {
+            console.warn('Cache save failed:', e);
+            return false;
         }
     }
 
@@ -397,8 +618,12 @@ class StudentLectureNotes {
             await this.idbSet('handles', 'studentAudioDir', picked);
             handle = picked;
         }
-        const perm = await handle.requestPermission?.({ mode: 'readwrite' });
-        if (perm && perm !== 'granted') return null;
+        // Request permission only within user gesture (button click invokes this method)
+        const permQuery = await handle.queryPermission?.({ mode: 'readwrite' });
+        if (permQuery !== 'granted') {
+            const perm = await handle.requestPermission?.({ mode: 'readwrite' });
+            if (perm && perm !== 'granted') return null;
+        }
         return handle;
     }
 
